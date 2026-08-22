@@ -1,0 +1,2 @@
+profile_id,amount,lifetime,randomness,spread,gravity_x,gravity_y,gravity_z,velocity_min,velocity_max,angular_velocity_min,angular_velocity_max,scale_min,scale_max,mesh_width,mesh_height,emission_color,emission_energy,gradient_start,gradient_mid,gradient_late,gradient_end
+hit_spark,22,0.28,0.35,150,0,-4.5,0,2.4,5.2,-720,720,0.45,1.35,0.16,0.045,ff8c14ff,2.5,ffffebff,ffd647ff,ff470abf,59050000

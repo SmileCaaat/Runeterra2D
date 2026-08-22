@@ -1,0 +1,12 @@
+effect_id,skill_id,order,trigger,effect_type,target_selector,damage_type,base_value,scaling_stat,scaling_coefficient,target_missing_health_coefficient,delay,interval,can_crit,nonlethal,buff_id,control_type,control_duration,hit_profile_id,tags
+breaker_cleanse,garen_breaker,10,on_cast,cleanse,self,none,0,,0,0,0,0,false,false,,slow,0,,cleanse
+breaker_speed,garen_breaker,20,on_cast,apply_buff,self,none,0,,0,0,0,0,false,false,breaker_speed,,0,,positive
+breaker_damage,garen_breaker,30,on_next_attack,damage,target,physical,115,attack_damage,0,0,0,0,true,false,,,0,breaker_hit,melee
+breaker_silence,garen_breaker,40,on_next_attack,apply_control,target,none,0,,0,0,0,0,false,false,,silence,1.5,,crowd_control
+black_sail_buff,garen_black_sail,10,on_cast,apply_buff,self,none,0,,0,0,0,0,false,false,black_sail,,0,,positive
+black_sail_rum_cleanse,garen_black_sail,20,on_cast,delayed_damage,self,none,0.30,,0,0,0,0,false,false,,,0,,cleanse_30_percent
+ocean_damage,garen_ocean_storm,10,periodic,damage,enemies_in_area,physical,48,attack_damage,0,0,0.5,0.5,true,false,,,0,ocean_hit,area
+judgment_damage,garen_tyrant_judgment,10,on_impact,damage,target,magic,130,ability_power,0,260,0.28,0,false,false,,,0,judgment_hit,execute
+seven_seas_damage,garen_seven_seas,10,on_impact,damage,enemies_in_area,physical,180,attack_damage,0,0,1.05,0,false,false,,,0,ghostship_hit,area
+seven_seas_stun,garen_seven_seas,20,on_impact,apply_control,enemies_in_area,none,0,,0,0,1.05,0,false,false,,stun,2.0,,crowd_control
+seven_seas_rum,garen_seven_seas,30,on_impact,apply_buff,self_and_allies,none,0,,0,0,1.05,0,false,false,seven_seas_rum,,0,,positive

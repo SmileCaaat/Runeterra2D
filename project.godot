@@ -1,0 +1,41 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Gemheart2D"
+run/main_scene="uid://bu24a6k8rjjgo"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+DialogueManager="*uid://c3rodes2l3gxb"
+PhantomCameraManager="*uid://duq6jhf6unyis"
+_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
+
+[display]
+
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/at-icons/plugin.cfg", "res://addons/combat_data/plugin.cfg", "res://addons/dialogue_manager/plugin.cfg", "res://addons/godot_ai/plugin.cfg", "res://addons/kanban_tasks/plugin.cfg", "res://addons/phantom_camera/plugin.cfg", "res://addons/yard/plugin.cfg")
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+rendering_device/driver.windows="d3d12"
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

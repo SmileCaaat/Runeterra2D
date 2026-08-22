@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://d2mwvmfk7x51t"
+
+[deps]
+
+files=["res://data/source/unit_stats.stat.translation", "res://data/source/unit_stats.base.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.conversion.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.notes.translation"]
+
+source_file="res://data/source/unit_stats.csv"
+dest_files=["res://data/source/unit_stats.stat.translation", "res://data/source/unit_stats.base.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.conversion.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.notes.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

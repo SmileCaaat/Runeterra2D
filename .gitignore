@@ -1,0 +1,32 @@
+# Godot 4 import cache and generated editor state
+.godot/
+/android/
+
+# Build and export output
+/build/
+/dist/
+/export/
+/exports/
+*.pck
+
+# Deterministic combat database generated from data/source/*.csv
+/data/generated/
+
+# Godot-generated translation resources emitted while importing CSV files
+*.translation
+
+# Optional third-party library; currently not referenced by project resources
+/addons/Sound FX Starter Pack Vol. 1/
+
+# Local editor and operating-system state
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+*~

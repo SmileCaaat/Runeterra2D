@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://hdniwijnrmq8"
+
+[deps]
+
+files=["res://data/source/ai_profiles.behavior.translation", "res://data/source/ai_profiles.chase.translation", "res://data/source/ai_profiles.waypoint.translation", "res://data/source/ai_profiles.wander.translation", "res://data/source/ai_profiles.wander.translation", "res://data/source/ai_profiles.arena.translation", "res://data/source/ai_profiles.arena.translation", "res://data/source/ai_profiles.arena.translation", "res://data/source/ai_profiles.arena.translation", "res://data/source/ai_profiles.demo.translation", "res://data/source/ai_profiles.skill.translation", "res://data/source/ai_profiles.deterministic.translation"]
+
+source_file="res://data/source/ai_profiles.csv"
+dest_files=["res://data/source/ai_profiles.behavior.translation", "res://data/source/ai_profiles.chase.translation", "res://data/source/ai_profiles.waypoint.translation", "res://data/source/ai_profiles.wander.translation", "res://data/source/ai_profiles.wander.translation", "res://data/source/ai_profiles.arena.translation", "res://data/source/ai_profiles.arena.translation", "res://data/source/ai_profiles.arena.translation", "res://data/source/ai_profiles.arena.translation", "res://data/source/ai_profiles.demo.translation", "res://data/source/ai_profiles.skill.translation", "res://data/source/ai_profiles.deterministic.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

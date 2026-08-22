@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://nuaji47wl3gf"
+
+[deps]
+
+files=["res://data/source/asset_manifest.asset.translation", "res://data/source/asset_manifest.resource.translation", "res://data/source/asset_manifest.node.translation", "res://data/source/asset_manifest.animation.translation", "res://data/source/asset_manifest.audio.translation", "res://data/source/asset_manifest.volume.translation", "res://data/source/asset_manifest.pitch.translation", "res://data/source/asset_manifest.pitch.translation", "res://data/source/asset_manifest.max.translation", "res://data/source/asset_manifest.scale.translation", "res://data/source/asset_manifest.scale.translation", "res://data/source/asset_manifest.scale.translation", "res://data/source/asset_manifest.offset.translation", "res://data/source/asset_manifest.offset.translation", "res://data/source/asset_manifest.pixel.translation", "res://data/source/asset_manifest.render.translation", "res://data/source/asset_manifest.nb.translation", "res://data/source/asset_manifest.shader.translation", "res://data/source/asset_manifest.lifecycle.translation", "res://data/source/asset_manifest.duration.translation", "res://data/source/asset_manifest.flip.translation"]
+
+source_file="res://data/source/asset_manifest.csv"
+dest_files=["res://data/source/asset_manifest.asset.translation", "res://data/source/asset_manifest.resource.translation", "res://data/source/asset_manifest.node.translation", "res://data/source/asset_manifest.animation.translation", "res://data/source/asset_manifest.audio.translation", "res://data/source/asset_manifest.volume.translation", "res://data/source/asset_manifest.pitch.translation", "res://data/source/asset_manifest.pitch.translation", "res://data/source/asset_manifest.max.translation", "res://data/source/asset_manifest.scale.translation", "res://data/source/asset_manifest.scale.translation", "res://data/source/asset_manifest.scale.translation", "res://data/source/asset_manifest.offset.translation", "res://data/source/asset_manifest.offset.translation", "res://data/source/asset_manifest.pixel.translation", "res://data/source/asset_manifest.render.translation", "res://data/source/asset_manifest.nb.translation", "res://data/source/asset_manifest.shader.translation", "res://data/source/asset_manifest.lifecycle.translation", "res://data/source/asset_manifest.duration.translation", "res://data/source/asset_manifest.flip.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

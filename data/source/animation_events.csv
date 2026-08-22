@@ -1,0 +1,14 @@
+event_id,owner_id,animation_name,event_type,timing_mode,timing_value,end_value,payload_id,vector_x,vector_y,vector_z,float_value
+attack1_hit,garen,attack1,hit,normalized,0.55,0.68,basic_melee,0,0,0,0
+attack1_audio,garen,attack1,audio,normalized,0.45,0,garen_attack_audio,0,0,0,1.08
+attack1_cancel,garen,attack1,cancel_open,normalized,0.72,0.95,attack_chain,0,0,0,0
+attack2_hit,garen,attack2,hit,normalized,0.55,0.68,basic_melee,0,0,0,0
+attack2_audio,garen,attack2,audio,normalized,0.45,0,garen_attack_audio,0,0,0,1.0
+attack2_cancel,garen,attack2,cancel_open,normalized,0.72,0.95,attack_chain,0,0,0,0
+attack3_hit,garen,attack3,hit,normalized,0.55,0.70,basic_melee,0,0,0,0
+attack3_audio,garen,attack3,audio,normalized,0.45,0,garen_attack_audio,0,0,0,0.88
+spell1_hit,garen,spell1,hit,normalized,0.55,0.70,breaker_hit,0,0,0,0
+spell1_audio,garen,spell1,audio,normalized,0.45,0,garen_attack_audio,0,0,0,0.94
+spell3_tick,garen,spell3,hit,seconds,0.5,3.0,ocean_hit,0,0,0,0.5
+spell4_impact,garen,spell4,hit,seconds,0.28,0,judgment_hit,0,0,0,0
+taunt_ghostship,garen,taunt,vfx,seconds,0,1.70,ghostship,0,0,0,0

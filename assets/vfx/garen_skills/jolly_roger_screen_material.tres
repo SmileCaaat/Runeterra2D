@@ -1,0 +1,13 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://assets/vfx/garen_skills/garen_vfx_screen_key.gdshader" id="1_shader"]
+
+[resource]
+resource_local_to_scene = true
+render_priority = -1
+shader = ExtResource("1_shader")
+shader_parameter/black_cutoff = 0.045
+shader_parameter/black_feather = 0.16
+shader_parameter/edge_erosion = 0.35
+shader_parameter/alpha_feather = 0.08
+shader_parameter/tint = Color(1, 1, 1, 0.92)

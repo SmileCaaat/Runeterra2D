@@ -1,0 +1,3 @@
+unit_id,display_name,unit_type,role,resource_type,range_type,level,ai_profile_id,skill_ids
+garen,盖伦,hero,juggernaut,none,melee,1,garen_demo,garen_breaker|garen_black_sail|garen_ocean_storm|garen_tyrant_judgment|garen_seven_seas
+training_dummy,移动木桩,training_dummy,training,none,melee,1,dummy_wander,

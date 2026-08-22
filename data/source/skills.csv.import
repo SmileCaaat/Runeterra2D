@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://boxh5gwb4fdow"
+
+[deps]
+
+files=["res://data/source/skills.owner.translation", "res://data/source/skills.slot.translation", "res://data/source/skills.display.translation", "res://data/source/skills.target.translation", "res://data/source/skills.cast.translation", "res://data/source/skills.cooldown.translation", "res://data/source/skills.cast.translation", "res://data/source/skills.recovery.translation", "res://data/source/skills.cast.translation", "res://data/source/skills.radius.translation", "res://data/source/skills.duration.translation", "res://data/source/skills.tick.translation", "res://data/source/skills.resource.translation", "res://data/source/skills.movement.translation", "res://data/source/skills.facing.translation", "res://data/source/skills.snapshot.translation", "res://data/source/skills.windup.translation", "res://data/source/skills.animation.translation", "res://data/source/skills.movement.translation", "res://data/source/skills.empowered.translation", "res://data/source/skills.travel.translation", "res://data/source/skills.travel.translation", "res://data/source/skills.vfx.translation", "res://data/source/skills.audio.translation", "res://data/source/skills.tags.translation"]
+
+source_file="res://data/source/skills.csv"
+dest_files=["res://data/source/skills.owner.translation", "res://data/source/skills.slot.translation", "res://data/source/skills.display.translation", "res://data/source/skills.target.translation", "res://data/source/skills.cast.translation", "res://data/source/skills.cooldown.translation", "res://data/source/skills.cast.translation", "res://data/source/skills.recovery.translation", "res://data/source/skills.cast.translation", "res://data/source/skills.radius.translation", "res://data/source/skills.duration.translation", "res://data/source/skills.tick.translation", "res://data/source/skills.resource.translation", "res://data/source/skills.movement.translation", "res://data/source/skills.facing.translation", "res://data/source/skills.snapshot.translation", "res://data/source/skills.windup.translation", "res://data/source/skills.animation.translation", "res://data/source/skills.movement.translation", "res://data/source/skills.empowered.translation", "res://data/source/skills.travel.translation", "res://data/source/skills.travel.translation", "res://data/source/skills.vfx.translation", "res://data/source/skills.audio.translation", "res://data/source/skills.tags.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

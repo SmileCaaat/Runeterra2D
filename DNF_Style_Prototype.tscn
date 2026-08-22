@@ -1,0 +1,430 @@
+[gd_scene format=3 uid="uid://bu24a6k8rjjgo"]
+
+[ext_resource type="SpriteFrames" path="res://assets/characters/rogue_admiral_garen/garen_sprite_frames.tres" id="1_08h5l"]
+[ext_resource type="Texture2D" uid="uid://s6tqtqunb51r" path="res://assets/fx/soft_ground_shadow.svg" id="2_shadow"]
+[ext_resource type="Script" uid="uid://dv8xxg0p6k8ch" path="res://scripts/characters/garen_combat_ai.gd" id="3_garen_ai"]
+[ext_resource type="Script" uid="uid://c4o8q0ogr3iwp" path="res://scripts/characters/moving_training_dummy.gd" id="4_dummy_ai"]
+[ext_resource type="Script" path="res://scripts/vfx/hit_spark_particles.gd" id="5_hit_spark"]
+[ext_resource type="AudioStream" path="res://assets/audio/combat/garen_attack_swing.wav" id="6_attack_audio"]
+[ext_resource type="AudioStream" path="res://assets/audio/combat/training_dummy_hit.wav" id="7_hit_audio"]
+[ext_resource type="Script" path="res://scripts/characters/garen_skill_controller.gd" id="8_skill_controller"]
+[ext_resource type="SpriteFrames" path="res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres" id="9_skill_vfx"]
+[ext_resource type="AudioStream" path="res://assets/audio/skills/garen/spell_JollyRoger.mp3" id="10_jolly_audio"]
+[ext_resource type="AudioStream" path="res://assets/audio/skills/garen/spell_OceanStorm.mp3" id="11_ocean_audio"]
+[ext_resource type="AudioStream" path="res://assets/audio/skills/garen/spell_anchor.mp3" id="12_anchor_audio"]
+[ext_resource type="AudioStream" path="res://assets/audio/skills/garen/spell_Ghost ship.mp3" id="13_ghostship_audio"]
+[ext_resource type="Material" path="res://assets/vfx/garen_skills/jolly_roger_screen_material.tres" id="14_jolly_material"]
+[ext_resource type="Material" path="res://assets/vfx/garen_skills/skill_vfx_soft_material.tres" id="15_soft_vfx_material"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_qf7t4"]
+sky_top_color = Color(0.11372549, 0.15294118, 0.21960784, 1)
+sky_horizon_color = Color(0.8392157, 0.6039216, 0.4392157, 1)
+ground_bottom_color = Color(0.105882354, 0.1254902, 0.15294118, 1)
+ground_horizon_color = Color(0.5019608, 0.45490196, 0.42745098, 1)
+
+[sub_resource type="Sky" id="Sky_6n0m8"]
+sky_material = SubResource("ProceduralSkyMaterial_qf7t4")
+
+[sub_resource type="Environment" id="Environment_kfaxl"]
+background_mode = 2
+sky = SubResource("Sky_6n0m8")
+ambient_light_source = 3
+ambient_light_color = Color(1, 0.75, 0.55, 1)
+ambient_light_energy = 0.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bofcl"]
+albedo_color = Color(0.32156864, 0.4, 0.34117648, 1)
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="BoxMesh_waa6q"]
+size = Vector3(32, 0.5, 10)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_08h5l"]
+size = Vector3(32, 0.5, 10)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5iwge"]
+albedo_color = Color(0.53333336, 0.4627451, 0.3882353, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_7akea"]
+size = Vector3(32, 3, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_3ktlg"]
+size = Vector3(32, 3, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cxo5v"]
+albedo_color = Color(0.53333336, 0.4627451, 0.3882353, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_ugsgx"]
+size = Vector3(0.5, 3, 10)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_io5tl"]
+size = Vector3(0.5, 3, 10)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7bxuh"]
+albedo_color = Color(0.43137255, 0.44313726, 0.52156866, 1)
+roughness = 0.82
+
+[sub_resource type="BoxMesh" id="BoxMesh_mft58"]
+size = Vector3(5, 0.6, 2.4)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_q1pas"]
+size = Vector3(5, 0.6, 2.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1rdkv"]
+albedo_color = Color(0.60784316, 0.3882353, 0.24705882, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_uabv3"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_icore"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rqely"]
+albedo_color = Color(0.41568628, 0.4392157, 0.5019608, 1)
+roughness = 0.75
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_txnb4"]
+top_radius = 0.65
+bottom_radius = 0.8
+height = 3.0
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_rsc8a"]
+height = 3.0
+radius = 0.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mpsvy"]
+albedo_color = Color(0.2627451, 0.8392157, 0.77254903, 1)
+emission_enabled = true
+emission = Color(0.2627451, 0.8392157, 0.77254903, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_sgxp5"]
+top_radius = 0.7
+bottom_radius = 0.7
+height = 0.08
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_jwj68"]
+height = 0.35
+radius = 0.85
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_oeiho"]
+size = Vector3(32, 3, 0.3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_7p3l8"]
+size = Vector3(0.3, 3, 10)
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_e143n"]
+radius = 0.42
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_84wp2"]
+albedo_color = Color(0.30980393, 0.5137255, 0.8, 1)
+metallic = 0.05
+roughness = 0.48
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_cwoja"]
+radius = 0.42
+height = 1.8
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_jpoia"]
+radius = 0.45
+height = 1.9
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_k3seb"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nocdf"]
+albedo_color = Color(0.78431374, 0.36078432, 0.38431373, 1)
+metallic = 0.03
+roughness = 0.52
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_c75ux"]
+radius = 0.45
+height = 1.9
+
+[node name="HD2D_Prototype" type="Node3D" unique_id=894535074]
+
+[node name="Environment" type="WorldEnvironment" parent="." unique_id=1249872615]
+environment = SubResource("Environment_kfaxl")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=816691586]
+transform = Transform3D(0.8525245, 0.3926847, -0.34496474, 0, 0.6599831, 0.7512804, 0.52268726, -0.640485, 0.56265175, 0, 0, 0)
+light_color = Color(1, 0.84705883, 0.70980394, 1)
+light_energy = 1.35
+shadow_enabled = true
+directional_shadow_max_distance = 40.0
+
+[node name="CameraRig" type="Node3D" parent="." unique_id=1526143358]
+
+[node name="DNFCamera" type="Camera3D" parent="CameraRig" unique_id=2113061531]
+transform = Transform3D(1, 0, 0, 0, 0.9286646, 0.37092048, 0, -0.37092048, 0.9286646, 0, 7, 16)
+projection = 1
+size = 10.5
+near = 0.1
+far = 100.0
+
+[node name="World" type="Node3D" parent="." unique_id=757758082]
+
+[node name="Ground" type="StaticBody3D" parent="World" unique_id=569610042]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 0)
+
+[node name="GroundMesh" type="MeshInstance3D" parent="World/Ground" unique_id=902324901]
+material_override = SubResource("StandardMaterial3D_bofcl")
+mesh = SubResource("BoxMesh_waa6q")
+
+[node name="GroundCollision" type="CollisionShape3D" parent="World/Ground" unique_id=1406786955]
+shape = SubResource("BoxShape3D_08h5l")
+
+[node name="Architecture" type="Node3D" parent="World" unique_id=1588551863]
+
+[node name="BackWall" type="StaticBody3D" parent="World/Architecture" unique_id=1624611856 groups=["stage_bound"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -5)
+
+[node name="BackWallMesh" type="MeshInstance3D" parent="World/Architecture/BackWall" unique_id=1112157619]
+material_override = SubResource("StandardMaterial3D_5iwge")
+mesh = SubResource("BoxMesh_7akea")
+
+[node name="BackWallCollision" type="CollisionShape3D" parent="World/Architecture/BackWall" unique_id=94891684]
+shape = SubResource("BoxShape3D_3ktlg")
+
+[node name="LeftWall" type="StaticBody3D" parent="World/Architecture" unique_id=1061311947 groups=["stage_bound"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 1.5, 0)
+
+[node name="LeftWallMesh" type="MeshInstance3D" parent="World/Architecture/LeftWall" unique_id=1694868262]
+material_override = SubResource("StandardMaterial3D_cxo5v")
+mesh = SubResource("BoxMesh_ugsgx")
+
+[node name="LeftWallCollision" type="CollisionShape3D" parent="World/Architecture/LeftWall" unique_id=248935373]
+shape = SubResource("BoxShape3D_io5tl")
+
+[node name="RaisedPlatform" type="StaticBody3D" parent="World/Architecture" unique_id=2093223377]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.3, 1.8)
+
+[node name="PlatformMesh" type="MeshInstance3D" parent="World/Architecture/RaisedPlatform" unique_id=671237360]
+material_override = SubResource("StandardMaterial3D_7bxuh")
+mesh = SubResource("BoxMesh_mft58")
+
+[node name="PlatformCollision" type="CollisionShape3D" parent="World/Architecture/RaisedPlatform" unique_id=911900502]
+shape = SubResource("BoxShape3D_q1pas")
+
+[node name="Props" type="Node3D" parent="World" unique_id=1604222721]
+
+[node name="Crate01" type="StaticBody3D" parent="World/Props" unique_id=158263051]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.6, -2.5)
+
+[node name="CrateMesh" type="MeshInstance3D" parent="World/Props/Crate01" unique_id=989741326]
+material_override = SubResource("StandardMaterial3D_1rdkv")
+mesh = SubResource("BoxMesh_uabv3")
+
+[node name="CrateCollision" type="CollisionShape3D" parent="World/Props/Crate01" unique_id=124050296]
+shape = SubResource("BoxShape3D_icore")
+
+[node name="Pillar01" type="StaticBody3D" parent="World/Props" unique_id=1835874672]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.5, -3.2)
+
+[node name="PillarMesh" type="MeshInstance3D" parent="World/Props/Pillar01" unique_id=25703490]
+material_override = SubResource("StandardMaterial3D_rqely")
+mesh = SubResource("CylinderMesh_txnb4")
+
+[node name="PillarCollision" type="CollisionShape3D" parent="World/Props/Pillar01" unique_id=204072314]
+shape = SubResource("CylinderShape3D_rsc8a")
+
+[node name="InteractionMarker" type="Area3D" parent="World/Props" unique_id=1176157600]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 2.7)
+
+[node name="MarkerMesh" type="MeshInstance3D" parent="World/Props/InteractionMarker" unique_id=1972706940]
+material_override = SubResource("StandardMaterial3D_mpsvy")
+mesh = SubResource("CylinderMesh_sgxp5")
+
+[node name="MarkerCollision" type="CollisionShape3D" parent="World/Props/InteractionMarker" unique_id=1200548865]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+shape = SubResource("CylinderShape3D_jwj68")
+
+[node name="StageBounds" type="Node3D" parent="World" unique_id=457186866]
+
+[node name="FrontLimit" type="StaticBody3D" parent="World/StageBounds" unique_id=1651334607 groups=["stage_bound"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 5)
+
+[node name="FrontCollision" type="CollisionShape3D" parent="World/StageBounds/FrontLimit" unique_id=500654158]
+shape = SubResource("BoxShape3D_oeiho")
+
+[node name="RightLimit" type="StaticBody3D" parent="World/StageBounds" unique_id=1852562971 groups=["stage_bound"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 1.5, 0)
+
+[node name="RightCollision" type="CollisionShape3D" parent="World/StageBounds/RightLimit" unique_id=1958799174]
+shape = SubResource("BoxShape3D_7p3l8")
+
+[node name="Characters" type="Node3D" parent="." unique_id=1662463035]
+
+[node name="Player" type="CharacterBody3D" parent="Characters" unique_id=1535866590 groups=["depth_sort_actor", "player_actor"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 1.2)
+floor_snap_length = 0.3
+script = ExtResource("3_garen_ai")
+
+[node name="PlayerCollision" type="CollisionShape3D" parent="Characters/Player" unique_id=15898383]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_e143n")
+
+[node name="CharacterFrames" type="AnimatedSprite3D" parent="Characters/Player" unique_id=1316070057]
+cast_shadow = 0
+offset = Vector2(234.5, 1078)
+pixel_size = 0.004
+billboard = 1
+sprite_frames = ExtResource("1_08h5l")
+animation = &"attack3"
+autoplay = "idle1"
+
+[node name="EditorPlaceholder" type="MeshInstance3D" parent="Characters/Player" unique_id=498754722]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+visible = false
+material_override = SubResource("StandardMaterial3D_84wp2")
+mesh = SubResource("CapsuleMesh_cwoja")
+
+[node name="GroundShadow" type="Sprite3D" parent="Characters/Player" unique_id=786767560]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.018, 0)
+cast_shadow = 0
+pixel_size = 0.005
+texture_filter = 1
+texture = ExtResource("2_shadow")
+
+[node name="AIStateLabel" type="Label3D" parent="Characters/Player" unique_id=286567726]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.45, 0)
+billboard = 1
+no_depth_test = true
+modulate = Color(0.55, 0.95, 1, 1)
+text = "AI · CHASE"
+font_size = 28
+outline_size = 8
+
+[node name="AttackAudio" type="AudioStreamPlayer3D" parent="Characters/Player"]
+stream = ExtResource("6_attack_audio")
+volume_db = -3.0
+max_distance = 18.0
+
+[node name="SkillController" type="Node3D" parent="Characters/Player"]
+script = ExtResource("8_skill_controller")
+
+[node name="JollyRoger" type="AnimatedSprite3D" parent="Characters/Player/SkillController"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
+visible = false
+cast_shadow = 0
+offset = Vector2(0, 602)
+pixel_size = 0.004
+billboard = 1
+render_priority = -1
+material_override = ExtResource("14_jolly_material")
+sprite_frames = ExtResource("9_skill_vfx")
+animation = &"spell2_JollyRoger"
+
+[node name="OceanStorm" type="AnimatedSprite3D" parent="Characters/Player/SkillController"]
+transform = Transform3D(1.4, 0, 0, 0, 1.4, 0, 0, 0, 1.4, 0, 0, 0.08)
+visible = false
+cast_shadow = 0
+offset = Vector2(0, 602)
+pixel_size = 0.0045
+billboard = 1
+render_priority = 1
+material_override = ExtResource("15_soft_vfx_material")
+sprite_frames = ExtResource("9_skill_vfx")
+animation = &"spell3_OceanStorm"
+
+[node name="Anchor" type="AnimatedSprite3D" parent="Characters/Player/SkillController"]
+visible = false
+cast_shadow = 0
+no_depth_test = true
+offset = Vector2(0, 602)
+pixel_size = 0.005
+billboard = 1
+render_priority = 2
+material_override = ExtResource("15_soft_vfx_material")
+sprite_frames = ExtResource("9_skill_vfx")
+animation = &"spell4_Anchor"
+
+[node name="Ghostship" type="AnimatedSprite3D" parent="Characters/Player/SkillController"]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0)
+visible = false
+cast_shadow = 0
+offset = Vector2(0, 602)
+pixel_size = 0.006
+billboard = 1
+render_priority = 2
+material_override = ExtResource("15_soft_vfx_material")
+sprite_frames = ExtResource("9_skill_vfx")
+animation = &"spell5_Ghostship"
+
+[node name="JollyRogerAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController"]
+stream = ExtResource("10_jolly_audio")
+volume_db = -2.0
+max_distance = 22.0
+
+[node name="OceanStormAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController"]
+stream = ExtResource("11_ocean_audio")
+volume_db = -2.0
+max_distance = 22.0
+
+[node name="AnchorAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController"]
+stream = ExtResource("12_anchor_audio")
+volume_db = -2.0
+max_distance = 22.0
+
+[node name="GhostshipAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController"]
+stream = ExtResource("13_ghostship_audio")
+volume_db = -2.0
+max_distance = 24.0
+
+[node name="EnemyPlaceholder" type="CharacterBody3D" parent="Characters" unique_id=828778341 groups=["depth_sort_actor", "enemy_actor"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -1.2)
+floor_snap_length = 0.3
+script = ExtResource("4_dummy_ai")
+
+[node name="EnemyCollision" type="CollisionShape3D" parent="Characters/EnemyPlaceholder" unique_id=651763157]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+shape = SubResource("CapsuleShape3D_jpoia")
+
+[node name="EnemyFrames" type="AnimatedSprite3D" parent="Characters/EnemyPlaceholder" unique_id=26836086]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
+cast_shadow = 0
+billboard = 1
+sprite_frames = SubResource("SpriteFrames_k3seb")
+
+[node name="EnemyEditorPlaceholder" type="MeshInstance3D" parent="Characters/EnemyPlaceholder" unique_id=1516365438]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+material_override = SubResource("StandardMaterial3D_nocdf")
+mesh = SubResource("CapsuleMesh_c75ux")
+
+[node name="HitSparkParticles" type="CPUParticles3D" parent="Characters/EnemyPlaceholder"]
+emitting = false
+script = ExtResource("5_hit_spark")
+
+[node name="HitAudio" type="AudioStreamPlayer3D" parent="Characters/EnemyPlaceholder"]
+stream = ExtResource("7_hit_audio")
+volume_db = -1.5
+max_distance = 18.0
+
+[node name="DummyStateLabel" type="Label3D" parent="Characters/EnemyPlaceholder" unique_id=543598010]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.35, 0)
+billboard = 1
+no_depth_test = true
+modulate = Color(1, 0.65, 0.65, 1)
+text = "移动木桩 · WANDER"
+font_size = 26
+outline_size = 8
+
+[node name="Markers" type="Node3D" parent="." unique_id=1243213368]
+
+[node name="PlayerSpawn" type="Marker3D" parent="Markers" unique_id=1697401206]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 1.2)
+
+[node name="EnemySpawn" type="Marker3D" parent="Markers" unique_id=973322437]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -1.2)
+
+[node name="CameraFocus" type="Marker3D" parent="Markers" unique_id=231861186]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+
+[node name="DepthLaneNear" type="Marker3D" parent="Markers" unique_id=1869278567]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.5)
+
+[node name="DepthLaneFar" type="Marker3D" parent="Markers" unique_id=1365935374]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.5)

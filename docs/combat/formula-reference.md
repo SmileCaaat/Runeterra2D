@@ -1,0 +1,142 @@
+# 公式与来源索引
+
+本文记录当前 schema v2 中实际使用的公式。外部页面会随补丁更新，以下网址是语义入口而不是永久不变的数值快照；具体英雄数值以对应英雄档案的查阅日期为准。
+
+## 记号
+
+- `L`：英雄等级，当前规则限制为 1–18。
+- `n = L - 1`。
+- `B`：基础值，`G`：成长系数。
+- `AD`、`AP`：攻击力和法术强度。
+- `Hcur`、`Hmax`：目标当前和最大生命。
+- 比例统一存为小数，例如 35% 存为 `0.35`。
+
+## 来源入口
+
+| 来源 ID | 用途 | 网址 | 最近核对 |
+| --- | --- | --- | --- |
+| `LOL-CHAMPION-STATS` | 英雄属性分类与成长公式 | [Champion statistics](https://wiki.leagueoflegends.com/en-us/Category:Champion_statistics) / [Champion statistic](https://wiki.leagueoflegends.com/en-us/Champion_statistic) | 2026-08-23 |
+| `LOL-GAREN-DATA` | Garen 基础属性与数据字段 | [Template:Data Garen](https://wiki.leagueoflegends.com/en-us/Template:Data_Garen) | 2026-08-23 |
+| `LOL-ARMOR` | 正负护甲语义 | [Armor](https://wiki.leagueoflegends.com/en-us/Armor) | 使用前重新核对 |
+| `LOL-MR` | 正负魔抗语义 | [Magic resistance](https://wiki.leagueoflegends.com/en-us/Magic_resistance) | 使用前重新核对 |
+| `LOL-HASTE` | 技能急速语义 | [Ability haste](https://wiki.leagueoflegends.com/en-us/Ability_haste) | 使用前重新核对 |
+| `LOL-TENACITY` | 韧性与控制缩减语义 | [Tenacity](https://wiki.leagueoflegends.com/en-us/Tenacity) | 使用前重新核对 |
+| `LOL-CRIT` | 暴击概率和暴击伤害语义 | [Critical strike](https://wiki.leagueoflegends.com/en-us/Critical_strike) | 使用前重新核对 |
+
+## 已实现的通用公式
+
+### 主属性成长
+
+来源类型：`reference`，来源 `LOL-CHAMPION-STATS`。
+
+```text
+growth_factor(L) = n × (0.7025 + 0.0175 × n)
+stat(L) = B + G × growth_factor(L)
+```
+
+`0.7025`、`0.0175` 和等级上限位于 `combat_rules.csv`。运行位置是 `CombatDatabase.get_unit_stat_value()`；生命、生命回复、攻击力、护甲和魔抗等成长属性使用 `growth_formula=primary`。
+
+### 攻击速度成长
+
+来源类型：`reference`，来源 `LOL-CHAMPION-STATS` 和英雄数据模板。
+
+```text
+AS(L) = ASbase + (bonus_AS + ASgrowth × growth_factor(L)) × ASratio
+```
+
+当前单位初始值计算时 `bonus_AS=0`。Wiki 显示的百分比成长先规范化为比例，例如 `3.65% -> 0.0365`。
+
+### 正负抗性
+
+来源类型：`reference`，语义参考 `LOL-ARMOR` 与 `LOL-MR`；曲线常数 `C=100` 为当前 `combat_rules`。
+
+```text
+R >= 0: damage_after_resist = raw × C / (C + R)
+R < 0 : damage_after_resist = raw × (2 - C / (C - R))
+```
+
+物理伤害使用护甲，魔法伤害使用魔抗，真实伤害不进入此公式。当前穿透属性已经建模，但尚未接入最终伤害流水线；文档和测试不得宣称其已经生效。
+
+### 技能急速
+
+来源类型：`reference`，语义参考 `LOL-HASTE`；最低冷却是 Gemheart 项目限制。
+
+```text
+cooldown = max(minimum_cooldown, base_cooldown × 100 / (100 + ability_haste))
+```
+
+### 韧性
+
+来源类型：`adapted`，比例结构参考 `LOL-TENACITY`，80% 上限和 0.1 秒下限来自 Gemheart `combat_rules`。
+
+```text
+resolved_duration = max(0.1, base_duration × (1 - clamp(tenacity, 0, 0.8)))
+```
+
+仅允许缩减的控制才能使用该公式；击飞、固定演出或未来定义为不可缩减的控制必须在控制类型规则中明确排除。
+
+### 暴击与当前伤害顺序
+
+来源类型：暴击语义为 `reference`，最低伤害与结算顺序为 `project`。
+
+```text
+raw = configured_damage × (critical_damage if critical else 1)
+resisted = resistance_formula(raw)
+final = max(minimum_damage, resisted)
+```
+
+只有 `can_crit=true` 的攻击才进行暴击判定。当前训练木桩结算顺序是“暴击 -> 抗性 -> 最低伤害 -> 扣血”。穿透、护盾、吸血、伤害修正分层尚未形成完整通用流水线。
+
+### 通用技能伤害数据契约
+
+来源类型：`project`，用于承载参考英雄的常见公式结构。
+
+```text
+missing_ratio = 1 - Hcur / max(Hmax, 1)
+raw = base_value
+    + scaling_coefficient × scaling_stat
+    + target_missing_health_coefficient × missing_ratio
+```
+
+当前 `SkillEffectDefinition` 已具有这些字段，但运行时仍有部分技能由角色控制器显式执行。新增英雄不能假定通用效果执行器已经覆盖全部触发器；必须用测试证明实际接线。
+
+## 当前 Garen 项目公式
+
+| 项目技能 | 当前公式 | 来源类型 | 说明 |
+| --- | --- | --- | --- |
+| 破舰 | `raw = 115`，允许暴击；移速乘数 `1 + 0.35` | `simplified/reference` | 机制参考 Q，当前未接入 AD 和技能等级成长 |
+| 黑帆 | 承伤 `incoming × 0.70`；控制时长 `duration × 0.70`；被动抗性乘数 `1.20` | `adapted/reference` | 机制参考 W，项目采用固定比例 |
+| 翻江倒海 | `6` 次固定间隔伤害，每次 `48`，每次可暴击 | `simplified/reference` | `3.0 / 0.5 = 6`；未接入攻速转数、AD、最近目标增伤与破甲 |
+| 暴君审判 | `130 + 260 × missing_ratio` 魔法伤害 | `adapted/reference` | 保留终结结构，但伤害类型和等级结构不同于参考 R |
+| 七海霸权 | `180` 物理范围伤害并眩晕 `2.0s` | `project` | 原创扩展，没有外部公式来源 |
+
+Garen 技能入口：
+
+- [Perseverance](https://wiki.leagueoflegends.com/en-us/Template:Data_Garen/Perseverance)
+- [Decisive Strike](https://wiki.leagueoflegends.com/en-us/Template:Data_Garen/Decisive_Strike)
+- [Courage](https://wiki.leagueoflegends.com/en-us/Template:Data_Garen/Courage)
+- [Judgment](https://wiki.leagueoflegends.com/en-us/Template:Data_Garen/Judgment)
+- [Demacian Justice](https://wiki.leagueoflegends.com/en-us/Template:Data_Garen/Demacian_Justice)
+
+## 项目自有动作公式
+
+以下内容是 Gemheart 的横版动作规则，没有对应 LoL Wiki 公式：
+
+- 命中有效区间：动画归一化时间满足 `active_start <= t <= active_end`。
+- 击退：初速度来自 `knockback_speed`，每帧向零衰减 `knockback_decay × delta`。
+- 纵深判定：攻击者和目标在 Z 轴或平面距离上必须满足 `depth_tolerance` 与命中形状。
+- 朗姆酒延迟伤害：伤害进入 `delayed_damage_pool`，在剩余 Buff 时间内按剩余池比例摊销，生命下限为 `1`；黑帆可令池中伤害乘以 `0.70`。
+- hitstop、hitstun、poise damage、launch velocity 和取消窗口均来自命中/动画事件配表，不从 LoL 数值推导。
+
+## 尚未完成的公式语义
+
+以下属性已经拥有 stat ID，但尚未形成完整、统一且经过测试的运行时公式：
+
+- 固定/百分比护甲和魔抗穿透的结算顺序。
+- 生命偷取、物理吸血、全能吸血与范围技能衰减。
+- 治疗/护盾强度、多护盾 FIFO 和护盾破裂。
+- 霸体恢复、削韧、击退抗性和击飞抗性的统一结算。
+- Buff 的 `flat -> add_percent -> multiply -> override` 完整聚合器。
+- 技能等级数组与英雄等级分段公式。
+
+这些条目只能标为“已建模/待实现”，不能在设计说明中写成“系统已支持”。
