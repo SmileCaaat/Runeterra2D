@@ -4,102 +4,102 @@
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 70,
-      "timeMs": 35,
+      "duration": 80,
+      "timeMs": 40,
       "sourceFrameIndex": 0,
       "rotated": false,
       "trimmed": false
     },
     "frame_0002.png": {
       "frame": {
-        "x": 1768,
+        "x": 1670,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
       "duration": 80,
-      "timeMs": 110,
+      "timeMs": 120,
       "sourceFrameIndex": 1,
       "rotated": false,
       "trimmed": false
     },
     "frame_0003.png": {
       "frame": {
-        "x": 3536,
+        "x": 3340,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 90,
-      "timeMs": 195,
+      "duration": 80,
+      "timeMs": 200,
       "sourceFrameIndex": 2,
       "rotated": false,
       "trimmed": false
     },
     "frame_0004.png": {
       "frame": {
-        "x": 5304,
+        "x": 5010,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 290,
+      "duration": 80,
+      "timeMs": 280,
       "sourceFrameIndex": 3,
       "rotated": false,
       "trimmed": false
     },
     "frame_0005.png": {
       "frame": {
-        "x": 7072,
+        "x": 6680,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 390,
+      "duration": 80,
+      "timeMs": 360,
       "sourceFrameIndex": 4,
       "rotated": false,
       "trimmed": false
     },
     "frame_0006.png": {
       "frame": {
-        "x": 8840,
+        "x": 8350,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 490,
+      "duration": 80,
+      "timeMs": 440,
       "sourceFrameIndex": 5,
       "rotated": false,
       "trimmed": false
     },
     "frame_0007.png": {
       "frame": {
-        "x": 10608,
+        "x": 10020,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 590,
+      "duration": 80,
+      "timeMs": 520,
       "sourceFrameIndex": 6,
       "rotated": false,
       "trimmed": false
     },
     "frame_0008.png": {
       "frame": {
-        "x": 12376,
+        "x": 11690,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 690,
+      "duration": 80,
+      "timeMs": 600,
       "sourceFrameIndex": 7,
       "rotated": false,
       "trimmed": false
@@ -107,38 +107,38 @@
     "frame_0009.png": {
       "frame": {
         "x": 0,
-        "y": 2480,
-        "w": 1768,
-        "h": 2480
+        "y": 2167,
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 790,
+      "duration": 80,
+      "timeMs": 680,
       "sourceFrameIndex": 8,
       "rotated": false,
       "trimmed": false
     },
     "frame_0010.png": {
       "frame": {
-        "x": 1768,
-        "y": 2480,
-        "w": 1768,
-        "h": 2480
+        "x": 1670,
+        "y": 2167,
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 890,
+      "duration": 80,
+      "timeMs": 760,
       "sourceFrameIndex": 9,
       "rotated": false,
       "trimmed": false
     },
     "frame_0011.png": {
       "frame": {
-        "x": 3536,
-        "y": 2480,
-        "w": 1768,
-        "h": 2480
+        "x": 3340,
+        "y": 2167,
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 990,
+      "duration": 80,
+      "timeMs": 840,
       "sourceFrameIndex": 10,
       "rotated": false,
       "trimmed": false
@@ -150,14 +150,14 @@
     "image": "spritesheet.png",
     "format": "RGBA8888",
     "size": {
-      "w": 14144,
-      "h": 4960
+      "w": 13360,
+      "h": 4334
     },
     "canvas": {
-      "width": 1768,
-      "height": 2480,
-      "originPixelX": 520,
-      "originPixelY": 2318,
+      "width": 1670,
+      "height": 2167,
+      "originPixelX": 647,
+      "originPixelY": 2004,
       "padding": 8
     }
   },

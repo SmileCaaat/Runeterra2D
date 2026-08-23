@@ -4,102 +4,102 @@
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 50,
+      "duration": 67,
+      "timeMs": 33,
       "sourceFrameIndex": 0,
       "rotated": false,
       "trimmed": false
     },
     "frame_0002.png": {
       "frame": {
-        "x": 1768,
+        "x": 1670,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 150,
+      "duration": 66,
+      "timeMs": 100,
       "sourceFrameIndex": 1,
       "rotated": false,
       "trimmed": false
     },
     "frame_0003.png": {
       "frame": {
-        "x": 3536,
+        "x": 3340,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 250,
+      "duration": 67,
+      "timeMs": 167,
       "sourceFrameIndex": 2,
       "rotated": false,
       "trimmed": false
     },
     "frame_0004.png": {
       "frame": {
-        "x": 5304,
+        "x": 5010,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 350,
+      "duration": 67,
+      "timeMs": 233,
       "sourceFrameIndex": 3,
       "rotated": false,
       "trimmed": false
     },
     "frame_0005.png": {
       "frame": {
-        "x": 7072,
+        "x": 6680,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 450,
+      "duration": 66,
+      "timeMs": 300,
       "sourceFrameIndex": 4,
       "rotated": false,
       "trimmed": false
     },
     "frame_0006.png": {
       "frame": {
-        "x": 8840,
+        "x": 8350,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 550,
+      "duration": 67,
+      "timeMs": 367,
       "sourceFrameIndex": 5,
       "rotated": false,
       "trimmed": false
     },
     "frame_0007.png": {
       "frame": {
-        "x": 10608,
+        "x": 10020,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 650,
+      "duration": 67,
+      "timeMs": 433,
       "sourceFrameIndex": 6,
       "rotated": false,
       "trimmed": false
     },
     "frame_0008.png": {
       "frame": {
-        "x": 12376,
+        "x": 11690,
         "y": 0,
-        "w": 1768,
-        "h": 2480
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 750,
+      "duration": 66,
+      "timeMs": 500,
       "sourceFrameIndex": 7,
       "rotated": false,
       "trimmed": false
@@ -107,51 +107,51 @@
     "frame_0009.png": {
       "frame": {
         "x": 0,
-        "y": 2480,
-        "w": 1768,
-        "h": 2480
+        "y": 2167,
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 850,
+      "duration": 67,
+      "timeMs": 567,
       "sourceFrameIndex": 8,
       "rotated": false,
       "trimmed": false
     },
     "frame_0010.png": {
       "frame": {
-        "x": 1768,
-        "y": 2480,
-        "w": 1768,
-        "h": 2480
+        "x": 1670,
+        "y": 2167,
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 950,
+      "duration": 67,
+      "timeMs": 633,
       "sourceFrameIndex": 9,
       "rotated": false,
       "trimmed": false
     },
     "frame_0011.png": {
       "frame": {
-        "x": 3536,
-        "y": 2480,
-        "w": 1768,
-        "h": 2480
+        "x": 3340,
+        "y": 2167,
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 1050,
+      "duration": 66,
+      "timeMs": 700,
       "sourceFrameIndex": 10,
       "rotated": false,
       "trimmed": false
     },
     "frame_0012.png": {
       "frame": {
-        "x": 5304,
-        "y": 2480,
-        "w": 1768,
-        "h": 2480
+        "x": 5010,
+        "y": 2167,
+        "w": 1670,
+        "h": 2167
       },
-      "duration": 100,
-      "timeMs": 1150,
+      "duration": 67,
+      "timeMs": 767,
       "sourceFrameIndex": 11,
       "rotated": false,
       "trimmed": false
@@ -163,14 +163,14 @@
     "image": "spritesheet.png",
     "format": "RGBA8888",
     "size": {
-      "w": 14144,
-      "h": 4960
+      "w": 13360,
+      "h": 4334
     },
     "canvas": {
-      "width": 1768,
-      "height": 2480,
-      "originPixelX": 520,
-      "originPixelY": 2318,
+      "width": 1670,
+      "height": 2167,
+      "originPixelX": 647,
+      "originPixelY": 2004,
       "padding": 8
     }
   },
