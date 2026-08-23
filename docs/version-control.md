@@ -20,7 +20,7 @@ Godot `.import` sidecar files and `.uid` files are project metadata and should r
 After a clean clone, rebuild the combat database before running the prototype:
 
 ```powershell
-Godot_v4.7-stable_win64_console.exe --headless --path D:\godot_projects\gemheart2d --script res://scripts/tools/build_combat_database.gd
+Godot_v4.7-stable_win64_console.exe --headless --path . --script res://scripts/tools/build_combat_database.gd
 ```
 
 ## Commit discipline
@@ -31,4 +31,4 @@ Godot_v4.7-stable_win64_console.exe --headless --path D:\godot_projects\gemheart
 - Prefer small commits that describe an outcome, for example `feat(combat): add Garen stat growth data`.
 - Run the relevant headless tests before committing combat-system changes.
 
-No remote repository is configured by default. Add one only after choosing the hosting location and repository visibility.
+The `origin` remote is the public repository `https://github.com/SmileCaaat/Runeterra2D`.
