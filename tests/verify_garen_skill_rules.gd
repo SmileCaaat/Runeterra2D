@@ -91,6 +91,7 @@ func _initialize() -> void:
 		filter_clip_ok = filter_clip_ok and frame_texture != null and frame_texture.filter_clip
 	var shader_ok := true
 	var canvas_fade_ok := true
+	var inward_edge_ok := true
 	var ground_occlusion_ok := true
 	for effect_name: StringName in [&"JollyRoger", &"OceanStorm", &"Anchor", &"Ghostship"]:
 		var effect := skills.get_node(NodePath(effect_name)) as AnimatedSprite3D
@@ -122,6 +123,10 @@ func _initialize() -> void:
 			shader_ok = shader_ok and material.shader != null
 			var canvas_clear_value: Variant = material.get_shader_parameter(&"canvas_edge_clear")
 			var canvas_fade_value: Variant = material.get_shader_parameter(&"canvas_edge_fade")
+			var inward_base_value: Variant = material.get_shader_parameter(&"canvas_inward_base")
+			var inward_warp_value: Variant = material.get_shader_parameter(&"canvas_inward_warp")
+			var inward_softness_value: Variant = material.get_shader_parameter(&"canvas_inward_softness")
+			var inward_frequency_value: Variant = material.get_shader_parameter(&"canvas_inward_frequency")
 			var frame_uv_rect_value: Variant = material.get_shader_parameter(&"frame_uv_rect")
 			var ground_height_value: Variant = material.get_shader_parameter(&"ground_height")
 			var ground_alpha_value: Variant = material.get_shader_parameter(&"ground_occluded_alpha")
@@ -132,6 +137,18 @@ func _initialize() -> void:
 				canvas_fade_ok = canvas_fade_ok and is_equal_approx(float(canvas_clear_value), 0.08)
 			if canvas_fade_value is float:
 				canvas_fade_ok = canvas_fade_ok and is_equal_approx(float(canvas_fade_value), 0.28)
+			inward_edge_ok = inward_edge_ok and inward_base_value is float and inward_warp_value is float
+			inward_edge_ok = inward_edge_ok and inward_softness_value is float and inward_frequency_value is float
+			if inward_base_value is float and inward_warp_value is float:
+				if effect_name == &"Anchor":
+					inward_edge_ok = inward_edge_ok and is_equal_approx(float(inward_base_value), 0.025)
+					inward_edge_ok = inward_edge_ok and is_equal_approx(float(inward_warp_value), 0.055)
+				elif effect_name == &"Ghostship":
+					inward_edge_ok = inward_edge_ok and is_equal_approx(float(inward_base_value), 0.04)
+					inward_edge_ok = inward_edge_ok and is_equal_approx(float(inward_warp_value), 0.085)
+				else:
+					inward_edge_ok = inward_edge_ok and is_zero_approx(float(inward_base_value))
+					inward_edge_ok = inward_edge_ok and is_zero_approx(float(inward_warp_value))
 			var frame_texture := effect.sprite_frames.get_frame_texture(effect.animation, effect.frame) as AtlasTexture
 			canvas_fade_ok = canvas_fade_ok and frame_texture != null and frame_uv_rect_value is Vector4
 			if frame_texture != null and frame_uv_rect_value is Vector4:
@@ -157,16 +174,17 @@ func _initialize() -> void:
 			if show_over_models_value is bool:
 				ground_occlusion_ok = ground_occlusion_ok and bool(show_over_models_value) == effect.no_depth_test
 
-	print("SKILL_RULES breaker=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s vfx_anchor=%s ghost_area=%s moving_storm=%s layering=%s filter=%s shader=%s canvas_fade=%s ground_occlusion=%s" % [
+	print("SKILL_RULES breaker=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s vfx_anchor=%s ghost_area=%s moving_storm=%s layering=%s filter=%s shader=%s canvas_fade=%s inward_edge=%s ground_occlusion=%s" % [
 		breaker_ok, passive_ok, reduction_ok, rum_ok, cleanse_ok, nonlethal_ok, judgment_ok,
 		jolly_duration_ok, anchor_follow_ok, ghost_flip_ok, vfx_anchor_ok, ghost_area_ok,
-		moving_storm_ok, layering_ok, filter_clip_ok, shader_ok, canvas_fade_ok, ground_occlusion_ok,
+		moving_storm_ok, layering_ok, filter_clip_ok, shader_ok, canvas_fade_ok, inward_edge_ok, ground_occlusion_ok,
 	])
 	var passed := breaker_ok and passive_ok and reduction_ok and rum_ok
 	passed = passed and cleanse_ok and nonlethal_ok and judgment_ok
 	passed = passed and jolly_duration_ok and anchor_follow_ok and ghost_flip_ok
 	passed = passed and vfx_anchor_ok and ghost_area_ok
 	passed = passed and moving_storm_ok and layering_ok and filter_clip_ok and shader_ok and canvas_fade_ok
+	passed = passed and inward_edge_ok
 	passed = passed and ground_occlusion_ok
 	if not passed:
 		push_error("Garen skill rule verification failed")

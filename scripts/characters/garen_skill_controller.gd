@@ -82,9 +82,11 @@ func _ready() -> void:
 		if effect.material_override != null:
 			effect.material_override = effect.material_override.duplicate()
 			if effect.material_override is ShaderMaterial:
-				(effect.material_override as ShaderMaterial).set_shader_parameter(
+				var effect_material := effect.material_override as ShaderMaterial
+				effect_material.set_shader_parameter(
 					&"show_over_models", effect.no_depth_test
 				)
+				_configure_inward_canvas_edge(effect, effect_material)
 		effect.frame_changed.connect(_sync_vfx_frame.bind(effect))
 		effect.animation_changed.connect(_sync_vfx_frame.bind(effect))
 		effect.sprite_frames_changed.connect(_sync_vfx_frame.bind(effect))
@@ -357,6 +359,23 @@ func _sync_vfx_frame(effect: AnimatedSprite3D) -> void:
 	if frame_texture != null:
 		material.set_shader_parameter(&"frame_texture", frame_texture)
 		material.set_shader_parameter(&"frame_uv_rect", _frame_uv_rect(frame_texture))
+
+
+func _configure_inward_canvas_edge(effect: AnimatedSprite3D, material: ShaderMaterial) -> void:
+	material.set_shader_parameter(&"canvas_inward_base", 0.0)
+	material.set_shader_parameter(&"canvas_inward_warp", 0.0)
+	material.set_shader_parameter(&"canvas_inward_softness", 0.04)
+	material.set_shader_parameter(&"canvas_inward_frequency", 4.0)
+	if effect == anchor_effect:
+		material.set_shader_parameter(&"canvas_inward_base", 0.025)
+		material.set_shader_parameter(&"canvas_inward_warp", 0.055)
+		material.set_shader_parameter(&"canvas_inward_softness", 0.04)
+		material.set_shader_parameter(&"canvas_inward_frequency", 4.8)
+	elif effect == ghostship:
+		material.set_shader_parameter(&"canvas_inward_base", 0.04)
+		material.set_shader_parameter(&"canvas_inward_warp", 0.085)
+		material.set_shader_parameter(&"canvas_inward_softness", 0.045)
+		material.set_shader_parameter(&"canvas_inward_frequency", 4.0)
 
 
 func _frame_uv_rect(frame_texture: Texture2D) -> Vector4:

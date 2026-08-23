@@ -11,6 +11,10 @@ uniform float alpha_feather : hint_range(0.001, 0.5, 0.001) = 0.08;
 uniform vec4 frame_uv_rect = vec4(0.0, 0.0, 1.0, 1.0);
 uniform float canvas_edge_clear : hint_range(0.0, 0.25, 0.005) = 0.08;
 uniform float canvas_edge_fade : hint_range(0.0, 0.5, 0.005) = 0.28;
+uniform float canvas_inward_base : hint_range(0.0, 0.25, 0.005) = 0.0;
+uniform float canvas_inward_warp : hint_range(0.0, 0.2, 0.005) = 0.0;
+uniform float canvas_inward_softness : hint_range(0.001, 0.2, 0.005) = 0.04;
+uniform float canvas_inward_frequency : hint_range(1.0, 12.0, 0.1) = 4.0;
 uniform vec4 tint : source_color = vec4(1.0);
 uniform float ground_height = 0.0;
 uniform float ground_fade_width : hint_range(0.001, 1.0, 0.001) = 0.18;
@@ -27,11 +31,50 @@ float keyed_coverage(vec2 uv) {
 	return sample_color.a * smoothstep(black_cutoff, black_cutoff + black_feather, brightness);
 }
 
+vec4 edge_hash(vec4 value) {
+	value = fract(value * 0.1031);
+	value *= value + 33.33;
+	value *= value + value;
+	return fract(value);
+}
+
+vec4 edge_value_noise(vec4 value) {
+	vec4 cell = floor(value);
+	vec4 fraction = fract(value);
+	vec4 weight = fraction * fraction * (3.0 - 2.0 * fraction);
+	return mix(edge_hash(cell), edge_hash(cell + 1.0), weight);
+}
+
 float canvas_edge_mask(vec2 uv) {
 	vec2 frame_size = max(frame_uv_rect.zw, vec2(0.000001));
-	vec2 frame_uv = (uv - frame_uv_rect.xy) / frame_size;
+	vec2 frame_uv = clamp((uv - frame_uv_rect.xy) / frame_size, vec2(0.0), vec2(1.0));
 	vec2 distance_to_edge = min(frame_uv, vec2(1.0) - frame_uv);
 	float nearest_edge = min(distance_to_edge.x, distance_to_edge.y);
+	if (canvas_inward_base > 0.0001 || canvas_inward_warp > 0.0001) {
+		vec4 edge_distance = vec4(
+			frame_uv.x,
+			1.0 - frame_uv.x,
+			frame_uv.y,
+			1.0 - frame_uv.y
+		);
+		vec4 edge_coordinate = vec4(frame_uv.y, frame_uv.y, frame_uv.x, frame_uv.x);
+		vec4 edge_phase = vec4(7.13, 19.71, 37.17, 61.03);
+		vec4 broad_noise = edge_value_noise(
+			edge_coordinate * canvas_inward_frequency + edge_phase
+		);
+		vec4 detail_noise = edge_value_noise(
+			edge_coordinate * (canvas_inward_frequency * 2.31) + edge_phase * 1.73 + 11.7
+		);
+		vec4 inward_cut = vec4(canvas_inward_base) + canvas_inward_warp * (
+			broad_noise * 0.72 + detail_noise * 0.28
+		);
+		vec4 inward_mask = smoothstep(
+			inward_cut,
+			inward_cut + vec4(max(canvas_inward_softness, 0.001)),
+			edge_distance
+		);
+		return min(min(inward_mask.x, inward_mask.y), min(inward_mask.z, inward_mask.w));
+	}
 	if (canvas_edge_fade <= canvas_edge_clear + 0.0001) {
 		return step(canvas_edge_clear, nearest_edge);
 	}
