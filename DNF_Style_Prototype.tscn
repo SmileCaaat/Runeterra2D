@@ -269,7 +269,7 @@ shape = SubResource("CapsuleShape3D_e143n")
 
 [node name="CharacterFrames" type="AnimatedSprite3D" parent="Characters/Player" unique_id=1316070057]
 cast_shadow = 0
-offset = Vector2(234.5, 1078)
+offset = Vector2(188, 920.5)
 pixel_size = 0.004
 billboard = 1
 sprite_frames = ExtResource("1_08h5l")

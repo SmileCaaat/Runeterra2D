@@ -6,6 +6,7 @@ enum CombatState { IDLE, CHASE, ATTACK }
 
 const ATTACK_COMBO: Array[StringName] = [&"attack1", &"attack2", &"attack3"]
 const ATTACK_PITCHES: Array[float] = [1.08, 1.0, 0.88]
+const CHARACTER_ANCHOR_JSON := "res://assets/characters/rogue_admiral_garen/idle1/spritesheet.json"
 
 @export_node_path("CharacterBody3D") var target_path := NodePath("../EnemyPlaceholder")
 @export_range(0.1, 10.0, 0.1) var move_speed := 3.4
@@ -38,9 +39,34 @@ func _ready() -> void:
 	_apply_combat_data()
 	target = get_node_or_null(target_path) as CharacterBody3D
 	skill_controller.call("set_target", target)
+	_apply_sprite_canvas_anchor()
 	unflipped_sprite_offset = character_frames.offset
 	character_frames.animation_finished.connect(_on_animation_finished)
 	_set_state(CombatState.CHASE if is_instance_valid(target) else CombatState.IDLE)
+
+
+func _apply_sprite_canvas_anchor() -> void:
+	var file := FileAccess.open(CHARACTER_ANCHOR_JSON, FileAccess.READ)
+	if file == null:
+		push_warning("Could not read character anchor metadata: %s" % CHARACTER_ANCHOR_JSON)
+		return
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		push_warning("Invalid character anchor metadata: %s" % CHARACTER_ANCHOR_JSON)
+		return
+	var meta: Dictionary = (parsed as Dictionary).get("meta", {})
+	var canvas: Dictionary = meta.get("canvas", {})
+	var canvas_width := float(canvas.get("width", 0.0))
+	var canvas_height := float(canvas.get("height", 0.0))
+	if canvas_width <= 0.0 or canvas_height <= 0.0:
+		push_warning("Missing character canvas dimensions: %s" % CHARACTER_ANCHOR_JSON)
+		return
+	var origin_x := float(canvas.get("originPixelX", canvas_width * 0.5))
+	var origin_y := float(canvas.get("originPixelY", canvas_height))
+	character_frames.offset = Vector2(
+		canvas_width * 0.5 - origin_x,
+		origin_y - canvas_height * 0.5,
+	)
 
 
 func _physics_process(delta: float) -> void:

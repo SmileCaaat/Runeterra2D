@@ -7,6 +7,9 @@ var start_player := Vector3.ZERO
 var start_dummy := Vector3.ZERO
 var observed := {}
 var elapsed := 0.0
+var expected_sprite_offset := Vector2.ZERO
+var initial_sprite_offset := Vector2.ZERO
+var anchor_setup_ok := false
 
 
 func _initialize() -> void:
@@ -21,6 +24,7 @@ func _initialize() -> void:
 	player = scene.get_node("Characters/Player") as CharacterBody3D
 	dummy = scene.get_node("Characters/EnemyPlaceholder") as CharacterBody3D
 	frames = player.get_node("CharacterFrames") as AnimatedSprite3D
+	expected_sprite_offset = _read_expected_sprite_offset()
 	start_player = player.position
 	start_dummy = dummy.position
 
@@ -55,15 +59,20 @@ func _process(delta: float) -> bool:
 	var total_frames := 0
 	for animation_name: StringName in library.get_animation_names():
 		total_frames += library.get_frame_count(animation_name)
+	initial_sprite_offset = player.get("unflipped_sprite_offset") as Vector2
+	anchor_setup_ok = initial_sprite_offset.is_equal_approx(expected_sprite_offset)
 	var anchor_x := absf(frames.offset.x)
 	player.call("_face_direction", Vector3.LEFT)
 	var left_flip_ok := frames.flip_h and is_equal_approx(frames.offset.x, -anchor_x)
+	left_flip_ok = left_flip_ok and is_equal_approx(frames.offset.y, expected_sprite_offset.y)
 	player.call("_face_direction", Vector3.RIGHT)
 	var right_flip_ok := not frames.flip_h and is_equal_approx(frames.offset.x, anchor_x)
-	print("COMBAT library=%d/%d vfx=%d/%d animations=%s skills=%s hits=%d bursts=%d audio=%d/%d player_moved=%.2f dummy_moved=%.2f separation=%.2f flip_anchor=%s/%s" % [
+	right_flip_ok = right_flip_ok and is_equal_approx(frames.offset.y, expected_sprite_offset.y)
+	print("COMBAT library=%d/%d vfx=%d/%d animations=%s skills=%s hits=%d bursts=%d audio=%d/%d player_moved=%.2f dummy_moved=%.2f separation=%.2f anchor=%s/%s anchor_meta=%s flip_anchor=%s/%s" % [
 		library.get_animation_names().size(), total_frames, vfx_frames.get_animation_names().size(), vfx_total_frames,
 		observed.keys(), skill_casts, hit_count, particle_bursts, attack_sounds, hit_sounds, player_distance, dummy_distance,
-		player.global_position.distance_to(dummy.global_position), left_flip_ok, right_flip_ok,
+		player.global_position.distance_to(dummy.global_position), initial_sprite_offset, expected_sprite_offset,
+		anchor_setup_ok, left_flip_ok, right_flip_ok,
 	])
 
 	var passed := library.get_animation_names().size() == 22 and total_frames == 289
@@ -75,8 +84,25 @@ func _process(delta: float) -> bool:
 	passed = passed and attack_sounds > 0 and hit_sounds == hit_count
 	passed = passed and all_skills_cast and vfx_frames.get_animation_names().size() == 4 and vfx_total_frames == 71
 	passed = passed and is_equal_approx(float(skill_controller.call("get_passive_armor_multiplier")), 1.2)
-	passed = passed and left_flip_ok and right_flip_ok
+	passed = passed and anchor_setup_ok and left_flip_ok and right_flip_ok
 	if not passed:
 		push_error("Combat workflow verification failed")
 	quit(0 if passed else 2)
 	return true
+
+
+func _read_expected_sprite_offset() -> Vector2:
+	var json_path := "res://assets/characters/rogue_admiral_garen/idle1/spritesheet.json"
+	var file := FileAccess.open(json_path, FileAccess.READ)
+	if file == null:
+		return Vector2.INF
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		return Vector2.INF
+	var meta: Dictionary = (parsed as Dictionary).get("meta", {})
+	var canvas: Dictionary = meta.get("canvas", {})
+	var width := float(canvas.get("width", 0.0))
+	var height := float(canvas.get("height", 0.0))
+	var origin_x := float(canvas.get("originPixelX", width * 0.5))
+	var origin_y := float(canvas.get("originPixelY", height))
+	return Vector2(width * 0.5 - origin_x, origin_y - height * 0.5)

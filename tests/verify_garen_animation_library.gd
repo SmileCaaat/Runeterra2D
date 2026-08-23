@@ -28,11 +28,30 @@ func _initialize() -> void:
 	var total_frames := 0
 	var total_json_duration_ms := 0
 	var total_library_duration_ms := 0.0
+	var reference_canvas := Vector4.ZERO
+	var canvas_was_set := false
+	var canvas_ok := true
 
 	for animation_name_string: String in animation_names:
 		var animation_name := StringName(animation_name_string)
 		var json_path := SHEETS_ROOT.path_join(animation_name_string).path_join("spritesheet.json")
 		var data := _read_json(json_path)
+		var meta: Dictionary = data.get("meta", {})
+		var canvas: Dictionary = meta.get("canvas", {})
+		var canvas_signature := Vector4(
+			float(canvas.get("width", 0.0)),
+			float(canvas.get("height", 0.0)),
+			float(canvas.get("originPixelX", 0.0)),
+			float(canvas.get("originPixelY", 0.0)),
+		)
+		if not canvas_was_set:
+			reference_canvas = canvas_signature
+			canvas_was_set = true
+		elif not canvas_signature.is_equal_approx(reference_canvas):
+			push_error("Canvas anchor mismatch for %s: %s != %s" % [
+				animation_name_string, canvas_signature, reference_canvas,
+			])
+			canvas_ok = false
 		var entries: Array[Dictionary] = []
 		var frame_map: Dictionary = data.get("frames", {})
 		for frame_key: String in frame_map:
@@ -92,9 +111,10 @@ func _initialize() -> void:
 
 	passed = passed and total_frames == EXPECTED_FRAMES
 	passed = passed and is_equal_approx(total_library_duration_ms, float(total_json_duration_ms))
-	print("GAREN_ANIMATIONS animations=%d frames=%d duration_ms=%d regions=%s timing=%s loops=%s" % [
+	passed = passed and canvas_ok
+	print("GAREN_ANIMATIONS animations=%d frames=%d duration_ms=%d canvas=%s regions=%s timing=%s loops=%s" % [
 		animation_names.size(), total_frames, total_json_duration_ms,
-		passed, passed, passed,
+		canvas_ok, passed, passed, passed,
 	])
 	if not passed:
 		push_error("Garen animation library verification failed")

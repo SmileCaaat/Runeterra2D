@@ -110,7 +110,7 @@ func _apply_canvas_anchor(data: Dictionary) -> void:
 	var canvas_height := float(canvas.get("height", 0))
 	var origin_x := float(canvas.get("originPixelX", canvas_width * 0.5))
 	var origin_y := float(canvas.get("originPixelY", canvas_height))
-	offset = Vector2(canvas_width * 0.5 - origin_x, canvas_height * 0.5 - origin_y)
+	offset = Vector2(canvas_width * 0.5 - origin_x, origin_y - canvas_height * 0.5)
 
 
 func _read_json_dictionary(path: String) -> Dictionary:
