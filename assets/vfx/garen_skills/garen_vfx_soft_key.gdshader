@@ -12,6 +12,7 @@ uniform float ground_height = 0.0;
 uniform float ground_fade_width : hint_range(0.001, 1.0, 0.001) = 0.18;
 uniform float ground_occluded_alpha : hint_range(0.0, 1.0, 0.01) = 0.32;
 uniform float depth_bias : hint_range(0.0, 0.2, 0.001) = 0.02;
+uniform float ground_depth_fade : hint_range(0.001, 2.0, 0.001) = 0.9;
 uniform bool show_over_models = false;
 
 varying vec3 vfx_world_position;
@@ -56,8 +57,8 @@ float apply_ground_occlusion(
 	float fragment_depth,
 	float world_height
 ) {
-	bool is_occluded = fragment_depth > scene_linear_depth(screen_uv, inv_projection) + depth_bias;
-	if (!is_occluded) {
+	float depth_delta = fragment_depth - scene_linear_depth(screen_uv, inv_projection);
+	if (depth_delta <= depth_bias) {
 		return coverage;
 	}
 	float ground_mask = 1.0 - smoothstep(
@@ -66,7 +67,13 @@ float apply_ground_occlusion(
 		world_height
 	);
 	if (ground_mask > 0.001) {
-		return coverage * mix(1.0, ground_occluded_alpha, ground_mask);
+		float depth_fade = smoothstep(
+			depth_bias,
+			depth_bias + max(ground_depth_fade, 0.001),
+			depth_delta
+		);
+		float occlusion_amount = depth_fade * ground_mask;
+		return coverage * mix(1.0, ground_occluded_alpha, occlusion_amount);
 	}
 	if (!show_over_models) {
 		discard;

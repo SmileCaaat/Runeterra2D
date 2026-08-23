@@ -99,6 +99,7 @@ func _initialize() -> void:
 			shader_ok = shader_ok and material.shader != null
 			var ground_height_value: Variant = material.get_shader_parameter(&"ground_height")
 			var ground_alpha_value: Variant = material.get_shader_parameter(&"ground_occluded_alpha")
+			var ground_depth_fade_value: Variant = material.get_shader_parameter(&"ground_depth_fade")
 			var show_over_models_value: Variant = material.get_shader_parameter(&"show_over_models")
 			ground_occlusion_ok = ground_occlusion_ok and ground_height_value is float
 			if ground_height_value is float:
@@ -106,6 +107,9 @@ func _initialize() -> void:
 			ground_occlusion_ok = ground_occlusion_ok and ground_alpha_value is float
 			if ground_alpha_value is float:
 				ground_occlusion_ok = ground_occlusion_ok and is_equal_approx(float(ground_alpha_value), 0.32)
+			ground_occlusion_ok = ground_occlusion_ok and ground_depth_fade_value is float
+			if ground_depth_fade_value is float:
+				ground_occlusion_ok = ground_occlusion_ok and is_equal_approx(float(ground_depth_fade_value), 0.9)
 			ground_occlusion_ok = ground_occlusion_ok and show_over_models_value is bool
 			if show_over_models_value is bool:
 				ground_occlusion_ok = ground_occlusion_ok and bool(show_over_models_value) == effect.no_depth_test
