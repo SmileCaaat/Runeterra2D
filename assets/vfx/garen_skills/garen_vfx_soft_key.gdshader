@@ -8,7 +8,8 @@ uniform float black_feather : hint_range(0.001, 0.5, 0.001) = 0.10;
 uniform float edge_erosion : hint_range(0.0, 1.0, 0.01) = 0.28;
 uniform float alpha_feather : hint_range(0.001, 0.5, 0.001) = 0.06;
 uniform vec4 frame_uv_rect = vec4(0.0, 0.0, 1.0, 1.0);
-uniform float canvas_edge_fade : hint_range(0.0, 0.5, 0.005) = 0.15;
+uniform float canvas_edge_clear : hint_range(0.0, 0.25, 0.005) = 0.08;
+uniform float canvas_edge_fade : hint_range(0.0, 0.5, 0.005) = 0.28;
 uniform vec4 tint : source_color = vec4(1.0);
 uniform float ground_height = 0.0;
 uniform float ground_fade_width : hint_range(0.001, 1.0, 0.001) = 0.18;
@@ -30,10 +31,10 @@ float canvas_edge_mask(vec2 uv) {
 	vec2 frame_uv = (uv - frame_uv_rect.xy) / frame_size;
 	vec2 distance_to_edge = min(frame_uv, vec2(1.0) - frame_uv);
 	float nearest_edge = min(distance_to_edge.x, distance_to_edge.y);
-	if (canvas_edge_fade <= 0.0001) {
-		return step(0.0, nearest_edge);
+	if (canvas_edge_fade <= canvas_edge_clear + 0.0001) {
+		return step(canvas_edge_clear, nearest_edge);
 	}
-	return smoothstep(0.0, canvas_edge_fade, nearest_edge);
+	return smoothstep(canvas_edge_clear, canvas_edge_fade, nearest_edge);
 }
 
 void vertex() {

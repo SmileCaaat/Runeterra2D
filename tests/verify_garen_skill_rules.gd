@@ -93,23 +93,45 @@ func _initialize() -> void:
 	var canvas_fade_ok := true
 	var ground_occlusion_ok := true
 	for effect_name: StringName in [&"JollyRoger", &"OceanStorm", &"Anchor", &"Ghostship"]:
-		(skills.get_node(NodePath(effect_name)) as AnimatedSprite3D).visible = true
-	skills.call("_sync_vfx_frame_textures")
+		var effect := skills.get_node(NodePath(effect_name)) as AnimatedSprite3D
+		effect.visible = true
+		var frame_count := effect.sprite_frames.get_frame_count(effect.animation)
+		for frame_index: int in range(frame_count):
+			effect.frame = frame_index
+			var frame_texture := effect.sprite_frames.get_frame_texture(effect.animation, frame_index) as AtlasTexture
+			var material := effect.material_override as ShaderMaterial
+			canvas_fade_ok = canvas_fade_ok and frame_texture != null and material != null
+			if frame_texture != null and material != null:
+				var atlas_size := Vector2(frame_texture.atlas.get_size())
+				var region := frame_texture.region
+				var expected_uv_rect := Vector4(
+					region.position.x / atlas_size.x,
+					region.position.y / atlas_size.y,
+					region.size.x / atlas_size.x,
+					region.size.y / atlas_size.y
+				)
+				var actual_uv_rect: Variant = material.get_shader_parameter(&"frame_uv_rect")
+				canvas_fade_ok = canvas_fade_ok and actual_uv_rect is Vector4
+				if actual_uv_rect is Vector4:
+					canvas_fade_ok = canvas_fade_ok and (actual_uv_rect as Vector4).is_equal_approx(expected_uv_rect)
 	for effect_name: StringName in [&"JollyRoger", &"OceanStorm", &"Anchor", &"Ghostship"]:
 		var effect := skills.get_node(NodePath(effect_name)) as AnimatedSprite3D
 		shader_ok = shader_ok and effect.material_override is ShaderMaterial
 		if effect.material_override is ShaderMaterial:
 			var material := effect.material_override as ShaderMaterial
 			shader_ok = shader_ok and material.shader != null
+			var canvas_clear_value: Variant = material.get_shader_parameter(&"canvas_edge_clear")
 			var canvas_fade_value: Variant = material.get_shader_parameter(&"canvas_edge_fade")
 			var frame_uv_rect_value: Variant = material.get_shader_parameter(&"frame_uv_rect")
 			var ground_height_value: Variant = material.get_shader_parameter(&"ground_height")
 			var ground_alpha_value: Variant = material.get_shader_parameter(&"ground_occluded_alpha")
 			var ground_depth_fade_value: Variant = material.get_shader_parameter(&"ground_depth_fade")
 			var show_over_models_value: Variant = material.get_shader_parameter(&"show_over_models")
-			canvas_fade_ok = canvas_fade_ok and canvas_fade_value is float
+			canvas_fade_ok = canvas_fade_ok and canvas_clear_value is float and canvas_fade_value is float
+			if canvas_clear_value is float:
+				canvas_fade_ok = canvas_fade_ok and is_equal_approx(float(canvas_clear_value), 0.08)
 			if canvas_fade_value is float:
-				canvas_fade_ok = canvas_fade_ok and is_equal_approx(float(canvas_fade_value), 0.15)
+				canvas_fade_ok = canvas_fade_ok and is_equal_approx(float(canvas_fade_value), 0.28)
 			var frame_texture := effect.sprite_frames.get_frame_texture(effect.animation, effect.frame) as AtlasTexture
 			canvas_fade_ok = canvas_fade_ok and frame_texture != null and frame_uv_rect_value is Vector4
 			if frame_texture != null and frame_uv_rect_value is Vector4:

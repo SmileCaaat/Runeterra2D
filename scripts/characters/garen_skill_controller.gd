@@ -85,6 +85,10 @@ func _ready() -> void:
 				(effect.material_override as ShaderMaterial).set_shader_parameter(
 					&"show_over_models", effect.no_depth_test
 				)
+		effect.frame_changed.connect(_sync_vfx_frame.bind(effect))
+		effect.animation_changed.connect(_sync_vfx_frame.bind(effect))
+		effect.sprite_frames_changed.connect(_sync_vfx_frame.bind(effect))
+		_sync_vfx_frame(effect)
 		effect.visible = false
 	anchor_effect.top_level = true
 	ghostship.top_level = true
@@ -93,7 +97,6 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_update_timers(delta)
 	_update_rum_damage(delta)
-	_sync_vfx_frame_textures()
 	if anchor_effect.visible and is_instance_valid(target):
 		anchor_effect.global_position = target.global_position
 	if not automatic_demo or is_casting or not is_instance_valid(target):
@@ -344,17 +347,16 @@ func _update_rum_damage(delta: float) -> void:
 	current_health = maxf(1.0, current_health - applied)
 
 
-func _sync_vfx_frame_textures() -> void:
-	for effect: AnimatedSprite3D in [jolly_roger, ocean_storm, anchor_effect, ghostship]:
-		if not effect.visible or effect.material_override == null:
-			continue
-		var material := effect.material_override as ShaderMaterial
-		if material == null or effect.sprite_frames == null:
-			continue
-		var frame_texture := effect.sprite_frames.get_frame_texture(effect.animation, effect.frame)
-		if frame_texture != null:
-			material.set_shader_parameter(&"frame_texture", frame_texture)
-			material.set_shader_parameter(&"frame_uv_rect", _frame_uv_rect(frame_texture))
+func _sync_vfx_frame(effect: AnimatedSprite3D) -> void:
+	if effect.material_override == null or effect.sprite_frames == null:
+		return
+	var material := effect.material_override as ShaderMaterial
+	if material == null:
+		return
+	var frame_texture := effect.sprite_frames.get_frame_texture(effect.animation, effect.frame)
+	if frame_texture != null:
+		material.set_shader_parameter(&"frame_texture", frame_texture)
+		material.set_shader_parameter(&"frame_uv_rect", _frame_uv_rect(frame_texture))
 
 
 func _frame_uv_rect(frame_texture: Texture2D) -> Vector4:
