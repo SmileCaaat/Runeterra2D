@@ -354,6 +354,23 @@ func _sync_vfx_frame_textures() -> void:
 		var frame_texture := effect.sprite_frames.get_frame_texture(effect.animation, effect.frame)
 		if frame_texture != null:
 			material.set_shader_parameter(&"frame_texture", frame_texture)
+			material.set_shader_parameter(&"frame_uv_rect", _frame_uv_rect(frame_texture))
+
+
+func _frame_uv_rect(frame_texture: Texture2D) -> Vector4:
+	if frame_texture is AtlasTexture:
+		var atlas_texture := frame_texture as AtlasTexture
+		if atlas_texture.atlas != null:
+			var atlas_size := Vector2(atlas_texture.atlas.get_size())
+			if atlas_size.x > 0.0 and atlas_size.y > 0.0:
+				var region := atlas_texture.region
+				return Vector4(
+					region.position.x / atlas_size.x,
+					region.position.y / atlas_size.y,
+					region.size.x / atlas_size.x,
+					region.size.y / atlas_size.y
+				)
+	return Vector4(0.0, 0.0, 1.0, 1.0)
 
 
 func _skill_in_range(skill_index: int) -> bool:
