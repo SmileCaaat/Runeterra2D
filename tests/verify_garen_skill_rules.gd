@@ -60,6 +60,17 @@ func _initialize() -> void:
 	var ghost_flip_ok := ghost.flip_h
 	skills.call("prepare_ghostship_direction", player.global_position + Vector3.RIGHT * 4.0)
 	ghost_flip_ok = ghost_flip_ok and not ghost.flip_h
+	var vfx_anchor_ok := true
+	for effect_name: StringName in [&"JollyRoger", &"OceanStorm", &"Anchor", &"Ghostship"]:
+		var effect := skills.get_node(NodePath(effect_name)) as AnimatedSprite3D
+		var expected_offset := _read_vfx_anchor(effect.animation)
+		vfx_anchor_ok = vfx_anchor_ok and effect.offset.is_equal_approx(expected_offset)
+
+	player.set_physics_process(false)
+	dummy.set_physics_process(false)
+	var ghost_area_center := dummy.global_position
+	await skills.call("_cast_seven_seas")
+	var ghost_area_ok := ghost.global_position.is_equal_approx(ghost_area_center)
 
 	var ocean := skills.get_node("OceanStorm") as AnimatedSprite3D
 	skills.set("is_casting", true)
@@ -85,14 +96,33 @@ func _initialize() -> void:
 		if effect.material_override is ShaderMaterial:
 			shader_ok = shader_ok and (effect.material_override as ShaderMaterial).shader != null
 
-	print("SKILL_RULES breaker=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s moving_storm=%s layering=%s filter=%s shader=%s" % [
+	print("SKILL_RULES breaker=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s vfx_anchor=%s ghost_area=%s moving_storm=%s layering=%s filter=%s shader=%s" % [
 		breaker_ok, passive_ok, reduction_ok, rum_ok, cleanse_ok, nonlethal_ok, judgment_ok,
-		jolly_duration_ok, anchor_follow_ok, ghost_flip_ok, moving_storm_ok, layering_ok, filter_clip_ok, shader_ok,
+		jolly_duration_ok, anchor_follow_ok, ghost_flip_ok, vfx_anchor_ok, ghost_area_ok,
+		moving_storm_ok, layering_ok, filter_clip_ok, shader_ok,
 	])
 	var passed := breaker_ok and passive_ok and reduction_ok and rum_ok
 	passed = passed and cleanse_ok and nonlethal_ok and judgment_ok
 	passed = passed and jolly_duration_ok and anchor_follow_ok and ghost_flip_ok
+	passed = passed and vfx_anchor_ok and ghost_area_ok
 	passed = passed and moving_storm_ok and layering_ok and filter_clip_ok and shader_ok
 	if not passed:
 		push_error("Garen skill rule verification failed")
 	quit(0 if passed else 2)
+
+
+func _read_vfx_anchor(animation_name: StringName) -> Vector2:
+	var json_path := "res://assets/vfx/garen_skills".path_join(String(animation_name)).path_join("spritesheet.json")
+	var file := FileAccess.open(json_path, FileAccess.READ)
+	if file == null:
+		return Vector2.INF
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		return Vector2.INF
+	var meta: Dictionary = (parsed as Dictionary).get("meta", {})
+	var canvas: Dictionary = meta.get("canvas", {})
+	var width := float(canvas.get("width", 0.0))
+	var height := float(canvas.get("height", 0.0))
+	var origin_x := float(canvas.get("originPixelX", width * 0.5))
+	var origin_y := float(canvas.get("originPixelY", height))
+	return Vector2(width * 0.5 - origin_x, origin_y - height * 0.5)
