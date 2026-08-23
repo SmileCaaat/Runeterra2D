@@ -81,6 +81,10 @@ func _ready() -> void:
 	for effect: AnimatedSprite3D in [jolly_roger, ocean_storm, anchor_effect, ghostship]:
 		if effect.material_override != null:
 			effect.material_override = effect.material_override.duplicate()
+			if effect.material_override is ShaderMaterial:
+				(effect.material_override as ShaderMaterial).set_shader_parameter(
+					&"show_over_models", effect.no_depth_test
+				)
 		effect.visible = false
 	anchor_effect.top_level = true
 	ghostship.top_level = true

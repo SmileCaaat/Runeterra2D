@@ -90,22 +90,37 @@ func _initialize() -> void:
 		var frame_texture := vfx_frames.get_frame_texture(animation_name, 0) as AtlasTexture
 		filter_clip_ok = filter_clip_ok and frame_texture != null and frame_texture.filter_clip
 	var shader_ok := true
+	var ground_occlusion_ok := true
 	for effect_name: StringName in [&"JollyRoger", &"OceanStorm", &"Anchor", &"Ghostship"]:
 		var effect := skills.get_node(NodePath(effect_name)) as AnimatedSprite3D
 		shader_ok = shader_ok and effect.material_override is ShaderMaterial
 		if effect.material_override is ShaderMaterial:
-			shader_ok = shader_ok and (effect.material_override as ShaderMaterial).shader != null
+			var material := effect.material_override as ShaderMaterial
+			shader_ok = shader_ok and material.shader != null
+			var ground_height_value: Variant = material.get_shader_parameter(&"ground_height")
+			var ground_alpha_value: Variant = material.get_shader_parameter(&"ground_occluded_alpha")
+			var show_over_models_value: Variant = material.get_shader_parameter(&"show_over_models")
+			ground_occlusion_ok = ground_occlusion_ok and ground_height_value is float
+			if ground_height_value is float:
+				ground_occlusion_ok = ground_occlusion_ok and is_equal_approx(float(ground_height_value), 0.0)
+			ground_occlusion_ok = ground_occlusion_ok and ground_alpha_value is float
+			if ground_alpha_value is float:
+				ground_occlusion_ok = ground_occlusion_ok and is_equal_approx(float(ground_alpha_value), 0.32)
+			ground_occlusion_ok = ground_occlusion_ok and show_over_models_value is bool
+			if show_over_models_value is bool:
+				ground_occlusion_ok = ground_occlusion_ok and bool(show_over_models_value) == effect.no_depth_test
 
-	print("SKILL_RULES breaker=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s vfx_anchor=%s ghost_area=%s moving_storm=%s layering=%s filter=%s shader=%s" % [
+	print("SKILL_RULES breaker=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s vfx_anchor=%s ghost_area=%s moving_storm=%s layering=%s filter=%s shader=%s ground_occlusion=%s" % [
 		breaker_ok, passive_ok, reduction_ok, rum_ok, cleanse_ok, nonlethal_ok, judgment_ok,
 		jolly_duration_ok, anchor_follow_ok, ghost_flip_ok, vfx_anchor_ok, ghost_area_ok,
-		moving_storm_ok, layering_ok, filter_clip_ok, shader_ok,
+		moving_storm_ok, layering_ok, filter_clip_ok, shader_ok, ground_occlusion_ok,
 	])
 	var passed := breaker_ok and passive_ok and reduction_ok and rum_ok
 	passed = passed and cleanse_ok and nonlethal_ok and judgment_ok
 	passed = passed and jolly_duration_ok and anchor_follow_ok and ghost_flip_ok
 	passed = passed and vfx_anchor_ok and ghost_area_ok
 	passed = passed and moving_storm_ok and layering_ok and filter_clip_ok and shader_ok
+	passed = passed and ground_occlusion_ok
 	if not passed:
 		push_error("Garen skill rule verification failed")
 	quit(0 if passed else 2)
