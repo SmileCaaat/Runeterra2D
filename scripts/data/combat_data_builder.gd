@@ -135,7 +135,7 @@ func _validate_source() -> void:
 	for row: Dictionary in _tables["unit_stats.csv"]:
 		_require_ref(row, "unit_id", unit_ids)
 		_require_ref(row, "stat_id", stat_ids)
-		_validate_enum(row, "growth_formula", ["none", "primary", "attack_speed"])
+		_validate_enum(row, "growth_formula", ["none", "linear", "primary", "attack_speed"])
 		if _f(row, "conversion_scale") <= 0.0:
 			_error(row, "conversion_scale must be > 0")
 		if not _s(row, "source_key").is_empty():

@@ -3,3 +3,4 @@ breaker_speed,破舰加速,4.5,1,replace,refresh,positive,true,false,,move_speed
 black_sail,黑帆,4.0,1,replace,refresh,positive,true,false,jolly_roger,damage_reduction|control_reduction
 black_sail_passive,黑帆被动,0,1,replace,none,none,false,false,,armor|magic_resistance|permanent
 seven_seas_rum,七海霸权朗姆酒,10.0,1,replace,refresh,positive,true,true,,delayed_damage|nonlethal
+scuttle_speed_zone,迅捷蟹加速法阵,10.0,1,replace,refresh,positive,true,false,,move_speed|area_reward

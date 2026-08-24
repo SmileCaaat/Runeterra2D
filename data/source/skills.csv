@@ -3,4 +3,4 @@ garen_breaker,garen,1,破舰,self,empower,6.0,0.16,0,0,0,4.5,0,0,allowed,continu
 garen_black_sail,garen,2,黑帆,self,instant,10.0,0.16,0.24,0,0,4.0,0,0,locked,cast_time,false,channel_wndup,channel,,,0,0,jolly_roger,jolly_roger_audio,defense_buff|rum_cleanse
 garen_ocean_storm,garen,3,翻江倒海,self_area,channel,8.0,0,0,2.6,2.6,3.0,0.5,0,allowed,continuous,false,,spell3,,,0,0,ocean_storm,ocean_storm_audio,periodic|physical|can_crit
 garen_tyrant_judgment,garen,4,暴君审判,unit,cast,11.0,0.28,0.35,4.0,0,0.63,0,0,locked,continuous,false,,spell4,,,0,0,anchor,anchor_audio,execute|magic
-garen_seven_seas,garen,5,七海霸权,ground_area,travel,18.0,1.05,0.65,7.5,3.0,1.70,0,0,locked,cast_time,true,,taunt,,,2.2,1.15,ghostship,ghostship_audio,area|stun|delayed_damage
+garen_seven_seas,garen,5,七海霸权,ground_area,travel,18.0,1.05,0.65,7.5,5.2,1.70,0,0,locked,cast_time,true,,taunt,,,2.2,1.15,ghostship,ghostship_audio,area|stun|delayed_damage

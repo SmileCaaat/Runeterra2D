@@ -5,13 +5,14 @@ signal attack_landed(animation_name: StringName)
 enum CombatState { IDLE, CHASE, ATTACK }
 
 const ATTACK_COMBO: Array[StringName] = [&"attack1", &"attack2", &"attack3"]
-const ATTACK_PITCHES: Array[float] = [1.08, 1.0, 0.88]
 const CHARACTER_ANCHOR_JSON := "res://assets/characters/rogue_admiral_garen/idle1/spritesheet.json"
 
 @export_node_path("CharacterBody3D") var target_path := NodePath("../EnemyPlaceholder")
 @export_range(0.1, 10.0, 0.1) var move_speed := 3.4
 @export_range(0.5, 4.0, 0.05) var attack_range := 1.5
 @export_range(0.0, 20.0, 0.1) var acceleration := 14.0
+@export_enum("friendly", "enemy") var team := "friendly"
+@export var level := 1
 
 @onready var character_frames: AnimatedSprite3D = $CharacterFrames
 @onready var state_label: Label3D = $AIStateLabel
@@ -33,11 +34,16 @@ var fighter_ai: AIProfileDefinition
 var attack_hit_range := 1.95
 var arena_min := Vector2(-14.5, -4.3)
 var arena_max := Vector2(14.5, 4.3)
+var external_move_speed_modifiers: Dictionary = {}
+var attack_pitches: Array[float] = [1.08, 1.0, 0.88]
 
 
 func _ready() -> void:
+	add_to_group(&"hero_actor")
 	_apply_combat_data()
 	target = get_node_or_null(target_path) as CharacterBody3D
+	if not _is_target_available(target):
+		target = _find_closest_target()
 	skill_controller.call("set_target", target)
 	_apply_sprite_canvas_anchor()
 	unflipped_sprite_offset = character_frames.offset
@@ -70,7 +76,8 @@ func _apply_sprite_canvas_anchor() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if not is_instance_valid(target):
+	_refresh_target()
+	if not _is_target_available(target):
 		_set_state(CombatState.IDLE)
 		_slow_down(delta)
 		_apply_gravity(delta)
@@ -102,7 +109,7 @@ func _physics_process(delta: float) -> void:
 				_start_next_attack()
 			else:
 				_set_state(CombatState.CHASE)
-				var speed_multiplier := float(skill_controller.call("get_move_speed_multiplier"))
+				var speed_multiplier := float(skill_controller.call("get_move_speed_multiplier")) * _external_move_speed_multiplier()
 				velocity.x = move_toward(velocity.x, direction.x * move_speed * speed_multiplier, acceleration * delta)
 				velocity.z = move_toward(velocity.z, direction.z * move_speed * speed_multiplier, acceleration * delta)
 
@@ -137,12 +144,16 @@ func _check_attack_hit(distance: float) -> void:
 	if character_frames.frame < impact_frame:
 		return
 	attack_hit_sent = true
+	if not _is_target_available(target):
+		return
 	var audio_event := combat_database.get_animation_event(&"garen", character_frames.animation, "audio") if combat_database != null else null
-	var fallback_pitch := ATTACK_PITCHES[combo_index] if combo_index >= 0 and combo_index < ATTACK_PITCHES.size() else 1.0
+	var fallback_pitch := attack_pitches[combo_index] if combo_index >= 0 and combo_index < attack_pitches.size() else 1.0
 	attack_audio.pitch_scale = audio_event.float_value if audio_event != null else (0.94 if current_attack_is_breaker else fallback_pitch)
 	attack_audio.play()
 	attack_sound_count += 1
 	if distance <= attack_hit_range:
+		if target.has_method("register_damage_source"):
+			target.call("register_damage_source", global_position, get_team())
 		if current_attack_is_breaker:
 			skill_controller.call("resolve_breaker_attack", target)
 			current_attack_is_breaker = false
@@ -152,7 +163,7 @@ func _check_attack_hit(distance: float) -> void:
 
 
 func _on_animation_finished() -> void:
-	if state != CombatState.ATTACK or not is_instance_valid(target):
+	if state != CombatState.ATTACK or not _is_target_available(target):
 		return
 	state = CombatState.CHASE
 	if bool(skill_controller.call("try_begin_demo_skill")):
@@ -205,7 +216,7 @@ func _move_during_ocean_storm(delta: float) -> void:
 	var direction := offset.normalized() if distance > 0.001 else Vector3.ZERO
 	_face_direction(direction)
 	if distance > attack_range * 0.85:
-		var speed_multiplier := float(skill_controller.call("get_move_speed_multiplier"))
+		var speed_multiplier := float(skill_controller.call("get_move_speed_multiplier")) * _external_move_speed_multiplier()
 		velocity.x = move_toward(velocity.x, direction.x * move_speed * speed_multiplier, acceleration * delta)
 		velocity.z = move_toward(velocity.z, direction.z * move_speed * speed_multiplier, acceleration * delta)
 	else:
@@ -227,6 +238,58 @@ func _apply_gravity(delta: float) -> void:
 
 func can_start_skill() -> bool:
 	return state != CombatState.ATTACK
+
+
+func _refresh_target() -> void:
+	if _is_target_available(target):
+		return
+	target = _find_closest_target()
+	skill_controller.call("set_target", target)
+	if _is_target_available(target):
+		_set_state(CombatState.CHASE)
+
+
+func _is_target_available(candidate: CharacterBody3D) -> bool:
+	if not is_instance_valid(candidate):
+		return false
+	if candidate.has_method("is_targetable"):
+		return bool(candidate.call("is_targetable"))
+	return true
+
+
+func _find_closest_target() -> CharacterBody3D:
+	var closest: CharacterBody3D
+	var closest_distance := INF
+	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
+		var candidate := candidate_node as CharacterBody3D
+		if not _is_target_available(candidate):
+			continue
+		if candidate.has_method("is_enemy_of") and not bool(candidate.call("is_enemy_of", get_team())):
+			continue
+		var candidate_distance := global_position.distance_squared_to(candidate.global_position)
+		if candidate_distance < closest_distance:
+			closest = candidate
+			closest_distance = candidate_distance
+	return closest
+
+
+func get_team() -> StringName:
+	return StringName(team)
+
+
+func set_external_move_speed_modifier(source_id: StringName, multiplier: float) -> void:
+	external_move_speed_modifiers[source_id] = maxf(0.0, multiplier)
+
+
+func clear_external_move_speed_modifier(source_id: StringName) -> void:
+	external_move_speed_modifiers.erase(source_id)
+
+
+func _external_move_speed_multiplier() -> float:
+	var result := 1.0
+	for value: Variant in external_move_speed_modifiers.values():
+		result *= float(value)
+	return result
 
 
 func _apply_combat_data() -> void:
@@ -259,3 +322,4 @@ func _apply_combat_data() -> void:
 			attack_audio.stream = stream
 		attack_audio.volume_db = attack_profile.volume_db
 		attack_audio.max_distance = attack_profile.max_distance
+		attack_pitches = [attack_profile.pitch_max, 1.0, attack_profile.pitch_min]

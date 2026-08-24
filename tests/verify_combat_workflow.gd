@@ -78,11 +78,11 @@ func _process(delta: float) -> bool:
 	var passed := library.get_animation_names().size() == 22 and total_frames == 289
 	passed = passed and observed.has("run") and observed.has("attack1")
 	passed = passed and observed.has("attack2") and observed.has("attack3")
-	passed = passed and hit_count >= 3 and player_distance > 0.5 and dummy_distance > 0.2
+	passed = passed and hit_count >= 3 and player_distance > 0.5 and dummy_distance <= 0.15
 	passed = passed and particle_bursts == hit_count
 	passed = passed and attack_audio.stream != null and hit_audio.stream != null
 	passed = passed and attack_sounds > 0 and hit_sounds == hit_count
-	passed = passed and all_skills_cast and vfx_frames.get_animation_names().size() == 4 and vfx_total_frames == 71
+	passed = passed and all_skills_cast and vfx_frames.get_animation_names().size() == 4 and vfx_total_frames == 76
 	passed = passed and is_equal_approx(float(skill_controller.call("get_passive_armor_multiplier")), 1.2)
 	passed = passed and anchor_setup_ok and left_flip_ok and right_flip_ok
 	if not passed:

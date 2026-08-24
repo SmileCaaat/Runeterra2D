@@ -21,6 +21,9 @@ uniform float ground_occluded_alpha : hint_range(0.0, 1.0, 0.01) = 0.32;
 uniform float depth_bias : hint_range(0.0, 0.2, 0.001) = 0.02;
 uniform float ground_depth_fade : hint_range(0.001, 2.0, 0.001) = 0.9;
 uniform bool show_over_models = false;
+uniform float tail_dissolve : hint_range(0.0, 1.0, 0.001) = 0.0;
+uniform float tail_dissolve_softness : hint_range(0.01, 0.3, 0.005) = 0.09;
+uniform float tail_dissolve_scale : hint_range(2.0, 32.0, 0.5) = 13.0;
 
 varying vec3 vfx_world_position;
 
@@ -152,6 +155,22 @@ void fragment() {
 	coverage = apply_ground_occlusion(
 		coverage, SCREEN_UV, INV_PROJECTION_MATRIX, -VERTEX.z, vfx_world_position.y
 	);
-	ALBEDO = source.rgb * tint.rgb;
+	float tail_noise = edge_value_noise(vec4(UV * tail_dissolve_scale, vec2(17.3, 41.7))).x;
+	// Vertical progression is dominant: bottom pixels have the lowest field and
+	// disappear first. Noise only breaks up the moving dissolve boundary.
+	float tail_field = (1.0 - UV.y) * 0.86 + tail_noise * 0.14;
+	float tail_threshold = tail_dissolve * 1.15 - 0.08;
+	float tail_survival = smoothstep(
+		tail_threshold - tail_dissolve_softness,
+		tail_threshold + tail_dissolve_softness,
+		tail_field
+	);
+	float tail_rim = (1.0 - smoothstep(
+		tail_dissolve_softness,
+		tail_dissolve_softness * 2.2,
+		abs(tail_field - tail_threshold)
+	)) * step(0.001, tail_dissolve);
+	coverage *= tail_survival * (1.0 - tail_dissolve * 0.42);
+	ALBEDO = source.rgb * tint.rgb + vec3(0.10, 0.52, 0.72) * tail_rim * 0.20;
 	ALPHA = coverage * tint.a;
 }

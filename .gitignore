@@ -30,3 +30,6 @@ Desktop.ini
 *.log
 *.bak
 *~
+
+# Local visual regression captures
+/tests/output/

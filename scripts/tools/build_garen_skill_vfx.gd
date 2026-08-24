@@ -6,6 +6,10 @@ const LOOPED := {"spell2_JollyRoger": true, "spell3_OceanStorm": true}
 
 
 func _initialize() -> void:
+	var output_path := OUTPUT_PATH
+	for argument: String in OS.get_cmdline_user_args():
+		if argument.begins_with("--output="):
+			output_path = argument.trim_prefix("--output=")
 	var library := SpriteFrames.new()
 	library.clear_all()
 	if library.has_animation(&"default"):
@@ -47,13 +51,13 @@ func _initialize() -> void:
 			library.add_frame(animation_name, texture, frame_seconds * 24.0)
 			total_frames += 1
 
-	var save_error := ResourceSaver.save(library, OUTPUT_PATH)
+	var save_error := ResourceSaver.save(library, output_path)
 	if save_error != OK:
 		push_error("Could not save skill VFX library: %s" % error_string(save_error))
 		quit(1)
 		return
 	print("Built %d skill VFX animations / %d frames -> %s" % [
-		library.get_animation_names().size(), total_frames, OUTPUT_PATH,
+		library.get_animation_names().size(), total_frames, output_path,
 	])
 	quit(0)
 

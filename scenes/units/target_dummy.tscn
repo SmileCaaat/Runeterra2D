@@ -1,0 +1,82 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/characters/target_dummy.gd" id="1_dummy"]
+[ext_resource type="SpriteFrames" path="res://assets/monsters/target_dummy/target_dummy_sprite_frames.tres" id="2_frames"]
+[ext_resource type="Script" path="res://scripts/vfx/hit_spark_particles.gd" id="3_hit_spark"]
+[ext_resource type="AudioStream" path="res://assets/audio/combat/training_dummy_hit.wav" id="4_hit_audio"]
+[ext_resource type="Texture2D" path="res://assets/fx/soft_ground_shadow.svg" id="5_shadow"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape_dummy"]
+radius = 0.3
+height = 2.3
+
+[sub_resource type="StandardMaterial3D" id="PlaceholderMaterial_dummy"]
+transparency = 1
+albedo_color = Color(0.32, 0.72, 0.84, 0.18)
+shading_mode = 0
+
+[sub_resource type="CapsuleMesh" id="PlaceholderMesh_dummy"]
+material = SubResource("PlaceholderMaterial_dummy")
+radius = 0.3
+height = 2.3
+
+[node name="TargetDummy" type="CharacterBody3D" groups=["depth_sort_actor", "training_dummy"]]
+floor_snap_length = 0.3
+script = ExtResource("1_dummy")
+
+[node name="EnemyCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
+shape = SubResource("CapsuleShape_dummy")
+
+[node name="GroundShadow" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.018, 0)
+cast_shadow = 0
+no_depth_test = true
+render_priority = -10
+modulate = Color(1, 1, 1, 0.82)
+pixel_size = 0.005
+texture_filter = 1
+texture = ExtResource("5_shadow")
+
+[node name="TeamGlowOutline" type="AnimatedSprite3D" parent="."]
+cast_shadow = 0
+modulate = Color(1, 0.03, 0.015, 0.9)
+offset = Vector2(29, 748.5)
+pixel_size = 0.0014445
+billboard = 1
+no_depth_test = true
+render_priority = -1
+sprite_frames = ExtResource("2_frames")
+animation = &"idle"
+
+[node name="EnemyFrames" type="AnimatedSprite3D" parent="." groups=["depth_sort_body"]]
+cast_shadow = 0
+sorting_use_aabb_center = false
+offset = Vector2(29, 800.5)
+pixel_size = 0.00135
+billboard = 1
+render_priority = 0
+sprite_frames = ExtResource("2_frames")
+animation = &"idle"
+
+[node name="EnemyEditorPlaceholder" type="MeshInstance3D" parent="."]
+visible = false
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
+mesh = SubResource("PlaceholderMesh_dummy")
+
+[node name="HitSparkParticles" type="CPUParticles3D" parent="."]
+emitting = false
+script = ExtResource("3_hit_spark")
+
+[node name="HitAudio" type="AudioStreamPlayer3D" parent="."]
+stream = ExtResource("4_hit_audio")
+volume_db = -1.0
+max_distance = 18.0
+
+[node name="DummyStateLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.65, 0)
+billboard = 1
+no_depth_test = true
+text = "训练假人"
+font_size = 22
+outline_size = 7

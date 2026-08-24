@@ -1,5 +1,8 @@
 extends Node3D
 
+const BREAKER_AFTERIMAGE_SHADER := preload("res://assets/vfx/garen_skills/garen_breaker_afterimage.gdshader")
+const IMPACT_SHOCKWAVE_SHADER := preload("res://assets/vfx/garen_skills/garen_impact_shockwave.gdshader")
+const WATER_VAPOR_BURST_SHADER := preload("res://assets/vfx/garen_skills/garen_water_vapor_burst.gdshader")
 const SKILL_BREAKER := 1
 const SKILL_BLACK_SAIL := 2
 const SKILL_OCEAN_STORM := 3
@@ -16,6 +19,12 @@ const SKILL_SEVEN_SEAS := 5
 @export var breaker_damage := 115.0
 @export var breaker_silence_duration := 1.5
 @export var breaker_cooldown := 6.0
+
+@export_group("Skill 1 - 破舰残影")
+@export_range(2, 3, 1) var breaker_afterimage_count := 3
+@export_range(0.1, 0.5, 0.01) var breaker_afterimage_lifetime := 0.28
+@export_range(0.05, 1.0, 0.01) var breaker_afterimage_alpha := 0.36
+@export var breaker_afterimage_color := Color(0.16, 0.72, 1.0, 1.0)
 
 @export_group("Skill 2 - 黑帆")
 @export var black_sail_duration := 4.0
@@ -36,9 +45,31 @@ const SKILL_SEVEN_SEAS := 5
 @export var judgment_missing_health_damage := 260.0
 @export var judgment_cooldown := 11.0
 
+@export_group("Skill 4/5 - 命中震荡")
+@export_range(1, 3, 1) var impact_shockwave_pool_size := 2
+@export_range(0.1, 0.8, 0.01) var impact_shockwave_lifetime := 0.38
+@export_range(0.0, 0.08, 0.001) var judgment_distortion_strength := 0.018
+@export_range(0.0, 0.08, 0.001) var ghostship_distortion_strength := 0.024
+@export var judgment_shockwave_size := 3.8
+@export var ghostship_shockwave_size := 6.0
+@export_range(0.05, 0.6, 0.01) var judgment_rebound_height := 0.26
+@export_range(0.03, 0.3, 0.01) var judgment_rebound_up_duration := 0.09
+@export_range(0.03, 0.4, 0.01) var judgment_rebound_down_duration := 0.14
+@export_range(0.0, 0.3, 0.01) var judgment_tail_hold_duration := 0.07
+@export_range(0.15, 1.0, 0.01) var judgment_tail_dissolve_duration := 0.42
+@export_range(0.15, 0.6, 0.01) var judgment_vapor_burst_duration := 0.28
+@export var judgment_vapor_burst_size := 3.6
+@export var anchor_impact_frame := 7
+@export var ghostship_impact_frame := 9
+@export var impact_shockwave_opacity := 0.55
+@export var judgment_camera_shake_duration := 0.20
+@export var judgment_camera_shake_strength := 0.09
+@export var ghostship_camera_shake_duration := 0.36
+@export var ghostship_camera_shake_strength := 0.105
+
 @export_group("Skill 5 - 七海霸权")
 @export var ghostship_damage := 180.0
-@export var ghostship_radius := 3.0
+@export var ghostship_radius := 5.2
 @export var ghostship_stun_duration := 2.0
 @export var rum_duration := 10.0
 @export var seven_seas_cooldown := 18.0
@@ -59,6 +90,36 @@ var is_casting := false
 var current_skill := 0
 var breaker_timer := 0.0
 var breaker_empowered_attack := false
+var breaker_afterimages: Array[Sprite3D] = []
+var breaker_afterimage_ages: Array[float] = []
+var breaker_afterimage_cursor := 0
+var breaker_afterimage_capture_count := 0
+var impact_shockwaves: Array[MeshInstance3D] = []
+var impact_shockwave_ages: Array[float] = []
+var impact_shockwave_lifetimes: Array[float] = []
+var impact_shockwave_cursor := 0
+var impact_shockwave_emit_count := 0
+var anchor_last_impact_frame := -1
+var ghostship_last_impact_frame := -1
+var impact_camera: Camera3D
+var impact_camera_base_h_offset := 0.0
+var impact_camera_base_v_offset := 0.0
+var impact_shake_elapsed := 0.0
+var impact_shake_duration := 0.0
+var impact_shake_strength := 0.0
+var impact_debris: CPUParticles3D
+var impact_debris_burst_count := 0
+var anchor_impact_position := Vector3.ZERO
+var anchor_position_locked := false
+var anchor_rebound_lift := 0.0
+var anchor_rebound_tween: Tween
+var anchor_tail_active := false
+var anchor_tail_elapsed := 0.0
+var water_vapor_burst: MeshInstance3D
+var water_vapor_burst_active := false
+var water_vapor_burst_elapsed := 0.0
+var water_vapor_mist: CPUParticles3D
+var water_vapor_burst_count := 0
 var black_sail_timer := 0.0
 var rum_timer := 0.0
 var delayed_damage_pool := 0.0
@@ -78,6 +139,11 @@ var black_sail_rum_cleanse_ratio := 0.30
 
 func _ready() -> void:
 	_apply_combat_data()
+	_build_breaker_afterimage_pool()
+	_build_impact_shockwave_pool()
+	_build_impact_debris()
+	_build_water_vapor_burst()
+	character_frames.frame_changed.connect(_capture_breaker_afterimage)
 	for effect: AnimatedSprite3D in [jolly_roger, ocean_storm, anchor_effect, ghostship]:
 		if effect.material_override != null:
 			effect.material_override = effect.material_override.duplicate()
@@ -88,19 +154,29 @@ func _ready() -> void:
 				)
 				_configure_inward_canvas_edge(effect, effect_material)
 		effect.frame_changed.connect(_sync_vfx_frame.bind(effect))
+		effect.frame_changed.connect(_handle_impact_vfx_frame.bind(effect))
 		effect.animation_changed.connect(_sync_vfx_frame.bind(effect))
 		effect.sprite_frames_changed.connect(_sync_vfx_frame.bind(effect))
 		_sync_vfx_frame(effect)
 		effect.visible = false
 	anchor_effect.top_level = true
 	ghostship.top_level = true
+	anchor_effect.animation_finished.connect(_on_anchor_animation_finished)
 
 
 func _process(delta: float) -> void:
+	_update_breaker_afterimages(delta)
+	_update_impact_shockwaves(delta)
+	_update_impact_camera_shake(delta)
+	_update_anchor_tail_dissolve(delta)
+	_update_water_vapor_burst(delta)
 	_update_timers(delta)
 	_update_rum_damage(delta)
-	if anchor_effect.visible and is_instance_valid(target):
-		anchor_effect.global_position = target.global_position
+	if anchor_effect.visible:
+		if anchor_position_locked:
+			anchor_effect.global_position = anchor_impact_position + Vector3.UP * anchor_rebound_lift
+		elif is_instance_valid(target):
+			anchor_effect.global_position = target.global_position
 	if not automatic_demo or is_casting or not is_instance_valid(target):
 		return
 	demo_timer -= delta
@@ -165,6 +241,7 @@ func should_use_breaker_attack() -> bool:
 
 
 func resolve_breaker_attack(skill_target: CharacterBody3D) -> void:
+	_register_damage_source(skill_target)
 	if not should_use_breaker_attack():
 		return
 	breaker_empowered_attack = false
@@ -173,6 +250,468 @@ func resolve_breaker_attack(skill_target: CharacterBody3D) -> void:
 	if skill_target.has_method("apply_silence"):
 		skill_target.call("apply_silence", breaker_silence_duration)
 	damage_event_count += 1
+
+
+func _build_breaker_afterimage_pool() -> void:
+	var pool_size := clampi(breaker_afterimage_count, 2, 3)
+	for index: int in range(pool_size):
+		var afterimage := Sprite3D.new()
+		afterimage.name = "BreakerAfterimage%d" % index
+		afterimage.visible = false
+		afterimage.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		afterimage.transparent = true
+		afterimage.shaded = false
+		afterimage.render_priority = maxi(-128, character_frames.render_priority - 1)
+		var afterimage_material := ShaderMaterial.new()
+		afterimage_material.shader = BREAKER_AFTERIMAGE_SHADER
+		afterimage_material.set_shader_parameter(&"ocean_tint", Color(
+			breaker_afterimage_color.r,
+			breaker_afterimage_color.g,
+			breaker_afterimage_color.b,
+			breaker_afterimage_alpha
+		))
+		afterimage.material_override = afterimage_material
+		add_child(afterimage)
+		afterimage.top_level = true
+		breaker_afterimages.append(afterimage)
+		breaker_afterimage_ages.append(breaker_afterimage_lifetime)
+
+
+func _capture_breaker_afterimage() -> void:
+	if breaker_afterimages.is_empty() or not _should_capture_breaker_afterimage():
+		return
+	var frame_texture := character_frames.sprite_frames.get_frame_texture(
+		character_frames.animation, character_frames.frame
+	)
+	if frame_texture == null:
+		return
+	var afterimage := breaker_afterimages[breaker_afterimage_cursor]
+	afterimage.texture = frame_texture
+	var afterimage_material := afterimage.material_override as ShaderMaterial
+	if afterimage_material != null:
+		afterimage_material.set_shader_parameter(&"frame_texture", frame_texture)
+		afterimage_material.set_shader_parameter(&"ocean_tint", Color(
+			breaker_afterimage_color.r,
+			breaker_afterimage_color.g,
+			breaker_afterimage_color.b,
+			breaker_afterimage_alpha
+		))
+	afterimage.global_transform = character_frames.global_transform
+	afterimage.offset = character_frames.offset
+	afterimage.pixel_size = character_frames.pixel_size
+	afterimage.axis = character_frames.axis
+	afterimage.billboard = character_frames.billboard
+	afterimage.fixed_size = character_frames.fixed_size
+	afterimage.centered = character_frames.centered
+	afterimage.double_sided = character_frames.double_sided
+	afterimage.no_depth_test = character_frames.no_depth_test
+	afterimage.texture_filter = character_frames.texture_filter
+	afterimage.flip_h = character_frames.flip_h
+	afterimage.flip_v = character_frames.flip_v
+	afterimage.layers = character_frames.layers
+	afterimage.modulate = Color.WHITE
+	afterimage.visible = true
+	breaker_afterimage_ages[breaker_afterimage_cursor] = 0.0
+	breaker_afterimage_cursor = (breaker_afterimage_cursor + 1) % breaker_afterimages.size()
+	breaker_afterimage_capture_count += 1
+
+
+func _should_capture_breaker_afterimage() -> bool:
+	if breaker_timer <= 0.0 or character_frames.sprite_frames == null:
+		return false
+	var definition := _definition(SKILL_BREAKER)
+	var run_animation := definition.movement_animation_name if definition != null else &"run_spell"
+	var attack_animation := definition.empowered_animation_name if definition != null else &"spell1"
+	return character_frames.animation == run_animation or character_frames.animation == attack_animation
+
+
+func _update_breaker_afterimages(delta: float) -> void:
+	var lifetime := maxf(breaker_afterimage_lifetime, 0.01)
+	for index: int in range(breaker_afterimages.size()):
+		var afterimage := breaker_afterimages[index]
+		if not afterimage.visible:
+			continue
+		breaker_afterimage_ages[index] += delta
+		var progress := clampf(breaker_afterimage_ages[index] / lifetime, 0.0, 1.0)
+		if progress >= 1.0:
+			afterimage.visible = false
+			afterimage.texture = null
+			continue
+		var fade := 1.0 - progress
+		var material := afterimage.material_override as ShaderMaterial
+		if material != null:
+			material.set_shader_parameter(&"ocean_tint", Color(
+				breaker_afterimage_color.r,
+				breaker_afterimage_color.g,
+				breaker_afterimage_color.b,
+				breaker_afterimage_alpha * fade * fade
+			))
+
+
+func _build_impact_shockwave_pool() -> void:
+	var pool_size := clampi(impact_shockwave_pool_size, 1, 3)
+	for index: int in range(pool_size):
+		var shockwave := MeshInstance3D.new()
+		shockwave.name = "ImpactShockwave%d" % index
+		shockwave.visible = false
+		shockwave.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var quad := QuadMesh.new()
+		quad.size = Vector2.ONE
+		shockwave.mesh = quad
+		var material := ShaderMaterial.new()
+		material.shader = IMPACT_SHOCKWAVE_SHADER
+		material.render_priority = 3
+		shockwave.material_override = material
+		add_child(shockwave)
+		shockwave.top_level = true
+		impact_shockwaves.append(shockwave)
+		impact_shockwave_ages.append(impact_shockwave_lifetime)
+		impact_shockwave_lifetimes.append(impact_shockwave_lifetime)
+
+
+func _build_impact_debris() -> void:
+	var profile := combat_database.get_particle_profile(&"judgment_debris_small") if combat_database != null else null
+	impact_debris = CPUParticles3D.new()
+	impact_debris.name = "ImpactDebris"
+	impact_debris.emitting = false
+	impact_debris.amount = profile.amount if profile != null else 22
+	impact_debris.lifetime = profile.lifetime if profile != null else 0.46
+	impact_debris.one_shot = true
+	impact_debris.explosiveness = 1.0
+	impact_debris.randomness = profile.randomness if profile != null else 0.48
+	impact_debris.local_coords = false
+	impact_debris.direction = Vector3(0.0, 0.62, 0.0)
+	impact_debris.spread = profile.spread if profile != null else 74.0
+	impact_debris.gravity = profile.gravity if profile != null else Vector3(0.0, -7.5, 0.0)
+	impact_debris.initial_velocity_min = profile.velocity_min if profile != null else 2.2
+	impact_debris.initial_velocity_max = profile.velocity_max if profile != null else 4.9
+	impact_debris.angular_velocity_min = profile.angular_velocity_min if profile != null else -620.0
+	impact_debris.angular_velocity_max = profile.angular_velocity_max if profile != null else 620.0
+	impact_debris.scale_amount_min = profile.scale_min if profile != null else 0.55
+	impact_debris.scale_amount_max = profile.scale_max if profile != null else 1.35
+	var color_ramp := Gradient.new()
+	color_ramp.offsets = PackedFloat32Array([0.0, 0.18, 0.72, 1.0])
+	color_ramp.colors = PackedColorArray([
+		profile.gradient_start if profile != null else Color(0.88, 0.98, 1.0, 0.95),
+		profile.gradient_mid if profile != null else Color(0.26, 0.78, 1.0, 0.90),
+		profile.gradient_late if profile != null else Color(0.08, 0.35, 0.52, 0.42),
+		profile.gradient_end if profile != null else Color(0.02, 0.10, 0.16, 0.0),
+	])
+	impact_debris.color_ramp = color_ramp
+	var debris_material := StandardMaterial3D.new()
+	debris_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	debris_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	debris_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	debris_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	debris_material.vertex_color_use_as_albedo = true
+	debris_material.albedo_color = Color.WHITE
+	debris_material.emission_enabled = true
+	debris_material.emission = profile.emission_color if profile != null else Color(0.12, 0.62, 0.92, 1.0)
+	debris_material.emission_energy_multiplier = profile.emission_energy if profile != null else 1.35
+	var debris_mesh := QuadMesh.new()
+	debris_mesh.size = profile.mesh_size if profile != null else Vector2(0.20, 0.038)
+	debris_mesh.material = debris_material
+	impact_debris.mesh = debris_mesh
+	add_child(impact_debris)
+	impact_debris.top_level = true
+
+
+func _build_water_vapor_burst() -> void:
+	var mist_profile := combat_database.get_particle_profile(&"judgment_vapor_mist") if combat_database != null else null
+	water_vapor_burst = MeshInstance3D.new()
+	water_vapor_burst.name = "WaterVaporBurst"
+	water_vapor_burst.visible = false
+	water_vapor_burst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var vapor_mesh := SphereMesh.new()
+	vapor_mesh.radius = 0.5
+	vapor_mesh.height = 1.0
+	vapor_mesh.radial_segments = 24
+	vapor_mesh.rings = 12
+	water_vapor_burst.mesh = vapor_mesh
+	var vapor_material := ShaderMaterial.new()
+	vapor_material.shader = WATER_VAPOR_BURST_SHADER
+	vapor_material.render_priority = 3
+	water_vapor_burst.material_override = vapor_material
+	add_child(water_vapor_burst)
+	water_vapor_burst.top_level = true
+
+	water_vapor_mist = CPUParticles3D.new()
+	water_vapor_mist.name = "WaterVaporMist"
+	water_vapor_mist.emitting = false
+	water_vapor_mist.amount = mist_profile.amount if mist_profile != null else 34
+	water_vapor_mist.lifetime = mist_profile.lifetime if mist_profile != null else 0.34
+	water_vapor_mist.one_shot = true
+	water_vapor_mist.explosiveness = 1.0
+	water_vapor_mist.randomness = mist_profile.randomness if mist_profile != null else 0.38
+	water_vapor_mist.local_coords = false
+	water_vapor_mist.direction = Vector3(0.0, 0.30, 0.0)
+	water_vapor_mist.spread = mist_profile.spread if mist_profile != null else 92.0
+	water_vapor_mist.gravity = mist_profile.gravity if mist_profile != null else Vector3(0.0, -3.2, 0.0)
+	water_vapor_mist.initial_velocity_min = mist_profile.velocity_min if mist_profile != null else 3.2
+	water_vapor_mist.initial_velocity_max = mist_profile.velocity_max if mist_profile != null else 6.8
+	water_vapor_mist.scale_amount_min = mist_profile.scale_min if mist_profile != null else 0.45
+	water_vapor_mist.scale_amount_max = mist_profile.scale_max if mist_profile != null else 1.25
+	var mist_ramp := Gradient.new()
+	mist_ramp.offsets = PackedFloat32Array([0.0, 0.08, 0.48, 1.0])
+	mist_ramp.colors = PackedColorArray([
+		mist_profile.gradient_start if mist_profile != null else Color(0.90, 0.99, 1.0, 0.78),
+		mist_profile.gradient_mid if mist_profile != null else Color(0.34, 0.82, 1.0, 0.68),
+		mist_profile.gradient_late if mist_profile != null else Color(0.10, 0.45, 0.68, 0.30),
+		mist_profile.gradient_end if mist_profile != null else Color(0.04, 0.16, 0.24, 0.0),
+	])
+	water_vapor_mist.color_ramp = mist_ramp
+	var mist_mesh := QuadMesh.new()
+	mist_mesh.size = mist_profile.mesh_size if mist_profile != null else Vector2(0.38, 0.24)
+	var mist_texture_gradient := Gradient.new()
+	mist_texture_gradient.offsets = PackedFloat32Array([0.0, 0.42, 1.0])
+	mist_texture_gradient.colors = PackedColorArray([
+		Color(1.0, 1.0, 1.0, 0.92),
+		Color(0.52, 0.88, 1.0, 0.58),
+		Color(0.20, 0.62, 0.82, 0.0),
+	])
+	var mist_texture := GradientTexture2D.new()
+	mist_texture.width = 64
+	mist_texture.height = 64
+	mist_texture.gradient = mist_texture_gradient
+	mist_texture.fill = GradientTexture2D.FILL_RADIAL
+	mist_texture.fill_from = Vector2(0.5, 0.5)
+	mist_texture.fill_to = Vector2(1.0, 0.5)
+	var mist_material := StandardMaterial3D.new()
+	mist_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mist_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mist_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mist_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mist_material.vertex_color_use_as_albedo = true
+	mist_material.albedo_texture = mist_texture
+	mist_material.render_priority = 4
+	mist_mesh.material = mist_material
+	water_vapor_mist.mesh = mist_mesh
+	add_child(water_vapor_mist)
+	water_vapor_mist.top_level = true
+
+
+func _emit_impact_debris(position: Vector3, large_burst: bool) -> void:
+	if not is_instance_valid(impact_debris):
+		return
+	impact_debris.global_position = position + Vector3.UP * 0.16
+	var profile_id := &"judgment_debris_large" if large_burst else &"judgment_debris_small"
+	var profile := combat_database.get_particle_profile(profile_id) if combat_database != null else null
+	impact_debris.amount = profile.amount if profile != null else (32 if large_burst else 22)
+	impact_debris.initial_velocity_min = profile.velocity_min if profile != null else (2.8 if large_burst else 2.2)
+	impact_debris.initial_velocity_max = profile.velocity_max if profile != null else (6.2 if large_burst else 4.9)
+	impact_debris.spread = profile.spread if profile != null else (88.0 if large_burst else 74.0)
+	impact_debris.restart()
+	impact_debris.emitting = true
+	impact_debris_burst_count += 1
+
+
+func _emit_water_vapor_burst(position: Vector3) -> void:
+	if not is_instance_valid(water_vapor_burst) or not is_instance_valid(water_vapor_mist):
+		return
+	water_vapor_burst_active = true
+	water_vapor_burst_elapsed = 0.0
+	water_vapor_burst.global_position = position + Vector3.UP * 0.34
+	water_vapor_burst.scale = Vector3(0.35, 0.10, 0.35)
+	water_vapor_burst.visible = true
+	var vapor_material := water_vapor_burst.material_override as ShaderMaterial
+	if vapor_material != null:
+		vapor_material.set_shader_parameter(&"progress", 0.0)
+	water_vapor_mist.global_position = position + Vector3.UP * 0.26
+	water_vapor_mist.speed_scale = 1.0
+	water_vapor_mist.restart()
+	water_vapor_mist.emitting = true
+	water_vapor_burst_count += 1
+
+
+func _update_water_vapor_burst(delta: float) -> void:
+	if not water_vapor_burst_active or not is_instance_valid(water_vapor_burst):
+		return
+	water_vapor_burst_elapsed += delta
+	var progress := clampf(
+		water_vapor_burst_elapsed / maxf(judgment_vapor_burst_duration, 0.01), 0.0, 1.0
+	)
+	if progress >= 1.0:
+		water_vapor_burst_active = false
+		water_vapor_burst.visible = false
+		return
+	var expansion := 1.0
+	if progress < 0.42:
+		var burst_t := progress / 0.42
+		var back_t := burst_t - 1.0
+		# Back-out curve: rapid expansion with a brief size overshoot.
+		expansion = 1.0 + 2.70 * back_t * back_t * back_t + 1.70 * back_t * back_t
+	elif progress < 0.62:
+		# Elastic recoil after the initial pressure release.
+		expansion = lerpf(1.0, 0.86, (progress - 0.42) / 0.20)
+	else:
+		# A small secondary opening keeps the collapse organic as it fades.
+		expansion = lerpf(0.86, 1.06, (progress - 0.62) / 0.38)
+	water_vapor_burst.scale = Vector3(
+		lerpf(0.35, judgment_vapor_burst_size, expansion),
+		lerpf(0.10, judgment_vapor_burst_size * 0.38, expansion),
+		lerpf(0.35, judgment_vapor_burst_size * 0.62, expansion)
+	)
+	var vapor_material := water_vapor_burst.material_override as ShaderMaterial
+	if vapor_material != null:
+		vapor_material.set_shader_parameter(&"progress", progress)
+
+
+func _handle_impact_vfx_frame(effect: AnimatedSprite3D) -> void:
+	# Design frame numbers are one-based: Anchor 8-12, Ghostship 10-12.
+	if effect == anchor_effect and effect.visible and effect.frame == anchor_impact_frame:
+		if anchor_last_impact_frame == effect.frame:
+			return
+		anchor_last_impact_frame = effect.frame
+		_emit_impact_shockwave(
+			effect.global_position + Vector3.UP * 0.55,
+			judgment_shockwave_size,
+			judgment_distortion_strength,
+			impact_shockwave_lifetime
+		)
+		if effect.frame == anchor_impact_frame:
+			_start_anchor_rebound(effect.global_position)
+			_emit_water_vapor_burst(effect.global_position)
+			_emit_impact_debris(effect.global_position, false)
+			_start_impact_camera_shake(judgment_camera_shake_duration, judgment_camera_shake_strength)
+	elif effect == ghostship and effect.visible and effect.frame == ghostship_impact_frame:
+		if ghostship_last_impact_frame == effect.frame:
+			return
+		ghostship_last_impact_frame = effect.frame
+		_emit_impact_shockwave(
+			effect.global_position + Vector3.UP * 0.75,
+			ghostship_shockwave_size,
+			ghostship_distortion_strength,
+			impact_shockwave_lifetime * 1.12
+		)
+		if effect.frame == ghostship_impact_frame:
+			_emit_impact_debris(effect.global_position, true)
+			_start_impact_camera_shake(ghostship_camera_shake_duration, ghostship_camera_shake_strength)
+
+
+func _emit_impact_shockwave(position: Vector3, size: float, strength: float, lifetime: float) -> void:
+	if impact_shockwaves.is_empty():
+		return
+	var shockwave := impact_shockwaves[impact_shockwave_cursor]
+	shockwave.global_position = position
+	# Heavy impacts spread along the floor as a pressure sheet, not a UI-like circle.
+	shockwave.scale = Vector3(size, size * 0.48, 1.0)
+	var material := shockwave.material_override as ShaderMaterial
+	if material != null:
+		material.set_shader_parameter(&"progress", 0.0)
+		material.set_shader_parameter(&"distortion_strength", strength)
+		material.set_shader_parameter(&"opacity", impact_shockwave_opacity)
+	shockwave.visible = true
+	impact_shockwave_ages[impact_shockwave_cursor] = 0.0
+	impact_shockwave_lifetimes[impact_shockwave_cursor] = maxf(lifetime, 0.01)
+	impact_shockwave_cursor = (impact_shockwave_cursor + 1) % impact_shockwaves.size()
+	impact_shockwave_emit_count += 1
+
+
+func _update_impact_shockwaves(delta: float) -> void:
+	for index: int in range(impact_shockwaves.size()):
+		var shockwave := impact_shockwaves[index]
+		if not shockwave.visible:
+			continue
+		impact_shockwave_ages[index] += delta
+		var progress := clampf(
+			impact_shockwave_ages[index] / impact_shockwave_lifetimes[index], 0.0, 1.0
+		)
+		if progress >= 1.0:
+			shockwave.visible = false
+			continue
+		var material := shockwave.material_override as ShaderMaterial
+		if material != null:
+			material.set_shader_parameter(&"progress", progress)
+			material.set_shader_parameter(&"opacity", impact_shockwave_opacity * (1.0 - progress))
+
+
+func _start_impact_camera_shake(duration: float, strength: float) -> void:
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return
+	if impact_camera != camera or impact_shake_duration <= 0.0:
+		impact_camera = camera
+		impact_camera_base_h_offset = camera.h_offset
+		impact_camera_base_v_offset = camera.v_offset
+	impact_shake_elapsed = 0.0
+	impact_shake_duration = maxf(impact_shake_duration, duration)
+	impact_shake_strength = maxf(impact_shake_strength, strength)
+
+
+func _update_impact_camera_shake(delta: float) -> void:
+	if impact_shake_duration <= 0.0 or not is_instance_valid(impact_camera):
+		return
+	impact_shake_elapsed += delta
+	var progress := clampf(impact_shake_elapsed / impact_shake_duration, 0.0, 1.0)
+	if progress >= 1.0:
+		impact_camera.h_offset = impact_camera_base_h_offset
+		impact_camera.v_offset = impact_camera_base_v_offset
+		impact_shake_duration = 0.0
+		impact_shake_strength = 0.0
+		return
+	var envelope := (1.0 - progress) * (1.0 - progress)
+	var phase := impact_shake_elapsed * 92.0
+	impact_camera.h_offset = impact_camera_base_h_offset + sin(phase) * impact_shake_strength * envelope
+	impact_camera.v_offset = impact_camera_base_v_offset + cos(phase * 1.37) * impact_shake_strength * 0.62 * envelope
+
+
+func _start_anchor_rebound(impact_position: Vector3) -> void:
+	anchor_position_locked = true
+	anchor_impact_position = impact_position
+	anchor_rebound_lift = 0.0
+	if anchor_rebound_tween != null and anchor_rebound_tween.is_valid():
+		anchor_rebound_tween.kill()
+	anchor_rebound_tween = create_tween()
+	anchor_rebound_tween.set_trans(Tween.TRANS_QUAD)
+	anchor_rebound_tween.tween_property(
+		self, "anchor_rebound_lift", judgment_rebound_height, judgment_rebound_up_duration
+	).set_ease(Tween.EASE_OUT)
+	anchor_rebound_tween.tween_property(
+		self, "anchor_rebound_lift", judgment_rebound_height * 0.22, judgment_rebound_down_duration
+	).set_ease(Tween.EASE_IN)
+
+
+func _update_anchor_tail_dissolve(delta: float) -> void:
+	var material := anchor_effect.material_override as ShaderMaterial
+	if material == null:
+		return
+	if not anchor_effect.visible:
+		material.set_shader_parameter(&"tail_dissolve", 0.0)
+		return
+	if not anchor_tail_active:
+		material.set_shader_parameter(&"tail_dissolve", 0.0)
+		return
+	anchor_tail_elapsed += delta
+	var dissolve_elapsed := maxf(anchor_tail_elapsed - judgment_tail_hold_duration, 0.0)
+	var tail_progress := clampf(dissolve_elapsed / maxf(judgment_tail_dissolve_duration, 0.01), 0.0, 1.0)
+	var eased_progress := smoothstep(0.0, 1.0, tail_progress)
+	material.set_shader_parameter(&"tail_dissolve", eased_progress)
+	if tail_progress >= 1.0:
+		_finish_anchor_tail()
+
+
+func _on_anchor_animation_finished() -> void:
+	if not anchor_effect.visible:
+		return
+	anchor_tail_active = true
+	anchor_tail_elapsed = 0.0
+	anchor_effect.speed_scale = 1.0
+	anchor_effect.pause()
+
+
+func _finish_anchor_tail() -> void:
+	anchor_tail_active = false
+	anchor_tail_elapsed = 0.0
+	anchor_effect.visible = false
+	anchor_effect.stop()
+	anchor_effect.speed_scale = 1.0
+	anchor_position_locked = false
+	anchor_rebound_lift = 0.0
+	if anchor_rebound_tween != null and anchor_rebound_tween.is_valid():
+		anchor_rebound_tween.kill()
+	var material := anchor_effect.material_override as ShaderMaterial
+	if material != null:
+		material.set_shader_parameter(&"tail_dissolve", 0.0)
 
 
 func receive_incoming_damage(amount: float) -> void:
@@ -267,16 +806,24 @@ func _cast_ocean_storm() -> void:
 		elapsed += ocean_storm_tick
 		if not character_frames.is_playing():
 			character_frames.play(animation)
-		if is_instance_valid(target) and fighter.global_position.distance_to(target.global_position) <= ocean_storm_radius:
-			if target.has_method("receive_skill_damage"):
-				target.call("receive_skill_damage", ocean_storm_damage, "翻江倒海", true, fighter.global_position, &"physical", &"ocean_hit")
-			damage_event_count += 1
+		resolve_ocean_storm_tick()
 	ocean_storm.visible = false
 	ocean_storm.stop()
 	ocean_audio.stop()
 
 
 func _cast_tyrant_judgment() -> void:
+	anchor_last_impact_frame = -1
+	anchor_tail_active = false
+	anchor_tail_elapsed = 0.0
+	anchor_position_locked = false
+	anchor_rebound_lift = 0.0
+	if anchor_rebound_tween != null and anchor_rebound_tween.is_valid():
+		anchor_rebound_tween.kill()
+	anchor_effect.speed_scale = 1.0
+	var anchor_material := anchor_effect.material_override as ShaderMaterial
+	if anchor_material != null:
+		anchor_material.set_shader_parameter(&"tail_dissolve", 0.0)
 	character_frames.play(_skill_animation(SKILL_TYRANT_JUDGMENT, &"spell4"))
 	anchor_effect.global_position = target.global_position
 	anchor_effect.visible = true
@@ -284,6 +831,7 @@ func _cast_tyrant_judgment() -> void:
 	anchor_audio.play()
 	await get_tree().create_timer(_skill_float(SKILL_TYRANT_JUDGMENT, "cast_time", 0.28)).timeout
 	if is_instance_valid(target) and target.has_method("receive_skill_damage"):
+		_register_damage_source(target)
 		var missing_ratio := 0.0
 		if target.has_method("get_health_ratio"):
 			missing_ratio = 1.0 - float(target.call("get_health_ratio"))
@@ -291,12 +839,11 @@ func _cast_tyrant_judgment() -> void:
 		target.call("receive_skill_damage", damage, "暴君审判", false, fighter.global_position, &"magic", &"judgment_hit")
 		damage_event_count += 1
 	await get_tree().create_timer(_skill_float(SKILL_TYRANT_JUDGMENT, "recovery_time", 0.35)).timeout
-	anchor_effect.visible = false
-	anchor_effect.stop()
 	anchor_audio.stop()
 
 
 func _cast_seven_seas() -> void:
+	ghostship_last_impact_frame = -1
 	character_frames.play(_skill_animation(SKILL_SEVEN_SEAS, &"taunt"))
 	# This is a ground-targeted area skill. The AI chooses the target's position
 	# at cast time, but the area does not continue tracking that character.
@@ -311,18 +858,61 @@ func _cast_seven_seas() -> void:
 	var seven_seas := _definition(SKILL_SEVEN_SEAS)
 	var travel_duration := seven_seas.travel_duration if seven_seas != null else impact_time + 0.1
 	travel.tween_property(ghostship, "global_position", area_center, travel_duration)
-	await get_tree().create_timer(impact_time).timeout
-	if is_instance_valid(target) and area_center.distance_to(target.global_position) <= ghostship_radius:
-		if target.has_method("receive_skill_damage"):
-			target.call("receive_skill_damage", ghostship_damage, "七海霸权", false, fighter.global_position, &"physical", &"ghostship_hit")
-		if target.has_method("apply_stun"):
-			target.call("apply_stun", ghostship_stun_duration)
-		damage_event_count += 1
+	await get_tree().create_timer(travel_duration).timeout
+	resolve_ghostship_impact(area_center)
 	rum_timer = rum_duration
 	await get_tree().create_timer(_skill_float(SKILL_SEVEN_SEAS, "recovery_time", 0.65)).timeout
 	ghostship.visible = false
 	ghostship.stop()
 	ghostship_audio.stop()
+
+
+func resolve_ocean_storm_tick() -> int:
+	var hit_targets := 0
+	for enemy: CharacterBody3D in _get_enemy_targets_in_radius(fighter.global_position, ocean_storm_radius):
+		if enemy.has_method("receive_skill_damage"):
+			_register_damage_source(enemy)
+			enemy.call("receive_skill_damage", ocean_storm_damage, "翻江倒海", true, fighter.global_position, &"physical", &"ocean_hit")
+			damage_event_count += 1
+			hit_targets += 1
+	return hit_targets
+
+
+func resolve_ghostship_impact(area_center: Vector3) -> int:
+	var hit_targets := 0
+	for enemy: CharacterBody3D in _get_enemy_targets_in_radius(area_center, ghostship_radius):
+		if enemy.has_method("receive_skill_damage"):
+			_register_damage_source(enemy)
+			enemy.call("receive_skill_damage", ghostship_damage, "七海霸权", false, fighter.global_position, &"physical", &"ghostship_hit")
+		if enemy.has_method("apply_stun"):
+			enemy.call("apply_stun", ghostship_stun_duration)
+		damage_event_count += 1
+		hit_targets += 1
+	return hit_targets
+
+
+func _get_enemy_targets_in_radius(area_center: Vector3, radius: float) -> Array[CharacterBody3D]:
+	var enemies: Array[CharacterBody3D] = []
+	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
+		var candidate := candidate_node as CharacterBody3D
+		if not is_instance_valid(candidate):
+			continue
+		if candidate.has_method("is_targetable") and not bool(candidate.call("is_targetable")):
+			continue
+		var fighter_team := StringName(fighter.call("get_team")) if fighter.has_method("get_team") else &"friendly"
+		if candidate.has_method("is_enemy_of") and not bool(candidate.call("is_enemy_of", fighter_team)):
+			continue
+		var horizontal_offset := candidate.global_position - area_center
+		horizontal_offset.y = 0.0
+		if horizontal_offset.length() <= radius:
+			enemies.append(candidate)
+	return enemies
+
+
+func _register_damage_source(target_actor: CharacterBody3D) -> void:
+	if target_actor.has_method("register_damage_source"):
+		var fighter_team := StringName(fighter.call("get_team")) if fighter.has_method("get_team") else &"friendly"
+		target_actor.call("register_damage_source", fighter.global_position, fighter_team)
 
 
 func _update_timers(delta: float) -> void:
@@ -489,6 +1079,34 @@ func _apply_combat_data() -> void:
 	ghostship_stun_duration = seven_stun.control_duration if seven_stun != null else ghostship_stun_duration
 	rum_duration = rum_buff.duration if rum_buff != null else rum_duration
 
+	breaker_afterimage_count = int(combat_database.get_rule(&"presentation.breaker_afterimage_count", breaker_afterimage_count))
+	breaker_afterimage_lifetime = _rule_float(&"presentation.breaker_afterimage_lifetime", breaker_afterimage_lifetime)
+	breaker_afterimage_alpha = _rule_float(&"presentation.breaker_afterimage_alpha", breaker_afterimage_alpha)
+	breaker_afterimage_color = Color.from_string(
+		String(combat_database.get_rule(&"presentation.breaker_afterimage_color", breaker_afterimage_color.to_html())),
+		breaker_afterimage_color
+	)
+	impact_shockwave_pool_size = int(combat_database.get_rule(&"presentation.impact_shockwave_pool_size", impact_shockwave_pool_size))
+	impact_shockwave_lifetime = _rule_float(&"presentation.impact_shockwave_lifetime", impact_shockwave_lifetime)
+	impact_shockwave_opacity = _rule_float(&"presentation.impact_shockwave_opacity", impact_shockwave_opacity)
+	anchor_impact_frame = int(combat_database.get_rule(&"presentation.judgment_impact_frame", anchor_impact_frame))
+	ghostship_impact_frame = int(combat_database.get_rule(&"presentation.ghostship_impact_frame", ghostship_impact_frame))
+	judgment_distortion_strength = _rule_float(&"presentation.judgment_distortion_strength", judgment_distortion_strength)
+	ghostship_distortion_strength = _rule_float(&"presentation.ghostship_distortion_strength", ghostship_distortion_strength)
+	judgment_shockwave_size = _rule_float(&"presentation.judgment_shockwave_size", judgment_shockwave_size)
+	ghostship_shockwave_size = _rule_float(&"presentation.ghostship_shockwave_size", ghostship_shockwave_size)
+	judgment_rebound_height = _rule_float(&"presentation.judgment_rebound_height", judgment_rebound_height)
+	judgment_rebound_up_duration = _rule_float(&"presentation.judgment_rebound_up_duration", judgment_rebound_up_duration)
+	judgment_rebound_down_duration = _rule_float(&"presentation.judgment_rebound_down_duration", judgment_rebound_down_duration)
+	judgment_tail_hold_duration = _rule_float(&"presentation.judgment_tail_hold_duration", judgment_tail_hold_duration)
+	judgment_tail_dissolve_duration = _rule_float(&"presentation.judgment_tail_fade_duration", judgment_tail_dissolve_duration)
+	judgment_vapor_burst_duration = _rule_float(&"presentation.judgment_vapor_duration", judgment_vapor_burst_duration)
+	judgment_vapor_burst_size = _rule_float(&"presentation.judgment_vapor_size", judgment_vapor_burst_size)
+	judgment_camera_shake_duration = _rule_float(&"presentation.judgment_camera_shake_duration", judgment_camera_shake_duration)
+	judgment_camera_shake_strength = _rule_float(&"presentation.judgment_camera_shake_strength", judgment_camera_shake_strength)
+	ghostship_camera_shake_duration = _rule_float(&"presentation.ghostship_camera_shake_duration", ghostship_camera_shake_duration)
+	ghostship_camera_shake_strength = _rule_float(&"presentation.ghostship_camera_shake_strength", ghostship_camera_shake_strength)
+
 	_apply_asset_profile(jolly_roger, jolly_audio, &"jolly_roger", &"jolly_roger_audio")
 	_apply_asset_profile(ocean_storm, ocean_audio, &"ocean_storm", &"ocean_storm_audio")
 	_apply_asset_profile(anchor_effect, anchor_audio, &"anchor", &"anchor_audio")
@@ -526,6 +1144,10 @@ func _skill_windup_animation(skill_index: int, fallback: StringName) -> StringNa
 func _skill_float(skill_index: int, property_name: StringName, fallback: float) -> float:
 	var definition := _definition(skill_index)
 	return float(definition.get(property_name)) if definition != null else fallback
+
+
+func _rule_float(rule_id: StringName, fallback: float) -> float:
+	return float(combat_database.get_rule(rule_id, fallback)) if combat_database != null else fallback
 
 
 func _apply_asset_profile(effect: AnimatedSprite3D, audio: AudioStreamPlayer3D, effect_id: StringName, audio_id: StringName) -> void:

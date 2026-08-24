@@ -46,6 +46,16 @@ AS(L) = ASbase + (bonus_AS + ASgrowth × growth_factor(L)) × ASratio
 
 当前单位初始值计算时 `bonus_AS=0`。Wiki 显示的百分比成长先规范化为比例，例如 `3.65% -> 0.0365`。
 
+### 怪物线性成长
+
+来源类型：`project/reference adaptation`。外部资料提供怪物在 1–18 级的端点值，Gemheart 使用 `growth_formula=linear` 保存等距插值，不套用英雄的非线性成长曲线。
+
+```text
+stat(L) = B + G × (L - 1)
+```
+
+当前迅捷蟹首次刷新生命为 `1007.5 + 142.235294 × (L - 1)`，普通形态为 `1550 + 218.823529 × (L - 1)`；运行位置为 `CombatDatabase.get_unit_stat_value()`。
+
 ### 正负抗性
 
 来源类型：`reference`，语义参考 `LOL-ARMOR` 与 `LOL-MR`；曲线常数 `C=100` 为当前 `combat_rules`。
@@ -127,6 +137,8 @@ Garen 技能入口：
 - 纵深判定：攻击者和目标在 Z 轴或平面距离上必须满足 `depth_tolerance` 与命中形状。
 - 朗姆酒延迟伤害：伤害进入 `delayed_damage_pool`，在剩余 Buff 时间内按剩余池比例摊销，生命下限为 `1`；黑帆可令池中伤害乘以 `0.70`。
 - hitstop、hitstun、poise damage、launch velocity 和取消窗口均来自命中/动画事件配表，不从 LoL 数值推导。
+- 迅捷蟹刷新、逃跑、归航和加速法阵表现参数来自 `combat_rules`；法阵持续时间与 30% 移速来自 `buffs` 和 `buff_modifiers`，移动形态速度来自 `unit_stats`。
+- 七海霸权视觉横向覆盖约为 `1166 px × 0.006 m/px × 1.5 = 10.494 m`；项目将圆形伤害直径取为 `10.4 m`，即 `skills.radius=5.2 m`，并同步 `ghostship_hit` 的 X/Z 尺寸与纵深容差。
 
 ## 尚未完成的公式语义
 

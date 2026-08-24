@@ -66,6 +66,8 @@ func get_unit_stat_value(unit_id: StringName, stat_id: StringName, level := 1) -
 	var level_cap := int(get_rule(&"progression.level_cap", 18))
 	var resolved_level := clampi(level, 1, level_cap)
 	match definition.growth_formula:
+		"linear":
+			return definition.base_value + definition.growth_value * float(resolved_level - 1)
 		"primary":
 			return _primary_growth(definition.base_value, definition.growth_value, resolved_level)
 		"attack_speed":

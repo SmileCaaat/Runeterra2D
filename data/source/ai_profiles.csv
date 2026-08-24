@@ -1,3 +1,5 @@
 profile_id,behavior,chase_stop_distance,waypoint_tolerance,wander_wait_min,wander_wait_max,arena_min_x,arena_min_y,arena_max_x,arena_max_y,demo_skill_gap,skill_sequence,deterministic_seed
 garen_demo,fighter,1.5,0.65,0.25,0.8,-14.5,-4.3,14.5,4.3,0.8,garen_breaker|garen_black_sail|garen_ocean_storm|garen_tyrant_judgment|garen_seven_seas,20260815
 dummy_wander,wander,0,0.65,0.25,0.8,-7.5,-3.4,7.5,3.4,0,,20260815
+dummy_passive,passive,0,0.10,0,0,-14.5,-4.3,14.5,4.3,0,,20260824
+scuttle_patrol,path_patrol,0,0.25,0,0,-14.5,-4.3,14.5,4.3,0,,20260824

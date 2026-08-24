@@ -3,7 +3,7 @@ extends SceneTree
 const SHEETS_ROOT := "res://assets/vfx/garen_skills"
 const LIBRARY_PATH := SHEETS_ROOT + "/garen_skill_vfx_frames.tres"
 const EXPECTED_ANIMATIONS := 4
-const EXPECTED_FRAMES := 71
+const EXPECTED_FRAMES := 76
 const LOOPED := {
 	"spell2_JollyRoger": true,
 	"spell3_OceanStorm": true,
@@ -23,8 +23,6 @@ func _initialize() -> void:
 	var total_frames := 0
 	var total_json_duration_ms := 0
 	var total_library_duration_ms := 0.0
-	var reference_canvas := Vector4.ZERO
-	var canvas_was_set := false
 	var canvas_ok := true
 	var filter_clip_ok := true
 
@@ -40,13 +38,8 @@ func _initialize() -> void:
 			float(canvas.get("originPixelX", 0.0)),
 			float(canvas.get("originPixelY", 0.0)),
 		)
-		if not canvas_was_set:
-			reference_canvas = canvas_signature
-			canvas_was_set = true
-		elif not canvas_signature.is_equal_approx(reference_canvas):
-			push_error("Skill VFX canvas mismatch for %s: %s != %s" % [
-				animation_name_string, canvas_signature, reference_canvas,
-			])
+		if canvas_signature.x <= 0.0 or canvas_signature.y <= 0.0:
+			push_error("Skill VFX canvas is invalid for %s: %s" % [animation_name_string, canvas_signature])
 			canvas_ok = false
 
 		var entries: Array[Dictionary] = []

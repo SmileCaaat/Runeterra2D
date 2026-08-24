@@ -2,7 +2,7 @@ asset_id,asset_type,resource_path,node_path,animation_name,audio_path,volume_db,
 garen_character,character_animation,res://assets/characters/rogue_admiral_garen/garen_sprite_frames.tres,CharacterFrames,,,0,1,1,20,1,1,1,245,861.5,0.004,0,false,,manual,0,true
 jolly_roger,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/JollyRoger,spell2_JollyRoger,,0,1,1,20,1,1,1,-102,429,0.004,-1,false,res://assets/vfx/garen_skills/jolly_roger_screen_material.tres,buff,4.0,false
 ocean_storm,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/OceanStorm,spell3_OceanStorm,,0,1,1,20,1.4,1.4,1.4,-102,429,0.0045,1,false,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,duration,3.0,false
-anchor,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/Anchor,spell4_Anchor,,0,1,1,20,1,1,1,-102,429,0.005,2,true,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,animation,0.63,false
+anchor,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/Anchor,spell4_Anchor,,0,1,1,20,1,1,1,-33.5,556,0.005,2,true,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,animation,0.63,false
 ghostship,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/Ghostship,spell5_Ghostship,,0,1,1,20,1.5,1.5,1.5,-102,429,0.006,2,false,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,animation,1.70,true
 garen_attack_audio,audio,,,,res://assets/audio/combat/garen_attack_swing.wav,-3,0.88,1.08,18,1,1,1,0,0,0,0,false,,manual,0,false
 training_dummy_hit_audio,audio,,,,res://assets/audio/combat/training_dummy_hit.wav,-1,0.94,1.06,18,1,1,1,0,0,0,0,false,,manual,0,false

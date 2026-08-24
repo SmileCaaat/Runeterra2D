@@ -1,0 +1,286 @@
+{
+  "frames": {
+    "frame_0001.png": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 42,
+      "sourceFrameIndex": 0,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0002.png": {
+      "frame": {
+        "x": 822,
+        "y": 0,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 84,
+      "timeMs": 125,
+      "sourceFrameIndex": 1,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0003.png": {
+      "frame": {
+        "x": 1644,
+        "y": 0,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 208,
+      "sourceFrameIndex": 2,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0004.png": {
+      "frame": {
+        "x": 2466,
+        "y": 0,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 292,
+      "sourceFrameIndex": 3,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0005.png": {
+      "frame": {
+        "x": 3288,
+        "y": 0,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 84,
+      "timeMs": 375,
+      "sourceFrameIndex": 4,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0006.png": {
+      "frame": {
+        "x": 4110,
+        "y": 0,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 458,
+      "sourceFrameIndex": 5,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0007.png": {
+      "frame": {
+        "x": 4932,
+        "y": 0,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 542,
+      "sourceFrameIndex": 6,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0008.png": {
+      "frame": {
+        "x": 5754,
+        "y": 0,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 84,
+      "timeMs": 625,
+      "sourceFrameIndex": 7,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0009.png": {
+      "frame": {
+        "x": 0,
+        "y": 4525,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 708,
+      "sourceFrameIndex": 8,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0010.png": {
+      "frame": {
+        "x": 822,
+        "y": 4525,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 792,
+      "sourceFrameIndex": 9,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0011.png": {
+      "frame": {
+        "x": 1644,
+        "y": 4525,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 84,
+      "timeMs": 875,
+      "sourceFrameIndex": 10,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0012.png": {
+      "frame": {
+        "x": 2466,
+        "y": 4525,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 958,
+      "sourceFrameIndex": 11,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0013.png": {
+      "frame": {
+        "x": 3288,
+        "y": 4525,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 1042,
+      "sourceFrameIndex": 12,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0014.png": {
+      "frame": {
+        "x": 4110,
+        "y": 4525,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 84,
+      "timeMs": 1125,
+      "sourceFrameIndex": 13,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0015.png": {
+      "frame": {
+        "x": 4932,
+        "y": 4525,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 1208,
+      "sourceFrameIndex": 14,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0016.png": {
+      "frame": {
+        "x": 5754,
+        "y": 4525,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 1292,
+      "sourceFrameIndex": 15,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0017.png": {
+      "frame": {
+        "x": 0,
+        "y": 9050,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 84,
+      "timeMs": 1375,
+      "sourceFrameIndex": 16,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0018.png": {
+      "frame": {
+        "x": 822,
+        "y": 9050,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 1458,
+      "sourceFrameIndex": 17,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0019.png": {
+      "frame": {
+        "x": 1644,
+        "y": 9050,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 83,
+      "timeMs": 1542,
+      "sourceFrameIndex": 18,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0020.png": {
+      "frame": {
+        "x": 2466,
+        "y": 9050,
+        "w": 822,
+        "h": 4525
+      },
+      "duration": 84,
+      "timeMs": 1625,
+      "sourceFrameIndex": 19,
+      "rotated": false,
+      "trimmed": false
+    }
+  },
+  "meta": {
+    "app": "XSXB Frame Tuner Lite",
+    "version": 1,
+    "image": "spritesheet.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 6576,
+      "h": 13575
+    },
+    "canvas": {
+      "width": 822,
+      "height": 4525,
+      "originPixelX": 382,
+      "originPixelY": 3063,
+      "padding": 8
+    }
+  },
+  "audio": {
+    "schemaVersion": 1,
+    "files": [],
+    "events": []
+  }
+}

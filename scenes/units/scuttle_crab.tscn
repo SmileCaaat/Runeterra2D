@@ -1,0 +1,80 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/characters/scuttle_crab.gd" id="1_crab"]
+[ext_resource type="SpriteFrames" path="res://assets/monsters/scuttle_crab/scuttle_crab_sprite_frames.tres" id="2_frames"]
+[ext_resource type="Texture2D" path="res://assets/fx/soft_ground_shadow.svg" id="3_shadow"]
+[ext_resource type="Script" path="res://scripts/vfx/hit_spark_particles.gd" id="4_hit_spark"]
+[ext_resource type="AudioStream" path="res://assets/audio/combat/training_dummy_hit.wav" id="5_hit_audio"]
+[ext_resource type="Shader" path="res://assets/shaders/scuttle_crab_dissolve.gdshader" id="6_dissolve"]
+
+[sub_resource type="CapsuleShape3D" id="CrabShape"]
+radius = 0.5
+height = 1.15
+
+[sub_resource type="ShaderMaterial" id="DissolveMaterial"]
+render_priority = 0
+shader = ExtResource("6_dissolve")
+shader_parameter/tint = Color(1, 1, 1, 1)
+shader_parameter/dissolve_amount = 0.0
+shader_parameter/edge_noise = 0.08
+shader_parameter/edge_softness = 0.045
+
+[node name="ScuttleCrab" type="CharacterBody3D" groups=["depth_sort_actor"]]
+floor_snap_length = 0.3
+script = ExtResource("1_crab")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.58, 0)
+shape = SubResource("CrabShape")
+
+[node name="GroundShadow" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.018, 0)
+cast_shadow = 0
+no_depth_test = true
+render_priority = -10
+modulate = Color(1, 1, 1, 0.75)
+pixel_size = 0.0037
+texture_filter = 1
+texture = ExtResource("3_shadow")
+
+[node name="NeutralOutline" type="AnimatedSprite3D" parent="."]
+cast_shadow = 0
+modulate = Color(1, 0.77, 0.05, 0.96)
+offset = Vector2(42.5, 139)
+pixel_size = 0.0016125
+billboard = 1
+no_depth_test = true
+render_priority = -1
+sprite_frames = ExtResource("2_frames")
+animation = &"idle"
+
+[node name="Frames" type="AnimatedSprite3D" parent="." groups=["depth_sort_body"]]
+material_override = SubResource("DissolveMaterial")
+cast_shadow = 0
+sorting_use_aabb_center = false
+offset = Vector2(42.5, 149)
+pixel_size = 0.0015
+billboard = 1
+render_priority = 0
+sprite_frames = ExtResource("2_frames")
+animation = &"idle"
+
+[node name="HitSparkParticles" type="CPUParticles3D" parent="."]
+emitting = false
+script = ExtResource("4_hit_spark")
+
+[node name="HitAudio" type="AudioStreamPlayer3D" parent="."]
+stream = ExtResource("5_hit_audio")
+volume_db = -2.0
+max_distance = 18.0
+
+[node name="StateLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+billboard = 1
+no_depth_test = true
+modulate = Color(1, 0.82, 0.16, 1)
+text = "峡谷迅捷蟹"
+font_size = 20
+outline_size = 7
+
+[connection signal="animation_finished" from="Frames" to="." method="_on_animation_finished"]

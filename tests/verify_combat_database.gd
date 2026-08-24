@@ -16,13 +16,13 @@ func _initialize() -> void:
 	var generated_ok := generated_database != null and generated_database.source_digest == database.source_digest
 	var editor_plugin_ok := load("res://addons/combat_data/editor_plugin.gd") != null
 
-	var counts_ok := database.rules.size() == 28 and database.stats.size() == 44
-	counts_ok = counts_ok and database.units.size() == 2 and database.unit_stats.size() == 67
+	var counts_ok := database.rules.size() == 66 and database.stats.size() == 48
+	counts_ok = counts_ok and database.units.size() == 3 and database.unit_stats.size() == 109
 	counts_ok = counts_ok and database.skills.size() == 5
-	counts_ok = counts_ok and database.skill_effects.size() == 11 and database.buffs.size() == 4
-	counts_ok = counts_ok and database.buff_modifiers.size() == 5 and database.ai_profiles.size() == 2
+	counts_ok = counts_ok and database.skill_effects.size() == 11 and database.buffs.size() == 5
+	counts_ok = counts_ok and database.buff_modifiers.size() == 6 and database.ai_profiles.size() == 4
 	counts_ok = counts_ok and database.hit_profiles.size() == 5 and database.animation_events.size() == 13
-	counts_ok = counts_ok and database.asset_profiles.size() == 11 and database.particle_profiles.size() == 1
+	counts_ok = counts_ok and database.asset_profiles.size() == 11 and database.particle_profiles.size() == 4
 
 	var armor_ok := is_equal_approx(CombatMath.resolve_resistance(100.0, 100.0, 100.0), 50.0)
 	armor_ok = armor_ok and is_equal_approx(CombatMath.resolve_resistance(100.0, -100.0, 100.0), 150.0)
@@ -32,7 +32,7 @@ func _initialize() -> void:
 	var garen := database.get_unit(&"garen")
 	var identity_ok := garen != null and garen.role == &"juggernaut"
 	identity_ok = identity_ok and garen.resource_type == &"none" and garen.range_type == &"melee"
-	identity_ok = identity_ok and database.schema_version == 2
+	identity_ok = identity_ok and database.schema_version == 3
 
 	var base_stats_ok := garen != null and is_equal_approx(garen.max_health, 690.0)
 	base_stats_ok = base_stats_ok and is_equal_approx(garen.attack_damage, 69.0)
@@ -64,6 +64,25 @@ func _initialize() -> void:
 	world_units_ok = world_units_ok and is_equal_approx(garen.selection_radius, 1.2)
 	world_units_ok = world_units_ok and is_equal_approx(garen.selection_height, 1.888889)
 	world_units_ok = world_units_ok and is_equal_approx(garen.acquisition_radius, 6.0)
+	var target_dummy := database.get_unit(&"training_dummy")
+	world_units_ok = world_units_ok and target_dummy != null
+	world_units_ok = world_units_ok and is_equal_approx(target_dummy.max_health, 1000.0)
+	world_units_ok = world_units_ok and is_equal_approx(target_dummy.attack_speed, 0.66)
+	world_units_ok = world_units_ok and is_equal_approx(target_dummy.attack_range, 1.75)
+	world_units_ok = world_units_ok and is_equal_approx(target_dummy.move_speed, 3.70)
+	world_units_ok = world_units_ok and is_equal_approx(database.get_unit_stat_value(&"training_dummy", &"gameplay_radius", 1), 0.65)
+	world_units_ok = world_units_ok and is_equal_approx(database.get_unit_stat_value(&"training_dummy", &"pathing_radius", 1), 0.30)
+	world_units_ok = world_units_ok and target_dummy.ai_profile_id == &"dummy_passive"
+	var scuttle := database.get_unit(&"scuttle_crab")
+	world_units_ok = world_units_ok and scuttle != null and scuttle.role == &"neutral"
+	world_units_ok = world_units_ok and is_equal_approx(scuttle.max_health, 1007.5)
+	world_units_ok = world_units_ok and is_equal_approx(scuttle.move_speed, 2.55)
+	world_units_ok = world_units_ok and is_equal_approx(scuttle.armor, 42.0)
+	world_units_ok = world_units_ok and is_equal_approx(database.get_unit_stat_value(&"scuttle_crab", &"pathing_radius", 1), 1.0)
+	world_units_ok = world_units_ok and is_equal_approx(database.get_unit_stat_value(&"scuttle_crab", &"max_health", 18), 3425.5)
+	world_units_ok = world_units_ok and is_equal_approx(database.get_unit_stat_value(&"scuttle_crab", &"normal_max_health", 18), 5270.0)
+	world_units_ok = world_units_ok and is_equal_approx(database.get_unit_stat_value(&"scuttle_crab", &"out_of_combat_move_speed", 1), 1.55)
+	world_units_ok = world_units_ok and is_equal_approx(database.get_unit_stat_value(&"scuttle_crab", &"dash_move_speed", 1), 7.5)
 
 	var timing_ok := garen != null and is_equal_approx(garen.attack_windup, 0.18)
 	timing_ok = timing_ok and is_equal_approx(garen.attack_windup_modifier, 0.5)

@@ -55,7 +55,7 @@ The current prototype does not yet have a separate game-mode table, so it uses t
 
 The normalized unit-stat table keeps both runtime values and source values. For example, Garen's source move speed `340` is stored beside runtime speed `3.4` with `conversion_scale=0.01`; this avoids mixing LoL units with Godot world meters while keeping every conversion reviewable.
 
-Primary growing stats use `base + growth * n * (0.7025 + 0.0175 * n)`, where `n = level - 1`. Attack speed applies the same growth factor through `attack_speed_ratio`. Levels are clamped by `progression.level_cap`. The coefficients are combat rules, while each stat row explicitly declares `none`, `primary` or `attack_speed` growth.
+Primary growing stats use `base + growth * n * (0.7025 + 0.0175 * n)`, where `n = level - 1`. Attack speed applies the same growth factor through `attack_speed_ratio`. Monster endpoint interpolation can use `linear = base + growth * n`. Levels are clamped by `progression.level_cap`. Each stat row explicitly declares `none`, `linear`, `primary` or `attack_speed` growth.
 
 Reference semantics and current Garen source values were checked against [Champion statistics](https://wiki.leagueoflegends.com/en-us/Champion_statistic) and [Template:Data Garen](https://wiki.leagueoflegends.com/en-us/Template:Data_Garen).
 

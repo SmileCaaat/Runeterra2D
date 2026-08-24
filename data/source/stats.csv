@@ -43,3 +43,7 @@ depth_radius,纵深半径,action,meter,flat,0,100,横版纵深命中尺寸
 poise_damage,削韧,action,point,flat,0,100000,一次命中的削韧值
 hitstun,硬直时长,action,second,flat,0,30,无法行动的受击时间
 knockback,击退强度,action,meter_per_second,flat,0,100,平面击退初速度
+normal_max_health,普通形态最大生命值,resource,point,flat,1,1000000,首次刷新后的中立生物生命成长
+out_of_combat_move_speed,脱战移动速度,movement,meter_per_second,flat,0,100,未进入战斗时的平面移动速度
+dash_move_speed,冲刺移动速度,movement,meter_per_second,flat,0,100,归航或特殊冲刺时的平面移动速度
+navigation_leash_radius,导航脱离距离,presence,meter,flat,0,100,离开固定导航路径后触发归航的距离

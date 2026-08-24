@@ -1,0 +1,143 @@
+{
+  "frames": {
+    "frame_0001.png": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 1087,
+        "h": 1706
+      },
+      "duration": 22,
+      "timeMs": 11,
+      "sourceFrameIndex": 0,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0002.png": {
+      "frame": {
+        "x": 1087,
+        "y": 0,
+        "w": 1087,
+        "h": 1706
+      },
+      "duration": 22,
+      "timeMs": 33,
+      "sourceFrameIndex": 1,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0003.png": {
+      "frame": {
+        "x": 2174,
+        "y": 0,
+        "w": 1087,
+        "h": 1706
+      },
+      "duration": 23,
+      "timeMs": 56,
+      "sourceFrameIndex": 2,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0004.png": {
+      "frame": {
+        "x": 3261,
+        "y": 0,
+        "w": 1087,
+        "h": 1706
+      },
+      "duration": 22,
+      "timeMs": 78,
+      "sourceFrameIndex": 3,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0005.png": {
+      "frame": {
+        "x": 4348,
+        "y": 0,
+        "w": 1087,
+        "h": 1706
+      },
+      "duration": 22,
+      "timeMs": 100,
+      "sourceFrameIndex": 4,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0006.png": {
+      "frame": {
+        "x": 5435,
+        "y": 0,
+        "w": 1087,
+        "h": 1706
+      },
+      "duration": 22,
+      "timeMs": 122,
+      "sourceFrameIndex": 5,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0007.png": {
+      "frame": {
+        "x": 6522,
+        "y": 0,
+        "w": 1087,
+        "h": 1706
+      },
+      "duration": 23,
+      "timeMs": 144,
+      "sourceFrameIndex": 6,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0008.png": {
+      "frame": {
+        "x": 7609,
+        "y": 0,
+        "w": 1087,
+        "h": 1706
+      },
+      "duration": 22,
+      "timeMs": 167,
+      "sourceFrameIndex": 7,
+      "rotated": false,
+      "trimmed": false
+    },
+    "frame_0009.png": {
+      "frame": {
+        "x": 0,
+        "y": 1706,
+        "w": 1087,
+        "h": 1706
+      },
+      "duration": 22,
+      "timeMs": 189,
+      "sourceFrameIndex": 8,
+      "rotated": false,
+      "trimmed": false
+    }
+  },
+  "meta": {
+    "app": "XSXB Frame Tuner Lite",
+    "version": 1,
+    "image": "spritesheet.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 8696,
+      "h": 3412
+    },
+    "canvas": {
+      "width": 1087,
+      "height": 1706,
+      "originPixelX": 501,
+      "originPixelY": 1002,
+      "padding": 8
+    }
+  },
+  "audio": {
+    "schemaVersion": 1,
+    "files": [],
+    "events": []
+  }
+}

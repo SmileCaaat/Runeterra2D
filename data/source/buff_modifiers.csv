@@ -4,3 +4,4 @@ black_sail_damage_taken,black_sail,damage_taken,multiply,0.70,while_active,100
 black_sail_control_duration,black_sail,control_duration,multiply,0.70,while_active,100
 black_sail_passive_armor,black_sail_passive,armor,add_percent,0.20,always,10
 black_sail_passive_mr,black_sail_passive,magic_resistance,add_percent,0.20,always,10
+scuttle_speed_zone_bonus,scuttle_speed_zone,move_speed,add_percent,0.30,while_inside,100

@@ -1,6 +1,6 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[gd_resource type="ShaderMaterial" format=3 uid="uid://gsco443lge80"]
 
-[ext_resource type="Shader" path="res://assets/vfx/garen_skills/garen_vfx_soft_key.gdshader" id="1_shader"]
+[ext_resource type="Shader" uid="uid://b44sc3qbie2ge" path="res://assets/vfx/garen_skills/garen_vfx_soft_key.gdshader" id="1_shader"]
 
 [resource]
 resource_local_to_scene = true

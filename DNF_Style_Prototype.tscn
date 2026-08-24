@@ -1,20 +1,22 @@
 [gd_scene format=3 uid="uid://bu24a6k8rjjgo"]
 
-[ext_resource type="SpriteFrames" path="res://assets/characters/rogue_admiral_garen/garen_sprite_frames.tres" id="1_08h5l"]
+[ext_resource type="SpriteFrames" uid="uid://clqjgimw4i4kr" path="res://assets/characters/rogue_admiral_garen/garen_sprite_frames.tres" id="1_08h5l"]
 [ext_resource type="Texture2D" uid="uid://s6tqtqunb51r" path="res://assets/fx/soft_ground_shadow.svg" id="2_shadow"]
 [ext_resource type="Script" uid="uid://dv8xxg0p6k8ch" path="res://scripts/characters/garen_combat_ai.gd" id="3_garen_ai"]
-[ext_resource type="Script" uid="uid://c4o8q0ogr3iwp" path="res://scripts/characters/moving_training_dummy.gd" id="4_dummy_ai"]
-[ext_resource type="Script" path="res://scripts/vfx/hit_spark_particles.gd" id="5_hit_spark"]
-[ext_resource type="AudioStream" path="res://assets/audio/combat/garen_attack_swing.wav" id="6_attack_audio"]
-[ext_resource type="AudioStream" path="res://assets/audio/combat/training_dummy_hit.wav" id="7_hit_audio"]
-[ext_resource type="Script" path="res://scripts/characters/garen_skill_controller.gd" id="8_skill_controller"]
-[ext_resource type="SpriteFrames" path="res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres" id="9_skill_vfx"]
-[ext_resource type="AudioStream" path="res://assets/audio/skills/garen/spell_JollyRoger.mp3" id="10_jolly_audio"]
-[ext_resource type="AudioStream" path="res://assets/audio/skills/garen/spell_OceanStorm.mp3" id="11_ocean_audio"]
-[ext_resource type="AudioStream" path="res://assets/audio/skills/garen/spell_anchor.mp3" id="12_anchor_audio"]
-[ext_resource type="AudioStream" path="res://assets/audio/skills/garen/spell_Ghost ship.mp3" id="13_ghostship_audio"]
-[ext_resource type="Material" path="res://assets/vfx/garen_skills/jolly_roger_screen_material.tres" id="14_jolly_material"]
-[ext_resource type="Material" path="res://assets/vfx/garen_skills/skill_vfx_soft_material.tres" id="15_soft_vfx_material"]
+[ext_resource type="AudioStream" uid="uid://cca16a1p03bpr" path="res://assets/audio/combat/garen_attack_swing.wav" id="6_attack_audio"]
+[ext_resource type="Script" uid="uid://cahtpkohg2pbo" path="res://scripts/characters/garen_skill_controller.gd" id="8_skill_controller"]
+[ext_resource type="SpriteFrames" uid="uid://nkv1ee1afy3v" path="res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres" id="9_skill_vfx"]
+[ext_resource type="AudioStream" uid="uid://cir6boseuombw" path="res://assets/audio/skills/garen/spell_JollyRoger.mp3" id="10_jolly_audio"]
+[ext_resource type="AudioStream" uid="uid://byniw5c2igk75" path="res://assets/audio/skills/garen/spell_OceanStorm.mp3" id="11_ocean_audio"]
+[ext_resource type="AudioStream" uid="uid://btb3h63i5rk5h" path="res://assets/audio/skills/garen/spell_anchor.mp3" id="12_anchor_audio"]
+[ext_resource type="AudioStream" uid="uid://bgut4blvfp11f" path="res://assets/audio/skills/garen/spell_Ghost ship.mp3" id="13_ghostship_audio"]
+[ext_resource type="Material" uid="uid://bmomd6rtvumq7" path="res://assets/vfx/garen_skills/jolly_roger_screen_material.tres" id="14_jolly_material"]
+[ext_resource type="Material" uid="uid://gsco443lge80" path="res://assets/vfx/garen_skills/skill_vfx_soft_material.tres" id="15_soft_vfx_material"]
+[ext_resource type="PackedScene" path="res://scenes/units/target_dummy.tscn" id="16_target_dummy"]
+[ext_resource type="Script" uid="uid://ciwom2obe6fuw" path="res://scripts/rendering/character_depth_sorter.gd" id="17_depth_sorter"]
+[ext_resource type="Script" uid="uid://cng0mh5tto5jy" path="res://scripts/systems/scuttle_crab_spawner.gd" id="18_scuttle_spawner"]
+[ext_resource type="PackedScene" path="res://scenes/units/scuttle_crab.tscn" id="19_scuttle"]
+[ext_resource type="PackedScene" path="res://scenes/world/scuttle_speed_zone.tscn" id="20_scuttle_zone"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_qf7t4"]
 sky_top_color = Color(0.11372549, 0.15294118, 0.21960784, 1)
@@ -129,21 +131,6 @@ roughness = 0.48
 radius = 0.42
 height = 1.8
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_jpoia"]
-radius = 0.45
-height = 1.9
-
-[sub_resource type="SpriteFrames" id="SpriteFrames_k3seb"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nocdf"]
-albedo_color = Color(0.78431374, 0.36078432, 0.38431373, 1)
-metallic = 0.03
-roughness = 0.52
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_c75ux"]
-radius = 0.45
-height = 1.9
-
 [node name="HD2D_Prototype" type="Node3D" unique_id=894535074]
 
 [node name="Environment" type="WorldEnvironment" parent="." unique_id=1249872615]
@@ -159,7 +146,7 @@ directional_shadow_max_distance = 40.0
 [node name="CameraRig" type="Node3D" parent="." unique_id=1526143358]
 
 [node name="DNFCamera" type="Camera3D" parent="CameraRig" unique_id=2113061531]
-transform = Transform3D(1, 0, 0, 0, 0.9286646, 0.37092048, 0, -0.37092048, 0.9286646, 0, 7, 16)
+transform = Transform3D(1, 0, 0, 0, 0.9286646, 0.37092048, 0, -0.37092048, 0.9286646, 0, 7.7587624, 16)
 projection = 1
 size = 10.5
 near = 0.1
@@ -171,6 +158,7 @@ far = 100.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 0)
 
 [node name="GroundMesh" type="MeshInstance3D" parent="World/Ground" unique_id=902324901]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0009250641, 0.01832676, -0.008790016)
 material_override = SubResource("StandardMaterial3D_bofcl")
 mesh = SubResource("BoxMesh_waa6q")
 
@@ -200,7 +188,7 @@ mesh = SubResource("BoxMesh_ugsgx")
 shape = SubResource("BoxShape3D_io5tl")
 
 [node name="RaisedPlatform" type="StaticBody3D" parent="World/Architecture" unique_id=2093223377]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.3, 1.8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.044897, 0.3, 1.8)
 
 [node name="PlatformMesh" type="MeshInstance3D" parent="World/Architecture/RaisedPlatform" unique_id=671237360]
 material_override = SubResource("StandardMaterial3D_7bxuh")
@@ -257,6 +245,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 1.5, 0)
 shape = SubResource("BoxShape3D_7p3l8")
 
 [node name="Characters" type="Node3D" parent="." unique_id=1662463035]
+script = ExtResource("17_depth_sorter")
 
 [node name="Player" type="CharacterBody3D" parent="Characters" unique_id=1535866590 groups=["depth_sort_actor", "player_actor"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 1.2)
@@ -267,7 +256,8 @@ script = ExtResource("3_garen_ai")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("CapsuleShape3D_e143n")
 
-[node name="CharacterFrames" type="AnimatedSprite3D" parent="Characters/Player" unique_id=1316070057]
+[node name="CharacterFrames" type="AnimatedSprite3D" parent="Characters/Player" unique_id=1316070057 groups=["depth_sort_body"]]
+sorting_use_aabb_center = false
 cast_shadow = 0
 offset = Vector2(245, 861.5)
 pixel_size = 0.004
@@ -286,7 +276,9 @@ mesh = SubResource("CapsuleMesh_cwoja")
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.018, 0)
 cast_shadow = 0
 pixel_size = 0.005
+no_depth_test = true
 texture_filter = 1
+render_priority = -10
 texture = ExtResource("2_shadow")
 
 [node name="AIStateLabel" type="Label3D" parent="Characters/Player" unique_id=286567726]
@@ -298,119 +290,100 @@ text = "AI · CHASE"
 font_size = 28
 outline_size = 8
 
-[node name="AttackAudio" type="AudioStreamPlayer3D" parent="Characters/Player"]
+[node name="AttackAudio" type="AudioStreamPlayer3D" parent="Characters/Player" unique_id=1634920268]
 stream = ExtResource("6_attack_audio")
 volume_db = -3.0
 max_distance = 18.0
 
-[node name="SkillController" type="Node3D" parent="Characters/Player"]
+[node name="SkillController" type="Node3D" parent="Characters/Player" unique_id=391854274]
 script = ExtResource("8_skill_controller")
 
-[node name="JollyRoger" type="AnimatedSprite3D" parent="Characters/Player/SkillController"]
+[node name="JollyRoger" type="AnimatedSprite3D" parent="Characters/Player/SkillController" unique_id=1447795958]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
 visible = false
+material_override = ExtResource("14_jolly_material")
 cast_shadow = 0
 offset = Vector2(-102, 429)
 pixel_size = 0.004
 billboard = 1
 render_priority = -1
-material_override = ExtResource("14_jolly_material")
 sprite_frames = ExtResource("9_skill_vfx")
 animation = &"spell2_JollyRoger"
 
-[node name="OceanStorm" type="AnimatedSprite3D" parent="Characters/Player/SkillController"]
+[node name="OceanStorm" type="AnimatedSprite3D" parent="Characters/Player/SkillController" unique_id=2009264593]
 transform = Transform3D(1.4, 0, 0, 0, 1.4, 0, 0, 0, 1.4, 0, 0, 0.08)
 visible = false
+material_override = ExtResource("15_soft_vfx_material")
 cast_shadow = 0
 offset = Vector2(-102, 429)
 pixel_size = 0.0045
 billboard = 1
 render_priority = 1
-material_override = ExtResource("15_soft_vfx_material")
 sprite_frames = ExtResource("9_skill_vfx")
 animation = &"spell3_OceanStorm"
 
-[node name="Anchor" type="AnimatedSprite3D" parent="Characters/Player/SkillController"]
+[node name="Anchor" type="AnimatedSprite3D" parent="Characters/Player/SkillController" unique_id=1574495976]
 visible = false
+material_override = ExtResource("15_soft_vfx_material")
 cast_shadow = 0
-no_depth_test = true
-offset = Vector2(-102, 429)
+offset = Vector2(-33.5, 556)
 pixel_size = 0.005
 billboard = 1
+no_depth_test = true
 render_priority = 2
-material_override = ExtResource("15_soft_vfx_material")
 sprite_frames = ExtResource("9_skill_vfx")
 animation = &"spell4_Anchor"
 
-[node name="Ghostship" type="AnimatedSprite3D" parent="Characters/Player/SkillController"]
+[node name="Ghostship" type="AnimatedSprite3D" parent="Characters/Player/SkillController" unique_id=46392021]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0)
 visible = false
+material_override = ExtResource("15_soft_vfx_material")
 cast_shadow = 0
 offset = Vector2(-102, 429)
 pixel_size = 0.006
 billboard = 1
 render_priority = 2
-material_override = ExtResource("15_soft_vfx_material")
 sprite_frames = ExtResource("9_skill_vfx")
 animation = &"spell5_Ghostship"
 
-[node name="JollyRogerAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController"]
+[node name="JollyRogerAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController" unique_id=1884743143]
 stream = ExtResource("10_jolly_audio")
 volume_db = -2.0
 max_distance = 22.0
 
-[node name="OceanStormAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController"]
+[node name="OceanStormAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController" unique_id=1506770748]
 stream = ExtResource("11_ocean_audio")
 volume_db = -2.0
 max_distance = 22.0
 
-[node name="AnchorAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController"]
+[node name="AnchorAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController" unique_id=1042375607]
 stream = ExtResource("12_anchor_audio")
 volume_db = -2.0
 max_distance = 22.0
 
-[node name="GhostshipAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController"]
+[node name="GhostshipAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController" unique_id=1415546776]
 stream = ExtResource("13_ghostship_audio")
 volume_db = -2.0
 max_distance = 24.0
 
-[node name="EnemyPlaceholder" type="CharacterBody3D" parent="Characters" unique_id=828778341 groups=["depth_sort_actor", "enemy_actor"]]
+[node name="EnemyPlaceholder" parent="Characters" unique_id=374868850 instance=ExtResource("16_target_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -1.2)
-floor_snap_length = 0.3
-script = ExtResource("4_dummy_ai")
 
-[node name="EnemyCollision" type="CollisionShape3D" parent="Characters/EnemyPlaceholder" unique_id=651763157]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
-shape = SubResource("CapsuleShape3D_jpoia")
+[node name="EnemyTargetDummy2" parent="Characters" unique_id=537952818 instance=ExtResource("16_target_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.2, 0, 1.4)
 
-[node name="EnemyFrames" type="AnimatedSprite3D" parent="Characters/EnemyPlaceholder" unique_id=26836086]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
-cast_shadow = 0
-billboard = 1
-sprite_frames = SubResource("SpriteFrames_k3seb")
+[node name="FriendlyTargetDummy1" parent="Characters" unique_id=1536837061 instance=ExtResource("16_target_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.2, 0, -1.4)
+team = "friendly"
 
-[node name="EnemyEditorPlaceholder" type="MeshInstance3D" parent="Characters/EnemyPlaceholder" unique_id=1516365438]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
-material_override = SubResource("StandardMaterial3D_nocdf")
-mesh = SubResource("CapsuleMesh_c75ux")
+[node name="FriendlyTargetDummy2" parent="Characters" unique_id=1753023698 instance=ExtResource("16_target_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.2, 0, 1.4)
+team = "friendly"
 
-[node name="HitSparkParticles" type="CPUParticles3D" parent="Characters/EnemyPlaceholder"]
-emitting = false
-script = ExtResource("5_hit_spark")
-
-[node name="HitAudio" type="AudioStreamPlayer3D" parent="Characters/EnemyPlaceholder"]
-stream = ExtResource("7_hit_audio")
-volume_db = -1.5
-max_distance = 18.0
-
-[node name="DummyStateLabel" type="Label3D" parent="Characters/EnemyPlaceholder" unique_id=543598010]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.35, 0)
-billboard = 1
-no_depth_test = true
-modulate = Color(1, 0.65, 0.65, 1)
-text = "移动木桩 · WANDER"
-font_size = 26
-outline_size = 8
+[node name="ScuttleCrabSpawner" type="Node3D" parent="Characters" unique_id=1114191432]
+script = ExtResource("18_scuttle_spawner")
+crab_scene = ExtResource("19_scuttle")
+speed_zone_scene = ExtResource("20_scuttle_zone")
 
 [node name="Markers" type="Node3D" parent="." unique_id=1243213368]
 
