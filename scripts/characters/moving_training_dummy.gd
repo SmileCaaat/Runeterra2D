@@ -77,7 +77,7 @@ func receive_hit(attacker_position: Vector3, attack_name: StringName) -> void:
 	var damage := attacker_definition.attack_damage if attacker_definition != null else 58.0
 	var event := combat_database.get_animation_event(&"garen", attack_name, "hit") if combat_database != null else null
 	var hit_profile_id: StringName = event.payload_id if event != null else &"basic_melee"
-	_apply_damage(damage, String(attack_name), false, attacker_position, &"physical", hit_profile_id)
+	_apply_damage(damage, String(attack_name), true, attacker_position, &"physical", hit_profile_id)
 
 
 func receive_skill_damage(amount: float, skill_name: String, can_crit: bool, attacker_position: Vector3, damage_type: StringName = &"physical", hit_profile_id: StringName = &"basic_melee") -> void:
@@ -117,9 +117,10 @@ func _apply_damage(amount: float, source_name: String, can_crit: bool, attacker_
 	knockback = away.normalized() * knockback_speed
 	var contact_direction := -away.normalized()
 	var contact_point := global_position + contact_direction * 0.48 + Vector3.UP * 1.05
-	hit_particles.call("burst", contact_point, away.normalized())
-	hit_audio.pitch_scale = random.randf_range(hit_audio_pitch_min, hit_audio_pitch_max)
-	hit_audio.play()
+	hit_particles.call("burst", contact_point, away.normalized(), critical, hit_profile_id)
+	if not CombatAudio.play_hit(hit_audio, combat_database, hit_profile, &"wood", critical, random):
+		hit_audio.pitch_scale = random.randf_range(hit_audio_pitch_min, hit_audio_pitch_max)
+		hit_audio.play()
 	hit_sound_count += 1
 	state_label.text = "%s%s · HP %d" % ["CRIT " if critical else "", source_name, int(current_health)]
 	body_mesh.scale = Vector3(0.82, 1.12, 0.82)
@@ -194,12 +195,7 @@ func _apply_combat_data() -> void:
 		waypoint_tolerance = ai_definition.waypoint_tolerance
 		arena_min = ai_definition.arena_min
 		arena_max = ai_definition.arena_max
-	var audio_profile := combat_database.get_asset_profile(&"training_dummy_hit_audio")
+	var audio_profile := CombatAudio.configure_player(hit_audio, combat_database, &"garen_basic_hit_wood")
 	if audio_profile != null:
-		var stream := load(audio_profile.audio_path) as AudioStream
-		if stream != null:
-			hit_audio.stream = stream
-		hit_audio.volume_db = audio_profile.volume_db
-		hit_audio.max_distance = audio_profile.max_distance
 		hit_audio_pitch_min = audio_profile.pitch_min
 		hit_audio_pitch_max = audio_profile.pitch_max

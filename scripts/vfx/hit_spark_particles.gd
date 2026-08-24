@@ -1,67 +1,88 @@
 extends CPUParticles3D
 
+const NORMAL_HIT_TEXTURE := preload("res://assets/vfx/hit/hit_yellow1.png")
+const CRITICAL_HIT_TEXTURE := preload("res://assets/vfx/hit/hit_yellow2.png")
+const HIT_IMPACT_POOL_SCRIPT := preload("res://scripts/vfx/hit_impact_pool_3d.gd")
+const SYSTEM_CONFIG := preload("res://assets/vfx/hit/hit_impact_system.tres")
+const SHEET_COLUMNS := 4
+const SHEET_ROWS := 4
+const FRAME_COUNT := SHEET_COLUMNS * SHEET_ROWS
+
 var burst_count := 0
-var particle_profile: ParticleProfileDefinition
+var last_critical := false
+var hit_sprite: Sprite3D
+var playback_elapsed := 0.0
+var playback_duration := 0.32
+var playback_active := false
+var impact_pool: Node
 
 
 func _ready() -> void:
-	var database := CombatData.database()
-	particle_profile = database.get_particle_profile(&"hit_spark") if database != null else null
+	# Keep the existing node type/API so unit scenes and gameplay callers remain compatible,
+	# but render the new sequence instead of emitting procedural particles.
 	emitting = false
-	amount = particle_profile.amount if particle_profile != null else 22
-	lifetime = particle_profile.lifetime if particle_profile != null else 0.28
-	one_shot = true
-	explosiveness = 1.0
-	randomness = particle_profile.randomness if particle_profile != null else 0.35
-	local_coords = false
-	direction = Vector3(1.0, 0.25, 0.0)
-	spread = particle_profile.spread if particle_profile != null else 150.0
-	gravity = particle_profile.gravity if particle_profile != null else Vector3(0.0, -4.5, 0.0)
-	initial_velocity_min = particle_profile.velocity_min if particle_profile != null else 2.4
-	initial_velocity_max = particle_profile.velocity_max if particle_profile != null else 5.2
-	angular_velocity_min = particle_profile.angular_velocity_min if particle_profile != null else -720.0
-	angular_velocity_max = particle_profile.angular_velocity_max if particle_profile != null else 720.0
-	scale_amount_min = particle_profile.scale_min if particle_profile != null else 0.45
-	scale_amount_max = particle_profile.scale_max if particle_profile != null else 1.35
-	color_ramp = _create_color_ramp()
-	mesh = _create_spark_mesh()
+	amount = 1
+	mesh = null
+	set_process(false)
+
+	hit_sprite = Sprite3D.new()
+	hit_sprite.name = "HitSequence"
+	hit_sprite.texture = NORMAL_HIT_TEXTURE
+	hit_sprite.hframes = SHEET_COLUMNS
+	hit_sprite.vframes = SHEET_ROWS
+	hit_sprite.frame = 0
+	hit_sprite.pixel_size = SYSTEM_CONFIG.normal_sequence_pixel_size
+	hit_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	hit_sprite.shaded = false
+	hit_sprite.no_depth_test = true
+	hit_sprite.render_priority = 40
+	hit_sprite.visible = false
+	add_child(hit_sprite)
+	call_deferred(&"_bind_impact_pool")
 
 
-func burst(world_contact: Vector3, impact_direction: Vector3) -> void:
+func _process(delta: float) -> void:
+	if not playback_active:
+		return
+	playback_elapsed += delta
+	var frame_index := mini(int(playback_elapsed / playback_duration * FRAME_COUNT), FRAME_COUNT - 1)
+	hit_sprite.frame = frame_index
+	if playback_elapsed >= playback_duration:
+		playback_active = false
+		hit_sprite.visible = false
+		set_process(false)
+
+
+func burst(
+	world_contact: Vector3,
+	impact_direction: Vector3,
+	critical: bool = false,
+	hit_profile_id: StringName = &"basic_melee"
+) -> void:
 	global_position = world_contact
-	var planar_direction := impact_direction
-	planar_direction.y = 0.25
-	direction = planar_direction.normalized()
-	restart()
-	emitting = true
+	last_critical = critical
+	hit_sprite.texture = CRITICAL_HIT_TEXTURE if critical else NORMAL_HIT_TEXTURE
+	hit_sprite.pixel_size = SYSTEM_CONFIG.critical_sequence_pixel_size if critical else SYSTEM_CONFIG.normal_sequence_pixel_size
+	hit_sprite.flip_h = impact_direction.x < 0.0
+	hit_sprite.frame = 0
+	hit_sprite.visible = true
+	playback_duration = SYSTEM_CONFIG.critical_sequence_duration if critical else SYSTEM_CONFIG.normal_sequence_duration
+	playback_elapsed = 0.0
+	playback_active = true
+	set_process(true)
 	burst_count += 1
+	if impact_pool == null:
+		impact_pool = HIT_IMPACT_POOL_SCRIPT.get_or_create(self)
+	if impact_pool != null:
+		impact_pool.play(world_contact, impact_direction, _resolve_procedural_profile(hit_profile_id, critical))
 
 
-func _create_color_ramp() -> Gradient:
-	var ramp := Gradient.new()
-	ramp.offsets = PackedFloat32Array([0.0, 0.2, 0.65, 1.0])
-	ramp.colors = PackedColorArray([
-		particle_profile.gradient_start if particle_profile != null else Color(1.0, 1.0, 0.92, 1.0),
-		particle_profile.gradient_mid if particle_profile != null else Color(1.0, 0.84, 0.28, 1.0),
-		particle_profile.gradient_late if particle_profile != null else Color(1.0, 0.28, 0.04, 0.75),
-		particle_profile.gradient_end if particle_profile != null else Color(0.35, 0.02, 0.0, 0.0),
-	])
-	return ramp
+func _bind_impact_pool() -> void:
+	if is_inside_tree() and impact_pool == null:
+		impact_pool = HIT_IMPACT_POOL_SCRIPT.get_or_create(self)
 
 
-func _create_spark_mesh() -> QuadMesh:
-	var spark_material := StandardMaterial3D.new()
-	spark_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	spark_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	spark_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	spark_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	spark_material.vertex_color_use_as_albedo = true
-	spark_material.albedo_color = Color.WHITE
-	spark_material.emission_enabled = true
-	spark_material.emission = particle_profile.emission_color if particle_profile != null else Color(1.0, 0.55, 0.08, 1.0)
-	spark_material.emission_energy_multiplier = particle_profile.emission_energy if particle_profile != null else 2.5
-
-	var spark_mesh := QuadMesh.new()
-	spark_mesh.size = particle_profile.mesh_size if particle_profile != null else Vector2(0.16, 0.045)
-	spark_mesh.material = spark_material
-	return spark_mesh
+func _resolve_procedural_profile(hit_profile_id: StringName, critical: bool) -> StringName:
+	if critical:
+		return SYSTEM_CONFIG.critical_profile_id
+	return SYSTEM_CONFIG.hit_profile_map.get(hit_profile_id, &"normal")

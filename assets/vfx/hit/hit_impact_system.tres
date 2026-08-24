@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="HitImpactSystemConfig" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/vfx/hit_impact_system_config.gd" id="1"]
+[ext_resource type="Resource" path="res://assets/vfx/hit/profiles/normal_hit.tres" id="2"]
+[ext_resource type="Resource" path="res://assets/vfx/hit/profiles/critical_hit.tres" id="3"]
+[ext_resource type="Resource" path="res://assets/vfx/hit/profiles/heavy_hit.tres" id="4"]
+[ext_resource type="Resource" path="res://assets/vfx/hit/profiles/magic_hit.tres" id="5"]
+[ext_resource type="Resource" path="res://assets/vfx/hit/profiles/anchor_hit.tres" id="6"]
+[ext_resource type="Resource" path="res://assets/vfx/hit/profiles/elemental_hit.tres" id="7"]
+
+[resource]
+script = ExtResource("1")
+pool_size = 8
+viewport_size = Vector2i(256, 256)
+base_pixel_size = 0.012
+normal_sequence_duration = 0.32
+critical_sequence_duration = 0.38
+normal_sequence_pixel_size = 0.0022
+critical_sequence_pixel_size = 0.0026
+critical_profile_id = &"critical"
+profiles = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])
+hit_profile_map = {
+&"basic_melee": &"normal",
+&"breaker_hit": &"heavy",
+&"ghostship_hit": &"magic",
+&"judgment_hit": &"anchor",
+&"ocean_hit": &"elemental"
+}

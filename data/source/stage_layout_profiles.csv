@@ -1,0 +1,5 @@
+profile_id,display_name,world_length,playable_depth,background_height,background_aspect,ground_aspect,safe_edge_margin,recommended_background_pixels,recommended_ground_pixels
+small,小型,32,8,12,8:3,4:1,2.5,4096x1536,4096x1024
+medium,中型,48,9,12,4:1,16:3,3.0,6144x1536,8192x1536
+large,大型,72,10,12,6:1,36:5,3.5,8192x1365,8192x1138
+extra_large,特大型,96,12,12,8:1,8:1,4.0,8192x1024,8192x1024

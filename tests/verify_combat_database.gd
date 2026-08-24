@@ -16,13 +16,13 @@ func _initialize() -> void:
 	var generated_ok := generated_database != null and generated_database.source_digest == database.source_digest
 	var editor_plugin_ok := load("res://addons/combat_data/editor_plugin.gd") != null
 
-	var counts_ok := database.rules.size() == 66 and database.stats.size() == 48
+	var counts_ok := database.rules.size() == 67 and database.stats.size() == 48
 	counts_ok = counts_ok and database.units.size() == 3 and database.unit_stats.size() == 109
 	counts_ok = counts_ok and database.skills.size() == 5
 	counts_ok = counts_ok and database.skill_effects.size() == 11 and database.buffs.size() == 5
 	counts_ok = counts_ok and database.buff_modifiers.size() == 6 and database.ai_profiles.size() == 4
-	counts_ok = counts_ok and database.hit_profiles.size() == 5 and database.animation_events.size() == 13
-	counts_ok = counts_ok and database.asset_profiles.size() == 11 and database.particle_profiles.size() == 4
+	counts_ok = counts_ok and database.hit_profiles.size() == 5 and database.animation_events.size() == 17
+	counts_ok = counts_ok and database.asset_profiles.size() == 28 and database.particle_profiles.size() == 4
 
 	var armor_ok := is_equal_approx(CombatMath.resolve_resistance(100.0, 100.0, 100.0), 50.0)
 	armor_ok = armor_ok and is_equal_approx(CombatMath.resolve_resistance(100.0, -100.0, 100.0), 150.0)
@@ -94,6 +94,11 @@ func _initialize() -> void:
 	semantic_ok = semantic_ok and ocean != null and ocean.target_type == "self_area"
 	semantic_ok = semantic_ok and ocean.movement_policy == "allowed" and is_equal_approx(ocean.tick_interval, 0.5)
 	semantic_ok = semantic_ok and seven != null and seven.target_type == "ground_area" and seven.snapshot_target_position
+	semantic_ok = semantic_ok and is_equal_approx(seven.travel_duration, 1.35)
+	var seven_impact_effects := database.get_skill_effects(&"garen_seven_seas", "on_impact")
+	semantic_ok = semantic_ok and seven_impact_effects.size() == 3
+	for effect: SkillEffectDefinition in seven_impact_effects:
+		semantic_ok = semantic_ok and is_equal_approx(effect.delay, 1.35)
 
 	var black_sail := database.get_buff(&"black_sail")
 	var jolly := database.get_asset_profile(&"jolly_roger")
@@ -107,15 +112,32 @@ func _initialize() -> void:
 	action_ok = action_ok and attack_event.payload_id == basic_hit.id
 	action_ok = action_ok and is_equal_approx(basic_hit.hitstun, 0.24)
 	action_ok = action_ok and basic_hit.depth_tolerance > 0.0 and basic_hit.knockback_speed > 0.0
+	var q_skill := database.get_skill(&"garen_breaker")
+	var q_audio_layers := database.get_animation_events(&"garen", &"spell1", "audio")
+	var audio_ok := q_skill != null and q_skill.audio_profile_id == &"garen_q_cast"
+	audio_ok = audio_ok and q_audio_layers.size() == 2
+	audio_ok = audio_ok and q_audio_layers[0].payload_id == &"garen_q_attack_cast_1"
+	audio_ok = audio_ok and q_audio_layers[1].payload_id == &"garen_q_attack_cast_2"
+	audio_ok = audio_ok and basic_hit.hit_audio_profile_id == &"garen_basic_hit_wood"
+	audio_ok = audio_ok and database.get_hit_profile(&"ocean_hit").hit_audio_profile_id == &"garen_e_hit"
+	audio_ok = audio_ok and database.get_hit_profile(&"judgment_hit").hit_audio_profile_id == &"garen_r_hit"
+	audio_ok = audio_ok and database.get_hit_profile(&"ghostship_hit").hit_audio_profile_id == &"garen_basic_hit_wood"
+	var passive_audio := database.get_asset_profile(&"garen_passive_recovery_activate")
+	audio_ok = audio_ok and passive_audio != null and FileAccess.file_exists(passive_audio.audio_path)
+	var ghostship_audio := database.get_asset_profile(&"ghostship_audio")
+	audio_ok = audio_ok and ghostship_audio != null
+	audio_ok = audio_ok and is_equal_approx(ghostship_audio.volume_db, 5.0)
+	audio_ok = audio_ok and ghostship_audio.max_distance >= 44.0
+	audio_ok = audio_ok and is_equal_approx(float(database.get_rule(&"presentation.seven_seas_buff_audio_delay", 0.0)), 0.15)
 
-	print("COMBAT_DATABASE build=%s generated=%s plugin=%s counts=%s identity=%s base=%s source=%s growth=%s world_units=%s timing=%s armor=%s haste=%s tenacity=%s semantic=%s lifecycle=%s action=%s digest=%s" % [
+	print("COMBAT_DATABASE build=%s generated=%s plugin=%s counts=%s identity=%s base=%s source=%s growth=%s world_units=%s timing=%s armor=%s haste=%s tenacity=%s semantic=%s lifecycle=%s action=%s audio=%s digest=%s" % [
 		build_ok, generated_ok, editor_plugin_ok, counts_ok, identity_ok, base_stats_ok, source_ok, growth_ok, world_units_ok, timing_ok,
-		armor_ok, haste_ok, tenacity_ok, semantic_ok, lifecycle_ok, action_ok,
+		armor_ok, haste_ok, tenacity_ok, semantic_ok, lifecycle_ok, action_ok, audio_ok,
 		database.source_digest.left(12),
 	])
 	var passed: bool = build_ok and generated_ok and editor_plugin_ok and counts_ok and armor_ok and haste_ok and tenacity_ok
 	passed = passed and identity_ok and base_stats_ok and source_ok and growth_ok and world_units_ok and timing_ok
-	passed = passed and semantic_ok and lifecycle_ok and action_ok
+	passed = passed and semantic_ok and lifecycle_ok and action_ok and audio_ok
 	if not passed:
 		push_error("Combat database verification failed")
 	quit(0 if passed else 2)

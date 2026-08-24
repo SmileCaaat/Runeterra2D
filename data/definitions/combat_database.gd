@@ -123,6 +123,20 @@ func get_animation_event(owner_id: StringName, animation_name: StringName, event
 	return null
 
 
+func get_animation_events(owner_id: StringName, animation_name: StringName, event_type: String) -> Array[AnimationEventDefinition]:
+	var matches: Array[AnimationEventDefinition] = []
+	for definition: AnimationEventDefinition in animation_events:
+		if definition.owner_id == owner_id and definition.animation_name == animation_name and definition.event_type == event_type:
+			matches.append(definition)
+	matches.sort_custom(
+		func(a: AnimationEventDefinition, b: AnimationEventDefinition) -> bool:
+			if not is_equal_approx(a.timing_value, b.timing_value):
+				return a.timing_value < b.timing_value
+			return String(a.id) < String(b.id)
+	)
+	return matches
+
+
 func get_asset_profile(profile_id: StringName) -> AssetProfileDefinition:
 	_ensure_indexes()
 	return _asset_profile_index.get(profile_id) as AssetProfileDefinition

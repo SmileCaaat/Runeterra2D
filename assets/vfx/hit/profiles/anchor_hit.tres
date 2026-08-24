@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="HitEffectProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vfx/hit_effect_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"anchor"
+duration = 0.68
+world_scale = 1.45
+core_color = Color(0.78, 0.96, 1, 1)
+hot_color = Color(0.12, 0.62, 0.92, 1)
+fade_color = Color(0.03, 0.18, 0.34, 0)
+flash_duration = 0.14
+flash_scale = 1.55
+burst_amount = 22
+burst_speed = Vector2(170, 380)
+spark_amount = 16
+spark_speed = Vector2(300, 580)
+spark_spread = 52.0
+shockwave_duration = 0.48
+shockwave_radius = 122.0
+shockwave_width = 10.0
+dust_amount = 12
+dust_speed = Vector2(50, 130)
+debris_amount = 16
+debris_speed = Vector2(150, 340)
+debris_gravity = 310.0

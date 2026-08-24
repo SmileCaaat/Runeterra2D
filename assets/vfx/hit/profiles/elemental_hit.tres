@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="HitEffectProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vfx/hit_effect_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"elemental"
+duration = 0.52
+world_scale = 1.18
+core_color = Color(0.62, 0.96, 1, 1)
+hot_color = Color(0.08, 0.72, 0.92, 1)
+fade_color = Color(0.02, 0.24, 0.52, 0)
+flash_duration = 0.13
+flash_scale = 1.25
+burst_amount = 16
+burst_speed = Vector2(110, 270)
+spark_amount = 10
+spark_speed = Vector2(220, 430)
+spark_spread = 55.0
+shockwave_duration = 0.36
+shockwave_radius = 92.0
+dust_amount = 7
+dust_gravity = 35.0
+debris_amount = 6
+debris_gravity = 90.0

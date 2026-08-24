@@ -99,12 +99,14 @@ func _physics_process(delta: float) -> void:
 		_begin_navigation_return()
 	_update_label()
 
-func receive_hit(attacker_position: Vector3, _attack_name: StringName) -> void:
+func receive_hit(attacker_position: Vector3, attack_name: StringName) -> void:
 	var damage := attacker_definition.attack_damage if attacker_definition != null else 69.0
-	_apply_damage(damage, attacker_position, &"physical", false)
+	var event := combat_database.get_animation_event(&"garen", attack_name, "hit") if combat_database != null else null
+	var hit_profile_id: StringName = event.payload_id if event != null else &"basic_melee"
+	_apply_damage(damage, attacker_position, &"physical", true, hit_profile_id)
 
 func receive_skill_damage(amount: float, _skill_name: String, _can_crit: bool, attacker_position: Vector3, damage_type: StringName = &"physical", _hit_profile_id: StringName = &"basic_melee") -> void:
-	_apply_damage(amount, attacker_position, damage_type, _can_crit)
+	_apply_damage(amount, attacker_position, damage_type, _can_crit, _hit_profile_id)
 
 func register_damage_source(attacker_position: Vector3, source_team: StringName) -> void:
 	last_threat_position = attacker_position
@@ -128,12 +130,14 @@ func is_targetable() -> bool:
 func get_health_ratio() -> float:
 	return current_health / maxf(max_health, 1.0)
 
-func _apply_damage(amount: float, attacker_position: Vector3, damage_type: StringName, can_crit: bool) -> void:
+func _apply_damage(amount: float, attacker_position: Vector3, damage_type: StringName, can_crit: bool, hit_profile_id: StringName) -> void:
 	if not is_targetable(): return
 	last_threat_position = attacker_position
 	var critical_chance := attacker_definition.critical_chance if attacker_definition != null else 0.0
 	var critical_damage := attacker_definition.critical_damage if attacker_definition != null else 1.75
-	var raw_damage := amount * (critical_damage if can_crit and random.randf() < critical_chance else 1.0)
+	var critical := can_crit and random.randf() < critical_chance
+	var raw_damage := amount * (critical_damage if critical else 1.0)
+	var hit_profile := combat_database.get_hit_profile(hit_profile_id) if combat_database != null else null
 	var damage := CombatMath.resolve_damage(
 		raw_damage, damage_type, armor, magic_resistance, combat_database
 	) if combat_database != null else raw_damage
@@ -149,9 +153,10 @@ func _apply_damage(amount: float, attacker_position: Vector3, damage_type: Strin
 	var away := global_position - attacker_position
 	away.y = 0.0
 	if away.is_zero_approx(): away = Vector3.RIGHT
-	hit_particles.call("burst", global_position + Vector3.UP * 0.7, away.normalized())
-	hit_audio.pitch_scale = random.randf_range(hit_audio_pitch_min, hit_audio_pitch_max)
-	hit_audio.play()
+	hit_particles.call("burst", global_position + Vector3.UP * 0.7, away.normalized(), critical, hit_profile_id)
+	if not CombatAudio.play_hit(hit_audio, combat_database, hit_profile, &"flesh", critical, random):
+		hit_audio.pitch_scale = random.randf_range(hit_audio_pitch_min, hit_audio_pitch_max)
+		hit_audio.play()
 	if current_health <= 0.0:
 		_begin_death_return()
 	_update_label()
@@ -334,13 +339,8 @@ func _apply_combat_data() -> void:
 	death_return_tolerance = _rule_float(&"scuttle.death_return_tolerance", death_return_tolerance)
 	death_fade_duration = _rule_float(&"scuttle.death_fade_duration", death_fade_duration)
 	hurt_visual_duration = _rule_float(&"scuttle.hurt_visual_duration", hurt_visual_duration)
-	var audio_profile := combat_database.get_asset_profile(&"training_dummy_hit_audio")
+	var audio_profile := CombatAudio.configure_player(hit_audio, combat_database, &"garen_basic_hit_flesh")
 	if audio_profile != null:
-		var stream := load(audio_profile.audio_path) as AudioStream
-		if stream != null:
-			hit_audio.stream = stream
-		hit_audio.volume_db = audio_profile.volume_db
-		hit_audio.max_distance = audio_profile.max_distance
 		hit_audio_pitch_min = audio_profile.pitch_min
 		hit_audio_pitch_max = audio_profile.pitch_max
 

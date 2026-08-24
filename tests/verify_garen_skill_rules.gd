@@ -16,6 +16,24 @@ func _initialize() -> void:
 	var friendly_dummy := scene.get_node("Characters/FriendlyTargetDummy1") as CharacterBody3D
 	var skills := player.get_node("SkillController")
 	skills.set("automatic_demo", false)
+	var jolly_audio := skills.get_node("JollyRogerAudio") as AudioStreamPlayer3D
+	var ocean_audio := skills.get_node("OceanStormAudio") as AudioStreamPlayer3D
+	var anchor_audio := skills.get_node("AnchorAudio") as AudioStreamPlayer3D
+	var ghostship_audio := skills.get_node("GhostshipAudio") as AudioStreamPlayer3D
+	var audio_ok := jolly_audio.stream != null and jolly_audio.stream.resource_path.ends_with("w_cast.ogg")
+	audio_ok = audio_ok and ocean_audio.stream != null and ocean_audio.stream.resource_path.ends_with("e_cast.ogg")
+	audio_ok = audio_ok and anchor_audio.stream != null and anchor_audio.stream.resource_path.ends_with("r_cast.ogg")
+	audio_ok = audio_ok and ghostship_audio.stream != null
+	audio_ok = audio_ok and is_equal_approx(ghostship_audio.volume_db, 5.0)
+	audio_ok = audio_ok and ghostship_audio.max_distance >= 44.0
+	audio_ok = audio_ok and CombatAudio.resolve_surface_audio(&"garen_basic_hit_wood", &"flesh", false) == &"garen_basic_hit_flesh"
+	audio_ok = audio_ok and CombatAudio.resolve_surface_audio(&"garen_basic_hit_wood", &"wood", true) == &"garen_crit_hit_wood"
+	var q_audio_player := skills.call("play_audio_cue", &"garen_q_cast", player.global_position, 1.0) as AudioStreamPlayer3D
+	audio_ok = audio_ok and q_audio_player != null and q_audio_player.stream.resource_path.ends_with("q_cast.ogg")
+	audio_ok = audio_ok and not (skills.get("audio_cue_play_counts") as Dictionary).has(&"garen_passive_recovery_activate")
+	if q_audio_player != null:
+		q_audio_player.stop()
+		q_audio_player.queue_free()
 
 	skills.set("breaker_timer", 4.5)
 	var breaker_ok := is_equal_approx(float(skills.call("get_move_speed_multiplier")), 1.35)
@@ -234,8 +252,12 @@ func _initialize() -> void:
 	enemy_two.global_position = saved_enemy_two_position
 	friendly_dummy.global_position = saved_friendly_position
 	var ghost_area_center := dummy.global_position
+	var seven_seas_layer_count_before := int((skills.get("audio_cue_play_counts") as Dictionary).get(&"garen_r_buff_activate", 0))
 	await skills.call("_cast_seven_seas")
 	var ghost_area_ok := ghost.global_position.is_equal_approx(ghost_area_center)
+	ghost_area_ok = ghost_area_ok and is_equal_approx(float(skills.get("ghostship_last_scheduled_impact_time")), 1.35)
+	ghost_area_ok = ghost_area_ok and is_equal_approx(float(skills.get("ghostship_last_scheduled_buff_audio_delay")), 0.15)
+	ghost_area_ok = ghost_area_ok and int((skills.get("audio_cue_play_counts") as Dictionary).get(&"garen_r_buff_activate", 0)) == seven_seas_layer_count_before + 1
 
 	var ocean := skills.get_node("OceanStorm") as AnimatedSprite3D
 	skills.set("is_casting", true)
@@ -339,10 +361,10 @@ func _initialize() -> void:
 			if show_over_models_value is bool:
 				ground_occlusion_ok = ground_occlusion_ok and bool(show_over_models_value) == effect.no_depth_test
 
-	print("SKILL_RULES breaker=%s afterimage=%s impact_shockwave=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s vfx_anchor=%s ghost_area=%s aoe=%s moving_storm=%s layering=%s filter=%s shader=%s canvas_fade=%s inward_edge=%s ground_occlusion=%s" % [
+	print("SKILL_RULES breaker=%s afterimage=%s impact_shockwave=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s vfx_anchor=%s ghost_area=%s aoe=%s moving_storm=%s layering=%s filter=%s shader=%s canvas_fade=%s inward_edge=%s ground_occlusion=%s audio=%s" % [
 		breaker_ok, afterimage_ok, impact_shockwave_ok, passive_ok, reduction_ok, rum_ok, cleanse_ok, nonlethal_ok, judgment_ok,
 		jolly_duration_ok, anchor_follow_ok, ghost_flip_ok, vfx_anchor_ok, ghost_area_ok, aoe_ok,
-		moving_storm_ok, layering_ok, filter_clip_ok, shader_ok, canvas_fade_ok, inward_edge_ok, ground_occlusion_ok,
+		moving_storm_ok, layering_ok, filter_clip_ok, shader_ok, canvas_fade_ok, inward_edge_ok, ground_occlusion_ok, audio_ok,
 	])
 	var passed := breaker_ok and afterimage_ok and impact_shockwave_ok and passive_ok and reduction_ok and rum_ok
 	passed = passed and cleanse_ok and nonlethal_ok and judgment_ok
@@ -351,6 +373,7 @@ func _initialize() -> void:
 	passed = passed and moving_storm_ok and layering_ok and filter_clip_ok and shader_ok and canvas_fade_ok
 	passed = passed and inward_edge_ok
 	passed = passed and ground_occlusion_ok
+	passed = passed and audio_ok
 	if not passed:
 		push_error("Garen skill rule verification failed")
 	quit(0 if passed else 2)

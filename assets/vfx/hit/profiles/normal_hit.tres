@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="HitEffectProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vfx/hit_effect_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"normal"
+duration = 0.26
+world_scale = 1.0
+core_color = Color(1, 0.96, 0.58, 1)
+hot_color = Color(1, 0.55, 0.06, 1)
+fade_color = Color(1, 0.1, 0.01, 0)
+flash_duration = 0.10
+flash_scale = 1.0
+burst_amount = 10
+spark_amount = 9
+dust_amount = 3
+debris_amount = 4

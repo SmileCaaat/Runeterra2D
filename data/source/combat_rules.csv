@@ -65,3 +65,4 @@ presentation.judgment_camera_shake_duration,presentation,float,0.20,暴君审判
 presentation.judgment_camera_shake_strength,presentation,float,0.09,暴君审判镜头震荡强度
 presentation.ghostship_camera_shake_duration,presentation,float,0.36,七海霸权镜头震荡时长
 presentation.ghostship_camera_shake_strength,presentation,float,0.105,七海霸权镜头震荡强度
+presentation.seven_seas_buff_audio_delay,presentation,float,0.15,七海霸权R buff activate叠加音相对主音轨延迟秒数

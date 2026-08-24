@@ -4,9 +4,26 @@ jolly_roger,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,
 ocean_storm,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/OceanStorm,spell3_OceanStorm,,0,1,1,20,1.4,1.4,1.4,-102,429,0.0045,1,false,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,duration,3.0,false
 anchor,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/Anchor,spell4_Anchor,,0,1,1,20,1,1,1,-33.5,556,0.005,2,true,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,animation,0.63,false
 ghostship,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/Ghostship,spell5_Ghostship,,0,1,1,20,1.5,1.5,1.5,-102,429,0.006,2,false,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,animation,1.70,true
-garen_attack_audio,audio,,,,res://assets/audio/combat/garen_attack_swing.wav,-3,0.88,1.08,18,1,1,1,0,0,0,0,false,,manual,0,false
-training_dummy_hit_audio,audio,,,,res://assets/audio/combat/training_dummy_hit.wav,-1,0.94,1.06,18,1,1,1,0,0,0,0,false,,manual,0,false
-jolly_roger_audio,audio,,,,res://assets/audio/skills/garen/spell_JollyRoger.mp3,-2,1,1,22,1,1,1,0,0,0,0,false,,buff,4.0,false
-ocean_storm_audio,audio,,,,res://assets/audio/skills/garen/spell_OceanStorm.mp3,-2,1,1,22,1,1,1,0,0,0,0,false,,duration,3.0,false
-anchor_audio,audio,,,,res://assets/audio/skills/garen/spell_anchor.mp3,-2,1,1,22,1,1,1,0,0,0,0,false,,animation,0.63,false
-ghostship_audio,audio,,,,res://assets/audio/skills/garen/spell_Ghost ship.mp3,-2,1,1,22,1,1,1,0,0,0,0,false,,animation,1.70,false
+garen_attack_audio,audio,,,,res://assets/audio/garen_original/basic_attack_cast_1.ogg,0,0.98,1.02,40,1,1,1,0,0,0,0,false,,manual,0,false
+garen_basic_attack_2_cast,audio,,,,res://assets/audio/garen_original/basic_attack_cast_2.ogg,0,0.98,1.02,40,1,1,1,0,0,0,0,false,,manual,0,false
+garen_crit_attack_cast,audio,,,,res://assets/audio/garen_original/crit_attack_cast.ogg,1,0.98,1.02,42,1,1,1,0,0,0,0,false,,manual,0,false
+garen_basic_hit_flesh,audio,,,,res://assets/audio/garen_original/basic_hit_flesh.ogg,0,0.97,1.03,40,1,1,1,0,0,0,0,false,,manual,0,false
+garen_basic_hit_metal,audio,,,,res://assets/audio/garen_original/basic_hit_metal.ogg,0,0.97,1.03,40,1,1,1,0,0,0,0,false,,manual,0,false
+garen_basic_hit_stone,audio,,,,res://assets/audio/garen_original/basic_hit_stone.ogg,0,0.97,1.03,40,1,1,1,0,0,0,0,false,,manual,0,false
+garen_basic_hit_wood,audio,,,,res://assets/audio/garen_original/basic_hit_wood.ogg,0,0.97,1.03,40,1,1,1,0,0,0,0,false,,manual,0,false
+garen_crit_hit_flesh,audio,,,,res://assets/audio/garen_original/crit_hit_flesh.ogg,1,0.98,1.02,42,1,1,1,0,0,0,0,false,,manual,0,false
+garen_crit_hit_metal,audio,,,,res://assets/audio/garen_original/crit_hit_metal.ogg,1,0.98,1.02,42,1,1,1,0,0,0,0,false,,manual,0,false
+garen_crit_hit_stone,audio,,,,res://assets/audio/garen_original/crit_hit_stone.ogg,1,0.98,1.02,42,1,1,1,0,0,0,0,false,,manual,0,false
+garen_crit_hit_wood,audio,,,,res://assets/audio/garen_original/crit_hit_wood.ogg,1,0.98,1.02,42,1,1,1,0,0,0,0,false,,manual,0,false
+garen_q_cast,audio,,,,res://assets/audio/garen_original/q_cast.ogg,0,1,1,42,1,1,1,0,0,0,0,false,,manual,0,false
+garen_q_attack_cast_1,audio,,,,res://assets/audio/garen_original/q_attack_cast_1.ogg,-1,1,1,42,1,1,1,0,0,0,0,false,,manual,0,false
+garen_q_attack_cast_2,audio,,,,res://assets/audio/garen_original/q_attack_cast_2.ogg,-2,1,1,42,1,1,1,0,0,0,0,false,,manual,0,false
+garen_w_cast,audio,,,,res://assets/audio/garen_original/w_cast.ogg,0,1,1,42,1,1,1,0,0,0,0,false,,buff,4.0,false
+garen_e_cast,audio,,,,res://assets/audio/garen_original/e_cast.ogg,0,1,1,42,1,1,1,0,0,0,0,false,,duration,3.0,false
+garen_e_hit,audio,,,,res://assets/audio/garen_original/e_hit.ogg,0,0.98,1.02,40,1,1,1,0,0,0,0,false,,manual,0,false
+garen_r_buff_activate,audio,,,,res://assets/audio/garen_original/r_buff_activate.ogg,-1,1,1,44,1,1,1,0,0,0,0,false,,manual,0,false
+garen_r_cast,audio,,,,res://assets/audio/garen_original/r_cast.ogg,0,1,1,44,1,1,1,0,0,0,0,false,,manual,0,false
+garen_r_hit,audio,,,,res://assets/audio/garen_original/r_hit.ogg,1,1,1,46,1,1,1,0,0,0,0,false,,manual,0,false
+garen_passive_recovery_activate,audio,,,,res://assets/audio/garen_original/passive_recovery_activate.ogg,0,1,1,40,1,1,1,0,0,0,0,false,,manual,0,false
+training_dummy_hit_audio,audio,,,,res://assets/audio/combat/training_dummy_hit.wav,-1,0.94,1.06,40,1,1,1,0,0,0,0,false,,manual,0,false
+ghostship_audio,audio,,,,res://assets/audio/skills/garen/spell_Ghost ship.mp3,5,1,1,44,1,1,1,0,0,0,0,false,,animation,1.70,false

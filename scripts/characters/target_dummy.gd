@@ -102,7 +102,7 @@ func receive_hit(attacker_position: Vector3, attack_name: StringName) -> void:
 	var damage := attacker_definition.attack_damage if attacker_definition != null else 58.0
 	var event := combat_database.get_animation_event(&"garen", attack_name, "hit") if combat_database != null else null
 	var hit_profile_id: StringName = event.payload_id if event != null else &"basic_melee"
-	_apply_damage(damage, String(attack_name), false, attacker_position, &"physical", hit_profile_id)
+	_apply_damage(damage, String(attack_name), true, attacker_position, &"physical", hit_profile_id)
 
 
 func receive_skill_damage(
@@ -188,9 +188,10 @@ func _apply_damage(
 	knockback = away.normalized() * knockback_speed
 	return_timer = return_home_delay
 	var contact_point := global_position - away.normalized() * gameplay_radius + Vector3.UP * 1.15
-	hit_particles.call("burst", contact_point, away.normalized())
-	hit_audio.pitch_scale = random.randf_range(0.94, 1.06)
-	hit_audio.play()
+	hit_particles.call("burst", contact_point, away.normalized(), critical, hit_profile_id)
+	if not CombatAudio.play_hit(hit_audio, combat_database, hit_profile, &"wood", critical, random):
+		hit_audio.pitch_scale = random.randf_range(0.94, 1.06)
+		hit_audio.play()
 	hit_sound_count += 1
 	_start_hit_reaction()
 
@@ -417,10 +418,4 @@ func _apply_combat_data() -> void:
 	if attacker_definition != null:
 		critical_chance = attacker_definition.critical_chance
 		critical_multiplier = attacker_definition.critical_damage
-	var audio_profile := combat_database.get_asset_profile(&"training_dummy_hit_audio")
-	if audio_profile != null:
-		var stream := load(audio_profile.audio_path) as AudioStream
-		if stream != null:
-			hit_audio.stream = stream
-		hit_audio.volume_db = audio_profile.volume_db
-		hit_audio.max_distance = audio_profile.max_distance
+	CombatAudio.configure_player(hit_audio, combat_database, &"garen_basic_hit_wood")

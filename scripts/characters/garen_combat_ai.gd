@@ -23,6 +23,7 @@ var target: CharacterBody3D
 var state := CombatState.IDLE
 var combo_index := -1
 var attack_hit_sent := false
+var attack_audio_events_sent: Dictionary[StringName, bool] = {}
 var attack_sound_count := 0
 var unflipped_sprite_offset := Vector2.ZERO
 var current_attack_name: StringName = &"attack1"
@@ -77,6 +78,8 @@ func _apply_sprite_canvas_anchor() -> void:
 
 func _physics_process(delta: float) -> void:
 	_refresh_target()
+	if state == CombatState.ATTACK:
+		_check_attack_audio()
 	if not _is_target_available(target):
 		_set_state(CombatState.IDLE)
 		_slow_down(delta)
@@ -121,6 +124,7 @@ func _physics_process(delta: float) -> void:
 
 func _start_next_attack() -> void:
 	attack_hit_sent = false
+	attack_audio_events_sent.clear()
 	state = CombatState.ATTACK
 	current_attack_is_breaker = bool(skill_controller.call("should_use_breaker_attack"))
 	if current_attack_is_breaker:
@@ -146,11 +150,6 @@ func _check_attack_hit(distance: float) -> void:
 	attack_hit_sent = true
 	if not _is_target_available(target):
 		return
-	var audio_event := combat_database.get_animation_event(&"garen", character_frames.animation, "audio") if combat_database != null else null
-	var fallback_pitch := attack_pitches[combo_index] if combo_index >= 0 and combo_index < attack_pitches.size() else 1.0
-	attack_audio.pitch_scale = audio_event.float_value if audio_event != null else (0.94 if current_attack_is_breaker else fallback_pitch)
-	attack_audio.play()
-	attack_sound_count += 1
 	if distance <= attack_hit_range:
 		if target.has_method("register_damage_source"):
 			target.call("register_damage_source", global_position, get_team())
@@ -160,6 +159,59 @@ func _check_attack_hit(distance: float) -> void:
 		elif target.has_method("receive_hit"):
 			target.call("receive_hit", global_position, character_frames.animation)
 		attack_landed.emit(character_frames.animation)
+
+
+func _check_attack_audio() -> void:
+	var audio_events := combat_database.get_animation_events(&"garen", character_frames.animation, "audio") if combat_database != null else []
+	if audio_events.is_empty():
+		if attack_audio_events_sent.has(&"fallback") or _animation_normalized_progress() < 0.45:
+			return
+		var fallback_pitch := attack_pitches[combo_index] if combo_index >= 0 and combo_index < attack_pitches.size() else 1.0
+		attack_audio.pitch_scale = 0.94 if current_attack_is_breaker else fallback_pitch
+		attack_audio.play()
+		attack_audio_events_sent[&"fallback"] = true
+		attack_sound_count += 1
+		return
+	for audio_event: AnimationEventDefinition in audio_events:
+		if attack_audio_events_sent.has(audio_event.id) or not _animation_event_reached(audio_event):
+			continue
+		attack_audio_events_sent[audio_event.id] = true
+		if attack_audio_events_sent.size() == 1:
+			if CombatAudio.configure_player(attack_audio, combat_database, audio_event.payload_id) != null:
+				attack_audio.pitch_scale = audio_event.float_value if audio_event.float_value > 0.0 else 1.0
+				attack_audio.play()
+				attack_sound_count += 1
+		elif skill_controller.has_method("play_audio_cue"):
+			if skill_controller.call("play_audio_cue", audio_event.payload_id, global_position, audio_event.float_value) != null:
+				attack_sound_count += 1
+
+
+func _animation_event_reached(event: AnimationEventDefinition) -> bool:
+	match event.timing_mode:
+		"frame":
+			return character_frames.frame >= roundi(event.timing_value)
+		"seconds":
+			return _animation_elapsed_seconds() >= event.timing_value
+		_:
+			return _animation_normalized_progress() >= event.timing_value
+
+
+func _animation_normalized_progress() -> float:
+	var frame_count := character_frames.sprite_frames.get_frame_count(character_frames.animation)
+	if frame_count <= 1:
+		return 1.0
+	return clampf((float(character_frames.frame) + character_frames.frame_progress) / float(frame_count - 1), 0.0, 1.0)
+
+
+func _animation_elapsed_seconds() -> float:
+	var frames := character_frames.sprite_frames
+	var animation := character_frames.animation
+	var speed := maxf(frames.get_animation_speed(animation) * character_frames.speed_scale, 0.001)
+	var elapsed := 0.0
+	for frame_index: int in range(character_frames.frame):
+		elapsed += frames.get_frame_duration(animation, frame_index) / speed
+	elapsed += frames.get_frame_duration(animation, character_frames.frame) * character_frames.frame_progress / speed
+	return elapsed
 
 
 func _on_animation_finished() -> void:

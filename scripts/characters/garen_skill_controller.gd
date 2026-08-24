@@ -101,6 +101,9 @@ var impact_shockwave_cursor := 0
 var impact_shockwave_emit_count := 0
 var anchor_last_impact_frame := -1
 var ghostship_last_impact_frame := -1
+var ghostship_last_scheduled_impact_time := 0.0
+var ghostship_buff_audio_delay := 0.15
+var ghostship_last_scheduled_buff_audio_delay := 0.0
 var impact_camera: Camera3D
 var impact_camera_base_h_offset := 0.0
 var impact_camera_base_v_offset := 0.0
@@ -135,6 +138,7 @@ var combat_database: CombatDatabase
 var garen_definition: UnitDefinition
 var skill_definitions: Dictionary = {}
 var black_sail_rum_cleanse_ratio := 0.30
+var audio_cue_play_counts: Dictionary[StringName, int] = {}
 
 
 func _ready() -> void:
@@ -775,6 +779,7 @@ func _cast_breaker() -> void:
 	slow_multiplier = 1.0
 	breaker_timer = breaker_duration
 	breaker_empowered_attack = true
+	play_audio_cue(_skill_audio_profile(SKILL_BREAKER, &"garen_q_cast"), fighter.global_position, 1.0)
 	character_frames.play(_skill_windup_animation(SKILL_BREAKER, &"channel_wndup"))
 	await get_tree().create_timer(_skill_float(SKILL_BREAKER, "cast_time", 0.16)).timeout
 
@@ -826,6 +831,7 @@ func _cast_tyrant_judgment() -> void:
 		anchor_material.set_shader_parameter(&"tail_dissolve", 0.0)
 	character_frames.play(_skill_animation(SKILL_TYRANT_JUDGMENT, &"spell4"))
 	anchor_effect.global_position = target.global_position
+	play_audio_cue(&"garen_r_buff_activate", target.global_position, 1.0)
 	anchor_effect.visible = true
 	anchor_effect.play(anchor_effect.animation)
 	anchor_audio.play()
@@ -839,7 +845,6 @@ func _cast_tyrant_judgment() -> void:
 		target.call("receive_skill_damage", damage, "暴君审判", false, fighter.global_position, &"magic", &"judgment_hit")
 		damage_event_count += 1
 	await get_tree().create_timer(_skill_float(SKILL_TYRANT_JUDGMENT, "recovery_time", 0.35)).timeout
-	anchor_audio.stop()
 
 
 func _cast_seven_seas() -> void:
@@ -851,12 +856,15 @@ func _cast_seven_seas() -> void:
 	prepare_ghostship_direction(area_center)
 	ghostship.visible = true
 	ghostship.play(ghostship.animation)
-	ghostship_audio.play()
+	ghostship_audio.play(0.0)
+	ghostship_last_scheduled_buff_audio_delay = ghostship_buff_audio_delay
+	play_audio_cue_delayed(&"garen_r_buff_activate", fighter.global_position, ghostship_buff_audio_delay, 1.0)
 	var travel := create_tween()
 	travel.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	var impact_time := _skill_float(SKILL_SEVEN_SEAS, "cast_time", 1.05)
 	var seven_seas := _definition(SKILL_SEVEN_SEAS)
 	var travel_duration := seven_seas.travel_duration if seven_seas != null else impact_time + 0.1
+	ghostship_last_scheduled_impact_time = travel_duration
 	travel.tween_property(ghostship, "global_position", area_center, travel_duration)
 	await get_tree().create_timer(travel_duration).timeout
 	resolve_ghostship_impact(area_center)
@@ -864,7 +872,6 @@ func _cast_seven_seas() -> void:
 	await get_tree().create_timer(_skill_float(SKILL_SEVEN_SEAS, "recovery_time", 0.65)).timeout
 	ghostship.visible = false
 	ghostship.stop()
-	ghostship_audio.stop()
 
 
 func resolve_ocean_storm_tick() -> int:
@@ -1106,15 +1113,50 @@ func _apply_combat_data() -> void:
 	judgment_camera_shake_strength = _rule_float(&"presentation.judgment_camera_shake_strength", judgment_camera_shake_strength)
 	ghostship_camera_shake_duration = _rule_float(&"presentation.ghostship_camera_shake_duration", ghostship_camera_shake_duration)
 	ghostship_camera_shake_strength = _rule_float(&"presentation.ghostship_camera_shake_strength", ghostship_camera_shake_strength)
+	ghostship_buff_audio_delay = _rule_float(&"presentation.seven_seas_buff_audio_delay", ghostship_buff_audio_delay)
 
-	_apply_asset_profile(jolly_roger, jolly_audio, &"jolly_roger", &"jolly_roger_audio")
-	_apply_asset_profile(ocean_storm, ocean_audio, &"ocean_storm", &"ocean_storm_audio")
-	_apply_asset_profile(anchor_effect, anchor_audio, &"anchor", &"anchor_audio")
+	_apply_asset_profile(jolly_roger, jolly_audio, &"jolly_roger", _skill_audio_profile(SKILL_BLACK_SAIL, &"garen_w_cast"))
+	_apply_asset_profile(ocean_storm, ocean_audio, &"ocean_storm", _skill_audio_profile(SKILL_OCEAN_STORM, &"garen_e_cast"))
+	_apply_asset_profile(anchor_effect, anchor_audio, &"anchor", _skill_audio_profile(SKILL_TYRANT_JUDGMENT, &"garen_r_cast"))
 	_apply_asset_profile(ghostship, ghostship_audio, &"ghostship", &"ghostship_audio")
 
 
 func _definition(skill_index: int) -> SkillDefinition:
 	return skill_definitions.get(skill_index) as SkillDefinition
+
+
+func _skill_audio_profile(skill_index: int, fallback: StringName) -> StringName:
+	var definition := _definition(skill_index)
+	return definition.audio_profile_id if definition != null and not definition.audio_profile_id.is_empty() else fallback
+
+
+func play_audio_cue(profile_id: StringName, world_position: Vector3, pitch_scale: float = 1.0) -> AudioStreamPlayer3D:
+	if combat_database == null or profile_id.is_empty():
+		return null
+	var player := AudioStreamPlayer3D.new()
+	player.name = "AudioCue_%s" % String(profile_id)
+	add_child(player)
+	player.top_level = true
+	player.global_position = world_position
+	if CombatAudio.configure_player(player, combat_database, profile_id) == null:
+		player.queue_free()
+		return null
+	player.pitch_scale = pitch_scale if pitch_scale > 0.0 else 1.0
+	player.finished.connect(player.queue_free)
+	player.play()
+	audio_cue_play_counts[profile_id] = audio_cue_play_counts.get(profile_id, 0) + 1
+	return player
+
+
+func play_audio_cue_delayed(
+	profile_id: StringName,
+	world_position: Vector3,
+	delay: float,
+	pitch_scale: float = 1.0
+) -> void:
+	if delay > 0.0:
+		await get_tree().create_timer(delay).timeout
+	play_audio_cue(profile_id, world_position, pitch_scale)
 
 
 func _effect(effect_id: StringName) -> SkillEffectDefinition:
