@@ -22,7 +22,7 @@ func _initialize() -> void:
 	var scene := packed.instantiate() as Node3D
 	root.add_child(scene)
 	player = scene.get_node("Characters/Player") as CharacterBody3D
-	dummy = scene.get_node("Characters/EnemyPlaceholder") as CharacterBody3D
+	dummy = scene.get_node("Characters/EnemyTargetDummy1") as CharacterBody3D
 	frames = player.get_node("CharacterFrames") as AnimatedSprite3D
 	expected_sprite_offset = _read_expected_sprite_offset()
 	start_player = player.position

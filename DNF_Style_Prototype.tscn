@@ -17,6 +17,15 @@
 [ext_resource type="Script" uid="uid://cng0mh5tto5jy" path="res://scripts/systems/scuttle_crab_spawner.gd" id="18_scuttle_spawner"]
 [ext_resource type="PackedScene" path="res://scenes/units/scuttle_crab.tscn" id="19_scuttle"]
 [ext_resource type="PackedScene" path="res://scenes/world/scuttle_speed_zone.tscn" id="20_scuttle_zone"]
+[ext_resource type="Texture2D" uid="uid://bvh85v65ky44o" path="res://assets/stages/training_ground/bg_far.png" id="21_training_background_far"]
+[ext_resource type="Texture2D" uid="uid://b3005w2r0jvtf" path="res://assets/stages/training_ground/ground.png" id="22_training_ground"]
+[ext_resource type="Script" uid="uid://c51jyi7nie7nv" path="res://scripts/stages/training_stage_controller.gd" id="23_training_stage"]
+[ext_resource type="Texture2D" uid="uid://ctbdhwhrajuch" path="res://assets/stages/training_ground/bg_mid.png" id="24_training_background_mid"]
+[ext_resource type="Texture2D" uid="uid://bgt8s685nu48c" path="res://assets/stages/training_ground/fg_near_left.png" id="25_training_foreground_left"]
+[ext_resource type="Texture2D" uid="uid://xajjt8ga2e30" path="res://assets/stages/training_ground/fg_near_right.png" id="26_training_foreground_right"]
+[ext_resource type="Shader" uid="uid://crybm280dsrm7" path="res://assets/shaders/stage_readability.gdshader" id="27_stage_readability"]
+[ext_resource type="Script" uid="uid://m8t41bkjgfud" path="res://scripts/rendering/unit_readability_layers.gd" id="28_unit_readability"]
+[ext_resource type="Shader" uid="uid://mptsdhv37oje" path="res://assets/shaders/stage_readability_alpha.gdshader" id="29_stage_readability_alpha"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_qf7t4"]
 sky_top_color = Color(0.11372549, 0.15294118, 0.21960784, 1)
@@ -28,21 +37,89 @@ ground_horizon_color = Color(0.5019608, 0.45490196, 0.42745098, 1)
 sky_material = SubResource("ProceduralSkyMaterial_qf7t4")
 
 [sub_resource type="Environment" id="Environment_kfaxl"]
-background_mode = 2
+background_mode = 1
+background_color = Color(0.07058824, 0.08627451, 0.11764706, 1)
 sky = SubResource("Sky_6n0m8")
 ambient_light_source = 3
-ambient_light_color = Color(1, 0.75, 0.55, 1)
-ambient_light_energy = 0.8
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.0
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bofcl"]
-albedo_color = Color(0.32156864, 0.4, 0.34117648, 1)
-roughness = 0.95
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_training_ground"]
+render_priority = 0
+shader = ExtResource("27_stage_readability")
+shader_parameter/albedo_texture = ExtResource("22_training_ground")
+shader_parameter/saturation = 0.72
+shader_parameter/contrast = 0.84
+shader_parameter/brightness = 0.9
+shader_parameter/environment_tint = Color(1, 1, 1, 1)
+shader_parameter/uv_scale = Vector2(1, 0.6001236)
+shader_parameter/uv_offset = Vector2(0, 0.1999382)
 
-[sub_resource type="BoxMesh" id="BoxMesh_waa6q"]
-size = Vector3(32, 0.5, 10)
+[sub_resource type="BoxMesh" id="BoxMesh_training_ground"]
+size = Vector3(32, 0.5, 8)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_08h5l"]
-size = Vector3(32, 0.5, 10)
+size = Vector3(32, 0.5, 8)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_training_background_far"]
+render_priority = 0
+shader = ExtResource("27_stage_readability")
+shader_parameter/albedo_texture = ExtResource("21_training_background_far")
+shader_parameter/saturation = 0.58
+shader_parameter/contrast = 0.76
+shader_parameter/brightness = 0.88
+shader_parameter/environment_tint = Color(1, 1, 1, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/uv_offset = Vector2(0, 0)
+
+[sub_resource type="QuadMesh" id="QuadMesh_training_background_far"]
+material = SubResource("ShaderMaterial_training_background_far")
+size = Vector2(32, 12)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_training_background_mid"]
+render_priority = -100
+shader = ExtResource("29_stage_readability_alpha")
+shader_parameter/albedo_texture = ExtResource("24_training_background_mid")
+shader_parameter/saturation = 0.72
+shader_parameter/contrast = 0.84
+shader_parameter/brightness = 0.91
+shader_parameter/environment_tint = Color(1, 1, 1, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/uv_offset = Vector2(0, 0)
+
+[sub_resource type="QuadMesh" id="QuadMesh_training_background_mid"]
+material = SubResource("ShaderMaterial_training_background_mid")
+size = Vector2(32, 12)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_training_foreground_left"]
+render_priority = -100
+shader = ExtResource("29_stage_readability_alpha")
+shader_parameter/albedo_texture = ExtResource("25_training_foreground_left")
+shader_parameter/saturation = 0.78
+shader_parameter/contrast = 0.88
+shader_parameter/brightness = 0.9
+shader_parameter/environment_tint = Color(1, 1, 1, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/uv_offset = Vector2(0, 0)
+
+[sub_resource type="QuadMesh" id="QuadMesh_training_foreground_left"]
+material = SubResource("ShaderMaterial_training_foreground_left")
+size = Vector2(32, 12)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_training_foreground_right"]
+render_priority = -100
+shader = ExtResource("29_stage_readability_alpha")
+shader_parameter/albedo_texture = ExtResource("26_training_foreground_right")
+shader_parameter/saturation = 0.78
+shader_parameter/contrast = 0.88
+shader_parameter/brightness = 0.9
+shader_parameter/environment_tint = Color(1, 1, 1, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/uv_offset = Vector2(0, 0)
+
+[sub_resource type="QuadMesh" id="QuadMesh_training_foreground_right"]
+material = SubResource("ShaderMaterial_training_foreground_right")
+size = Vector2(32, 12)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5iwge"]
 albedo_color = Color(0.53333336, 0.4627451, 0.3882353, 1)
@@ -131,24 +208,25 @@ roughness = 0.48
 radius = 0.42
 height = 1.8
 
-[node name="HD2D_Prototype" type="Node3D" unique_id=894535074]
+[node name="TrainingGround" type="Node3D" unique_id=894535074]
+script = ExtResource("23_training_stage")
 
 [node name="Environment" type="WorldEnvironment" parent="." unique_id=1249872615]
 environment = SubResource("Environment_kfaxl")
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=816691586]
 transform = Transform3D(0.8525245, 0.3926847, -0.34496474, 0, 0.6599831, 0.7512804, 0.52268726, -0.640485, 0.56265175, 0, 0, 0)
-light_color = Color(1, 0.84705883, 0.70980394, 1)
-light_energy = 1.35
-shadow_enabled = true
+visible = false
+light_energy = 0.0
 directional_shadow_max_distance = 40.0
 
 [node name="CameraRig" type="Node3D" parent="." unique_id=1526143358]
 
 [node name="DNFCamera" type="Camera3D" parent="CameraRig" unique_id=2113061531]
-transform = Transform3D(1, 0, 0, 0, 0.9286646, 0.37092048, 0, -0.37092048, 0.9286646, 0, 7.7587624, 16)
+transform = Transform3D(1, 0, 0, 0, 0.9286646, 0.37092048, 0, -0.37092048, 0.9286646, 0, 10.374866, 16)
 projection = 1
-size = 10.5
+current = true
+size = 11.0
 near = 0.1
 far = 100.0
 
@@ -158,12 +236,34 @@ far = 100.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 0)
 
 [node name="GroundMesh" type="MeshInstance3D" parent="World/Ground" unique_id=902324901]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0009250641, 0.01832676, -0.008790016)
-material_override = SubResource("StandardMaterial3D_bofcl")
-mesh = SubResource("BoxMesh_waa6q")
+material_override = SubResource("ShaderMaterial_training_ground")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_training_ground")
 
 [node name="GroundCollision" type="CollisionShape3D" parent="World/Ground" unique_id=1406786955]
 shape = SubResource("BoxShape3D_08h5l")
+
+[node name="Backdrop" type="Node3D" parent="World" unique_id=1306581825]
+
+[node name="BackgroundFar" type="MeshInstance3D" parent="World/Backdrop" unique_id=607208076]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5837612, -12.190071)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_training_background_far")
+
+[node name="BackgroundMid" type="MeshInstance3D" parent="World/Backdrop" unique_id=1898665139]
+transform = Transform3D(1, 0, 0, 0, 0.90329397, 0.4290221, 0, -0.4290221, 0.90329397, -0.38129997, 1.798439, -10.019209)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_training_background_mid")
+
+[node name="ForegroundNearLeft" type="MeshInstance3D" parent="World/Backdrop" unique_id=1066911751]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.398381, 4.1557436)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_training_foreground_left")
+
+[node name="ForegroundNearRight" type="MeshInstance3D" parent="World/Backdrop" unique_id=703882275]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.49483156, 5.408723, 4.1540046)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_training_foreground_right")
 
 [node name="Architecture" type="Node3D" parent="World" unique_id=1588551863]
 
@@ -171,6 +271,7 @@ shape = SubResource("BoxShape3D_08h5l")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -5)
 
 [node name="BackWallMesh" type="MeshInstance3D" parent="World/Architecture/BackWall" unique_id=1112157619]
+visible = false
 material_override = SubResource("StandardMaterial3D_5iwge")
 mesh = SubResource("BoxMesh_7akea")
 
@@ -181,6 +282,7 @@ shape = SubResource("BoxShape3D_3ktlg")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 1.5, 0)
 
 [node name="LeftWallMesh" type="MeshInstance3D" parent="World/Architecture/LeftWall" unique_id=1694868262]
+visible = false
 material_override = SubResource("StandardMaterial3D_cxo5v")
 mesh = SubResource("BoxMesh_ugsgx")
 
@@ -189,6 +291,7 @@ shape = SubResource("BoxShape3D_io5tl")
 
 [node name="RaisedPlatform" type="StaticBody3D" parent="World/Architecture" unique_id=2093223377]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.044897, 0.3, 1.8)
+visible = false
 
 [node name="PlatformMesh" type="MeshInstance3D" parent="World/Architecture/RaisedPlatform" unique_id=671237360]
 material_override = SubResource("StandardMaterial3D_7bxuh")
@@ -196,8 +299,10 @@ mesh = SubResource("BoxMesh_mft58")
 
 [node name="PlatformCollision" type="CollisionShape3D" parent="World/Architecture/RaisedPlatform" unique_id=911900502]
 shape = SubResource("BoxShape3D_q1pas")
+disabled = true
 
 [node name="Props" type="Node3D" parent="World" unique_id=1604222721]
+visible = false
 
 [node name="Crate01" type="StaticBody3D" parent="World/Props" unique_id=158263051]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.6, -2.5)
@@ -208,6 +313,7 @@ mesh = SubResource("BoxMesh_uabv3")
 
 [node name="CrateCollision" type="CollisionShape3D" parent="World/Props/Crate01" unique_id=124050296]
 shape = SubResource("BoxShape3D_icore")
+disabled = true
 
 [node name="Pillar01" type="StaticBody3D" parent="World/Props" unique_id=1835874672]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.5, -3.2)
@@ -218,6 +324,7 @@ mesh = SubResource("CylinderMesh_txnb4")
 
 [node name="PillarCollision" type="CollisionShape3D" parent="World/Props/Pillar01" unique_id=204072314]
 shape = SubResource("CylinderShape3D_rsc8a")
+disabled = true
 
 [node name="InteractionMarker" type="Area3D" parent="World/Props" unique_id=1176157600]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 2.7)
@@ -229,6 +336,7 @@ mesh = SubResource("CylinderMesh_sgxp5")
 [node name="MarkerCollision" type="CollisionShape3D" parent="World/Props/InteractionMarker" unique_id=1200548865]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
 shape = SubResource("CylinderShape3D_jwj68")
+disabled = true
 
 [node name="StageBounds" type="Node3D" parent="World" unique_id=457186866]
 
@@ -265,6 +373,13 @@ billboard = 1
 sprite_frames = ExtResource("1_08h5l")
 animation = &"attack3"
 autoplay = "idle1"
+
+[node name="UnitReadability" type="Node3D" parent="Characters/Player" unique_id=1487209063]
+script = ExtResource("28_unit_readability")
+source_sprite_path = NodePath("../CharacterFrames")
+outline_scale = 1.045
+glow_scale = 1.085
+outline_alpha = 0.76
 
 [node name="EditorPlaceholder" type="MeshInstance3D" parent="Characters/Player" unique_id=498754722]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
@@ -306,6 +421,7 @@ cast_shadow = 0
 offset = Vector2(-102, 429)
 pixel_size = 0.004
 billboard = 1
+no_depth_test = true
 render_priority = -1
 sprite_frames = ExtResource("9_skill_vfx")
 animation = &"spell2_JollyRoger"
@@ -366,7 +482,7 @@ stream = ExtResource("13_ghostship_audio")
 volume_db = -2.0
 max_distance = 24.0
 
-[node name="EnemyPlaceholder" parent="Characters" unique_id=374868850 instance=ExtResource("16_target_dummy")]
+[node name="EnemyTargetDummy1" parent="Characters" unique_id=374868850 instance=ExtResource("16_target_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -1.2)
 
 [node name="EnemyTargetDummy2" parent="Characters" unique_id=537952818 instance=ExtResource("16_target_dummy")]

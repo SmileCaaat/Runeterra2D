@@ -7,7 +7,7 @@ enum CombatState { IDLE, CHASE, ATTACK }
 const ATTACK_COMBO: Array[StringName] = [&"attack1", &"attack2", &"attack3"]
 const CHARACTER_ANCHOR_JSON := "res://assets/characters/rogue_admiral_garen/idle1/spritesheet.json"
 
-@export_node_path("CharacterBody3D") var target_path := NodePath("../EnemyPlaceholder")
+@export_node_path("CharacterBody3D") var target_path := NodePath("../EnemyTargetDummy1")
 @export_range(0.1, 10.0, 0.1) var move_speed := 3.4
 @export_range(0.5, 4.0, 0.05) var attack_range := 1.5
 @export_range(0.0, 20.0, 0.1) var acceleration := 14.0

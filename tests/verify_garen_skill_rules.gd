@@ -11,7 +11,7 @@ func _initialize() -> void:
 	root.add_child(scene)
 	await process_frame
 	var player := scene.get_node("Characters/Player") as CharacterBody3D
-	var dummy := scene.get_node("Characters/EnemyPlaceholder") as CharacterBody3D
+	var dummy := scene.get_node("Characters/EnemyTargetDummy1") as CharacterBody3D
 	var enemy_two := scene.get_node("Characters/EnemyTargetDummy2") as CharacterBody3D
 	var friendly_dummy := scene.get_node("Characters/FriendlyTargetDummy1") as CharacterBody3D
 	var skills := player.get_node("SkillController")
@@ -270,6 +270,7 @@ func _initialize() -> void:
 	layering_ok = layering_ok and ocean.render_priority > 0 and anchor.render_priority > 0
 	layering_ok = layering_ok and anchor.no_depth_test
 	layering_ok = layering_ok and (skills.get_node("JollyRoger") as AnimatedSprite3D).render_priority < 0
+	layering_ok = layering_ok and (skills.get_node("JollyRoger") as AnimatedSprite3D).no_depth_test
 	layering_ok = layering_ok and ghost.scale.is_equal_approx(Vector3.ONE * 1.5)
 	var filter_clip_ok := true
 	var vfx_frames := ocean.sprite_frames

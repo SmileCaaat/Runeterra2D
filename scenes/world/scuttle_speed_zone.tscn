@@ -1,8 +1,49 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://tcvh448gvv08"]
 
-[ext_resource type="Script" path="res://scripts/world/scuttle_speed_zone.gd" id="1_zone"]
-[ext_resource type="Shader" path="res://assets/shaders/scuttle_speed_zone.gdshader" id="2_zone_shader"]
-[ext_resource type="Texture2D" path="res://assets/textures/speed_shrine.png" id="3_shrine_texture"]
+[ext_resource type="Script" uid="uid://bjy2bwfg21oyd" path="res://scripts/world/scuttle_speed_zone.gd" id="1_zone"]
+[ext_resource type="Shader" uid="uid://bm3ecr2mi75oo" path="res://assets/shaders/scuttle_speed_zone.gdshader" id="2_zone_shader"]
+[ext_resource type="Texture2D" uid="uid://jb66r5vraxp0" path="res://assets/textures/speed_shrine.png" id="3_shrine_texture"]
+[ext_resource type="SpriteFrames" path="res://assets/textures/speed_shrine_intro/speed_shrine_intro_frames.tres" id="4_intro_frames"]
+[ext_resource type="AudioStream" uid="uid://cfahr3c83apf3" path="res://addons/Sound FX Starter Pack Vol. 1/Magic/Holy Missile.wav" id="5_intro_audio"]
+[ext_resource type="Texture2D" uid="uid://7wrsqfgjsa0o" path="res://assets/fx/soft_green_mote.svg" id="6_mote_texture"]
+
+[sub_resource type="Gradient" id="MoteGradient"]
+offsets = PackedFloat32Array(0, 0.18, 0.72, 1)
+colors = PackedColorArray(0.75, 1, 0.82, 0, 0.58, 1, 0.68, 0.95, 0.12, 0.8, 0.34, 0.65, 0.04, 0.4, 0.12, 0)
+
+[sub_resource type="GradientTexture1D" id="MoteGradientTexture"]
+gradient = SubResource("MoteGradient")
+
+[sub_resource type="ParticleProcessMaterial" id="MoteProcessMaterial"]
+emission_shape = 6
+emission_ring_axis = Vector3(0, 1, 0)
+emission_ring_height = 0.12
+emission_ring_radius = 2.05
+emission_ring_inner_radius = 1.55
+emission_ring_cone_angle = 90.0
+direction = Vector3(0, 1, 0)
+spread = 10.0
+initial_velocity_min = 0.55
+initial_velocity_max = 1.05
+angular_velocity_min = -90.0
+angular_velocity_max = 90.0
+orbit_velocity_min = 0.32
+orbit_velocity_max = 0.42
+gravity = Vector3(0, 0.18, 0)
+scale_min = 0.45
+scale_max = 1.15
+color_ramp = SubResource("MoteGradientTexture")
+
+[sub_resource type="StandardMaterial3D" id="MoteMaterial"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("6_mote_texture")
+billboard_mode = 1
+
+[sub_resource type="QuadMesh" id="MoteMesh"]
+material = SubResource("MoteMaterial")
+size = Vector2(0.12, 0.12)
 
 [sub_resource type="ShaderMaterial" id="ZoneMaterial"]
 render_priority = -5
@@ -18,16 +59,41 @@ size = Vector2(5.2, 5.2)
 height = 0.25
 radius = 2.6
 
-[node name="ScuttleSpeedZone" type="Area3D" groups=["scuttle_speed_zone"]]
-script = ExtResource("1_zone")
+[node name="ScuttleSpeedZone" type="Area3D" unique_id=768029275 groups=["scuttle_speed_zone"]]
 collision_layer = 0
-collision_mask = 1
+script = ExtResource("1_zone")
 
-[node name="TintedDisc" type="MeshInstance3D" parent="."]
+[node name="ActivationSequence" type="AnimatedSprite3D" parent="." unique_id=826141135]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.075, 0)
+cast_shadow = 0
+pixel_size = 0.034
+texture_filter = 1
+render_priority = -4
+sprite_frames = ExtResource("4_intro_frames")
+animation = &"activate"
+frame = 3
+
+[node name="ActivationAudio" type="AudioStreamPlayer3D" parent="." unique_id=55222553]
+stream = ExtResource("5_intro_audio")
+volume_db = -1.0
+max_distance = 24.0
+
+[node name="GreenOrbitMotes" type="GPUParticles3D" parent="." unique_id=1003017692]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.09, 0)
+emitting = false
+amount = 32
+lifetime = 1.8
+randomness = 0.35
+visibility_aabb = AABB(-3, -0.25, -3, 6, 4, 6)
+process_material = SubResource("MoteProcessMaterial")
+draw_pass_1 = SubResource("MoteMesh")
+
+[node name="TintedDisc" type="MeshInstance3D" parent="." unique_id=2047859464]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0)
 cast_shadow = 0
 mesh = SubResource("ZoneMesh")
 
-[node name="Collision" type="CollisionShape3D" parent="."]
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=2116358727]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 shape = SubResource("ZoneShape")
+disabled = true

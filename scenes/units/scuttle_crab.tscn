@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/characters/scuttle_crab.gd" id="1_crab"]
 [ext_resource type="SpriteFrames" path="res://assets/monsters/scuttle_crab/scuttle_crab_sprite_frames.tres" id="2_frames"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/vfx/hit_spark_particles.gd" id="4_hit_spark"]
 [ext_resource type="AudioStream" path="res://assets/audio/combat/training_dummy_hit.wav" id="5_hit_audio"]
 [ext_resource type="Shader" path="res://assets/shaders/scuttle_crab_dissolve.gdshader" id="6_dissolve"]
+[ext_resource type="Script" path="res://scripts/rendering/unit_readability_layers.gd" id="7_readability"]
 
 [sub_resource type="CapsuleShape3D" id="CrabShape"]
 radius = 0.5
@@ -43,7 +44,6 @@ modulate = Color(1, 0.77, 0.05, 0.96)
 offset = Vector2(42.5, 139)
 pixel_size = 0.0016125
 billboard = 1
-no_depth_test = true
 render_priority = -1
 sprite_frames = ExtResource("2_frames")
 animation = &"idle"
@@ -58,6 +58,14 @@ billboard = 1
 render_priority = 0
 sprite_frames = ExtResource("2_frames")
 animation = &"idle"
+
+[node name="UnitReadability" type="Node3D" parent="."]
+script = ExtResource("7_readability")
+source_sprite_path = NodePath("../Frames")
+create_outline = false
+glow_scale = 1.12
+vertical_offset_px = -10.0
+glow_alpha = 0.08
 
 [node name="HitSparkParticles" type="CPUParticles3D" parent="."]
 emitting = false

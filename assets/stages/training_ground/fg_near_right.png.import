@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://jb66r5vraxp0"
-path.s3tc="res://.godot/imported/speed_shrine.png-da03eab0c7431ce79340ba861a1474d6.s3tc.ctex"
+uid="uid://xajjt8ga2e30"
+path.s3tc="res://.godot/imported/fg_near_right.png-0f107d57832bb1cc025da565db992d86.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/textures/speed_shrine.png"
-dest_files=["res://.godot/imported/speed_shrine.png-da03eab0c7431ce79340ba861a1474d6.s3tc.ctex"]
+source_file="res://assets/stages/training_ground/fg_near_right.png"
+dest_files=["res://.godot/imported/fg_near_right.png-0f107d57832bb1cc025da565db992d86.s3tc.ctex"]
 
 [params]
 

@@ -10,7 +10,14 @@ extends Area3D
 @export var minimum_scale := 0.8
 @export_range(0.0, 1.0, 0.01) var maximum_opacity := 0.60
 @export_range(0.0, 1.0, 0.01) var minimum_opacity := 0.30
+@export var intro_duration := 0.72
+@export var particle_intro_speed := 2.4
+@export var particle_active_speed := 0.65
 @onready var shrine: MeshInstance3D = $TintedDisc
+@onready var intro: AnimatedSprite3D = $ActivationSequence
+@onready var intro_audio: AudioStreamPlayer3D = $ActivationAudio
+@onready var orbit_motes: GPUParticles3D = $GreenOrbitMotes
+@onready var collision: CollisionShape3D = $Collision
 var owner_team: StringName = &"friendly"
 var remaining := 10.0
 var affected: Array[Node3D] = []
@@ -18,6 +25,7 @@ var breathing_elapsed := 0.0
 var fade_elapsed := 0.0
 var shrine_material: ShaderMaterial
 var combat_database: CombatDatabase
+var zone_active := false
 
 func _ready() -> void:
 	_apply_combat_data()
@@ -29,6 +37,16 @@ func _ready() -> void:
 		shrine_material = shrine_material.duplicate() as ShaderMaterial
 		shrine.material_override = shrine_material
 		shrine_material.set_shader_parameter(&"opacity", 0.0)
+	_configure_particles()
+	collision.disabled = true
+	intro.visible = true
+	intro.speed_scale = 0.72 / maxf(intro_duration, 0.01)
+	intro.play(&"activate")
+	intro_audio.play()
+	orbit_motes.speed_scale = particle_intro_speed
+	orbit_motes.emitting = true
+	orbit_motes.restart()
+	intro.animation_finished.connect(_activate_zone)
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
 
@@ -53,11 +71,52 @@ func _apply_combat_data() -> void:
 	minimum_scale = _rule_float(&"scuttle.speed_zone_scale_min", minimum_scale)
 	maximum_opacity = _rule_float(&"scuttle.speed_zone_opacity_max", maximum_opacity)
 	minimum_opacity = _rule_float(&"scuttle.speed_zone_opacity_min", minimum_opacity)
+	intro_duration = _rule_float(&"scuttle.speed_zone_intro_duration", intro_duration)
+	particle_intro_speed = _rule_float(&"scuttle.speed_zone_particle_intro_speed", particle_intro_speed)
+	particle_active_speed = _rule_float(&"scuttle.speed_zone_particle_active_speed", particle_active_speed)
+
+func _configure_particles() -> void:
+	var material := orbit_motes.process_material as ParticleProcessMaterial
+	if material == null:
+		return
+	material = material.duplicate() as ParticleProcessMaterial
+	orbit_motes.process_material = material
+	material.emission_ring_radius = _rule_float(&"scuttle.speed_zone_particle_ring_radius", material.emission_ring_radius)
+	material.emission_ring_inner_radius = _rule_float(&"scuttle.speed_zone_particle_ring_inner_radius", material.emission_ring_inner_radius)
+	var orbit_speed := _rule_float(&"scuttle.speed_zone_particle_orbit_speed", material.orbit_velocity_min)
+	material.orbit_velocity_min = orbit_speed
+	material.orbit_velocity_max = orbit_speed + 0.10
+	var profile := combat_database.get_particle_profile(&"scuttle_speed_zone_motes") if combat_database != null else null
+	if profile == null:
+		return
+	orbit_motes.amount = profile.amount
+	orbit_motes.lifetime = profile.lifetime
+	orbit_motes.randomness = profile.randomness
+	material.spread = profile.spread
+	material.gravity = profile.gravity
+	material.initial_velocity_min = profile.velocity_min
+	material.initial_velocity_max = profile.velocity_max
+	material.angular_velocity_min = profile.angular_velocity_min
+	material.angular_velocity_max = profile.angular_velocity_max
+	material.scale_min = profile.scale_min
+	material.scale_max = profile.scale_max
+
+func _activate_zone() -> void:
+	if zone_active:
+		return
+	zone_active = true
+	intro.visible = false
+	remaining = duration
+	fade_elapsed = 0.0
+	collision.set_deferred(&"disabled", false)
+	orbit_motes.speed_scale = particle_active_speed
 
 func _rule_float(rule_id: StringName, fallback: float) -> float:
 	return float(combat_database.get_rule(rule_id, fallback)) if combat_database != null else fallback
 
 func _physics_process(delta: float) -> void:
+	if not zone_active:
+		return
 	remaining -= delta
 	_update_shrine_visual(delta)
 	for node: Node in get_tree().get_nodes_in_group(&"hero_actor"):

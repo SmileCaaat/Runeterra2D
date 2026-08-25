@@ -1,0 +1,21 @@
+[gd_resource type="SpriteFrames" load_steps=7 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/speed_shrine_intro/0.png" id="1_frame"]
+[ext_resource type="Texture2D" path="res://assets/textures/speed_shrine_intro/1.png" id="2_frame"]
+[ext_resource type="Texture2D" path="res://assets/textures/speed_shrine_intro/2.png" id="3_frame"]
+[ext_resource type="Texture2D" path="res://assets/textures/speed_shrine_intro/3.png" id="4_frame"]
+[ext_resource type="Texture2D" path="res://assets/textures/speed_shrine_intro/4.png" id="5_frame"]
+[ext_resource type="Texture2D" path="res://assets/textures/speed_shrine_intro/5.png" id="6_frame"]
+
+[resource]
+animations = [{
+"frames": [{"duration": 1.0, "texture": ExtResource("1_frame")},
+{"duration": 1.0, "texture": ExtResource("2_frame")},
+{"duration": 1.0, "texture": ExtResource("3_frame")},
+{"duration": 1.0, "texture": ExtResource("4_frame")},
+{"duration": 1.0, "texture": ExtResource("5_frame")},
+{"duration": 1.0, "texture": ExtResource("6_frame")}],
+"loop": 0,
+"name": &"activate",
+"speed": 8.333333
+}]

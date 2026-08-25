@@ -43,8 +43,11 @@ func _run() -> void:
 		func(_team: StringName) -> void: death_arrival_positions.append(crab.global_position)
 	)
 	var outline := crab.get_node("NeutralOutline") as AnimatedSprite3D
-	_assert(outline.no_depth_test and outline.render_priority == -1, "neutral outline contract")
+	var glow := crab.get_node("UnitReadability/BacklightGlow") as AnimatedSprite3D
+	_assert(not (crab.get_node("Frames") as AnimatedSprite3D).no_depth_test, "unit body respects ground depth")
+	_assert(not outline.no_depth_test and outline.render_priority == -1, "neutral outline contract")
 	_assert(outline.modulate.r > 0.9 and outline.modulate.g > 0.6, "yellow outline")
+	_assert(glow.modulate.r > 0.9 and glow.modulate.g > 0.6 and glow.modulate.a <= 0.10, "neutral backlight glow")
 	crab.call("register_damage_source", Vector3(-3, 0, 0), &"friendly")
 	crab.call("receive_skill_damage", 999999.0, "TEST", false, Vector3(-3, 0, 0), &"physical", &"basic_melee")
 	_assert(not crab.is_in_group(&"combat_target"), "dead crab exits targeting immediately")
@@ -62,6 +65,17 @@ func _run() -> void:
 	else:
 		zone = zones[0] as Area3D
 	_assert(zone != null, "speed zone should appear after return and dissolve")
+	var intro := zone.get_node("ActivationSequence") as AnimatedSprite3D
+	var intro_audio := zone.get_node("ActivationAudio") as AudioStreamPlayer3D
+	var motes := zone.get_node("GreenOrbitMotes") as GPUParticles3D
+	_assert(intro.visible and intro.animation == &"activate", "speed shrine intro plays flat on the ground before activation")
+	_assert(intro_audio.stream.resource_path.ends_with("Holy Missile.wav"), "speed shrine intro uses Holy Missile audio")
+	_assert(motes.emitting and is_equal_approx(motes.speed_scale, 2.4), "green ring particles run fast during intro")
+	await create_timer(0.5).timeout
+	_assert(bool(zone.get("zone_active")), "speed zone activates after the six-frame intro")
+	_assert(not intro.visible, "intro sequence hides when the persistent shrine appears")
+	_assert(is_equal_approx(motes.speed_scale, 0.65), "green ring particles slow down after activation")
+	_assert(not (zone.get_node("Collision") as CollisionShape3D).disabled, "speed zone collision enables only after intro")
 	zone.set("breathing_elapsed", 0.0)
 	zone.set("fade_elapsed", float(zone.get("fade_in_duration")))
 	zone.call("_update_shrine_visual", 0.0)

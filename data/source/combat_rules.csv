@@ -41,6 +41,12 @@ scuttle.speed_zone_scale_max,monster_presentation,float,1.0,加速法阵呼吸�
 scuttle.speed_zone_scale_min,monster_presentation,float,0.8,加速法阵呼吸最小视觉比例
 scuttle.speed_zone_opacity_max,monster_presentation,float,0.60,加速法阵最大尺寸时透明度
 scuttle.speed_zone_opacity_min,monster_presentation,float,0.30,加速法阵最小尺寸时透明度
+scuttle.speed_zone_intro_duration,monster_presentation,float,0.72,迅捷蟹死亡后贴地法阵启动序列总时长
+scuttle.speed_zone_particle_ring_radius,monster_presentation,float,2.05,加速法阵绿色漂浮粒子的圆环半径
+scuttle.speed_zone_particle_ring_inner_radius,monster_presentation,float,1.55,加速法阵绿色漂浮粒子的圆环内半径
+scuttle.speed_zone_particle_orbit_speed,monster_presentation,float,0.32,加速法阵绿色漂浮粒子绕中心旋转速度
+scuttle.speed_zone_particle_intro_speed,monster_presentation,float,2.4,法阵启动序列期间的粒子播放倍率
+scuttle.speed_zone_particle_active_speed,monster_presentation,float,0.65,法阵开启后的粒子播放倍率
 presentation.breaker_afterimage_count,presentation,int,3,破舰残影池大小
 presentation.breaker_afterimage_lifetime,presentation,float,0.28,破舰单帧残影寿命
 presentation.breaker_afterimage_alpha,presentation,float,0.36,破舰残影初始透明度

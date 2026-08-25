@@ -1,10 +1,11 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/characters/target_dummy.gd" id="1_dummy"]
 [ext_resource type="SpriteFrames" path="res://assets/monsters/target_dummy/target_dummy_sprite_frames.tres" id="2_frames"]
 [ext_resource type="Script" path="res://scripts/vfx/hit_spark_particles.gd" id="3_hit_spark"]
 [ext_resource type="AudioStream" path="res://assets/audio/combat/training_dummy_hit.wav" id="4_hit_audio"]
 [ext_resource type="Texture2D" path="res://assets/fx/soft_ground_shadow.svg" id="5_shadow"]
+[ext_resource type="Script" path="res://scripts/rendering/unit_readability_layers.gd" id="6_readability"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape_dummy"]
 radius = 0.3
@@ -44,7 +45,6 @@ modulate = Color(1, 0.03, 0.015, 0.9)
 offset = Vector2(29, 748.5)
 pixel_size = 0.0014445
 billboard = 1
-no_depth_test = true
 render_priority = -1
 sprite_frames = ExtResource("2_frames")
 animation = &"idle"
@@ -58,6 +58,14 @@ billboard = 1
 render_priority = 0
 sprite_frames = ExtResource("2_frames")
 animation = &"idle"
+
+[node name="UnitReadability" type="Node3D" parent="."]
+script = ExtResource("6_readability")
+source_sprite_path = NodePath("../EnemyFrames")
+create_outline = false
+glow_scale = 1.11
+vertical_offset_px = -52.0
+glow_alpha = 0.08
 
 [node name="EnemyEditorPlaceholder" type="MeshInstance3D" parent="."]
 visible = false
