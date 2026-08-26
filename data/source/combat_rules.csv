@@ -1,6 +1,7 @@
 rule_id,category,value_type,value,description
-schema.version,system,int,13,战斗数据库结构版本：英雄与怪物实例模板绑定
+schema.version,system,int,15,战斗数据库结构版本：职业分支与可复用AI范式
 garen.ocean_storm.base_spins,hero_skill,int,7,翻江倒海在零额外攻速时的三秒基础转数
+garen.ocean_storm.loop_frame_count,hero_skill,int,8,翻江倒海角色动画循环使用零基0至7帧
 garen.ocean_storm.bonus_attack_speed_per_spin,hero_skill,float,0.25,每25%额外攻速增加一转
 garen.ocean_storm.armor_shred_hits,hero_skill,int,6,翻江倒海对同一目标施加破甲所需命中次数
 garen.ocean_storm.armor_shred_ratio,hero_skill,float,0.25,翻江倒海破甲比例
@@ -10,6 +11,9 @@ garen.breaker.lunge_duration,hero_skill,float,0.12,破舰强化普攻的横版�
 garen.breaker.lunge_standoff,hero_skill,float,0.85,破舰冲刺结束时距目标的平面距离
 progression.level_cap,progression,int,30,默认英雄等级上限
 progression.skill_rank_cap,progression,int,5,技能最大等级上限；R等技能可在skills.max_rank声明更低上限
+garen.courage.max_stacks,hero_skill,int,30,勇气最多30层；训练假人不提供层数
+garen.courage.resistance_per_stack,hero_skill,float,1.0,每层勇气提供1点护甲与1点魔法抗性
+garen.black_sail.guard_duration,hero_skill,float,0.75,黑帆施放后的护盾与60%韧性持续时间
 garen.perseverance.lockout_duration,hero_passive,float,8.0,坚忍受到有效伤害后的恢复抑制时长
 garen.perseverance.period,hero_passive,float,5.0,坚忍回复比例的计量周期；运行时连续结算等价总回复
 garen.perseverance.base_regen_ratio_per_5,hero_passive,float,0.015,坚忍1级每5秒最大生命回复比例

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "godot-ui": {
+      "source": "zate/cc-godot",
+      "sourceType": "github",
+      "skillPath": "plugins/gd/skills/godot-ui/SKILL.md",
+      "computedHash": "0ed46667be618a59b0f0072f2a6ed98cbe439c71eb300156ad4158b11a5b2c2d"
+    }
+  }
+}

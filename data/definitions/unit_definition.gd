@@ -6,6 +6,8 @@ extends Resource
 @export_enum("hero", "monster", "training_dummy", "summon") var unit_type := "hero"
 @export_enum("hero", "monster") var instance_template_id := "hero"
 @export var role: StringName
+@export var class_id: StringName
+@export var subclass_id: StringName
 @export var resource_type: StringName
 @export var range_type: StringName
 @export var level := 1
@@ -41,3 +43,4 @@ extends Resource
 @export var move_speed_growth := 0.0
 @export var ai_profile_id: StringName
 @export var skill_ids: Array[StringName] = []
+@export var courage_stack_eligible := false

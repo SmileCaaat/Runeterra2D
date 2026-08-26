@@ -6,6 +6,11 @@ enum CombatState { IDLE, CHASE, ATTACK }
 
 const ATTACK_COMBO: Array[StringName] = [&"attack1", &"attack2", &"attack3"]
 const CHARACTER_ANCHOR_JSON := "res://assets/characters/rogue_admiral_garen/idle1/spritesheet.json"
+const SKILL_Q := 1
+const SKILL_W := 2
+const SKILL_E := 3
+const SKILL_R := 4
+const SKILL_T := 5
 
 @export_node_path("CharacterBody3D") var target_path := NodePath("../EnemyTargetDummy1")
 @export_range(0.1, 10.0, 0.1) var move_speed := 3.4
@@ -32,6 +37,7 @@ var attack_combo: Array[StringName] = ATTACK_COMBO.duplicate()
 var combat_database: CombatDatabase
 var garen_definition: UnitDefinition
 var fighter_ai: AIProfileDefinition
+var ai_archetype: Resource
 var attack_hit_range := 1.95
 var arena_min := Vector2(-14.5, -4.3)
 var arena_max := Vector2(14.5, 4.3)
@@ -163,6 +169,8 @@ func _check_attack_hit(distance: float) -> void:
 			current_attack_is_breaker = false
 		elif target.has_method("receive_hit"):
 			target.call("receive_hit", global_position, character_frames.animation)
+			if skill_controller != null:
+				skill_controller.call("register_courage_kill", target)
 		attack_landed.emit(character_frames.animation)
 
 
@@ -231,6 +239,94 @@ func _on_animation_finished() -> void:
 		_start_next_attack()
 	else:
 		_set_state(CombatState.CHASE)
+
+
+func select_ai_skill() -> int:
+	# Hero-specific expression of the reusable Juggernaut pressure archetype.
+	# The profile supplies all thresholds; the order is intentionally conditional,
+	# never a blocking Q/W/E/R/T carousel.
+	if ai_archetype == null or ai_archetype.decision_mode != "melee_pressure" or not _is_target_available(target):
+		return 0
+	var distance := _target_distance()
+	var target_health_ratio := _target_health_ratio(target)
+	var nearby_enemy_count := _count_nearby_enemies(ai_archetype.engage_distance)
+	var skill_cooldowns: Array = skill_controller.get("cooldowns") as Array
+
+	# R is a true-damage finisher. Evaluate calculated damage instead of merely
+	# waiting for an arbitrary health percentage, then keep a percentage guard so
+	# future high-health targets do not get prematurely executed.
+	if _skill_ready(skill_cooldowns, SKILL_R) and distance <= _skill_range(SKILL_R):
+		var target_max_health := float(target.get("max_health"))
+		var projected_damage := float(skill_controller.call("calculate_judgment_damage", target_max_health, target_health_ratio))
+		var target_health := target_max_health * target_health_ratio
+		if target_health_ratio <= ai_archetype.execute_health_ratio or projected_damage >= target_health:
+			return SKILL_R
+
+	# T is an awakening-scale ground AOE. It is reserved for a real group hit;
+	# the low-health fallback still lets the training scene demonstrate it without
+	# turning every single-target exchange into a Ghostship cast.
+	if _skill_ready(skill_cooldowns, SKILL_T) and distance <= _skill_range(SKILL_T):
+		if nearby_enemy_count >= ai_archetype.aoe_min_targets or target_health_ratio <= ai_archetype.awakening_health_ratio:
+			return SKILL_T
+
+	# Defensive W is reactive and stays available during E by design.
+	if _skill_ready(skill_cooldowns, SKILL_W) and get_health_ratio() <= ai_archetype.defend_health_ratio:
+		return SKILL_W
+
+	# E owns close-range sustained pressure. Its self-area targeting also makes
+	# it the preferred multi-target response once the juggernaut has connected.
+	if _skill_ready(skill_cooldowns, SKILL_E) and distance <= _skill_range(SKILL_E):
+		if nearby_enemy_count >= ai_archetype.aoe_min_targets or target_health_ratio <= ai_archetype.pressure_health_ratio:
+			return SKILL_E
+
+	# Q begins the approach and hands the next attack its lunge/empower state.
+	if _skill_ready(skill_cooldowns, SKILL_Q) and distance <= ai_archetype.engage_distance:
+		return SKILL_Q
+	return 0
+
+
+func _skill_ready(skill_cooldowns: Array, skill_index: int) -> bool:
+	return skill_index >= 0 and skill_index < skill_cooldowns.size() and float(skill_cooldowns[skill_index]) <= 0.0
+
+
+func _skill_range(skill_index: int) -> float:
+	if combat_database == null:
+		return attack_range
+	var definition := combat_database.get_skill_by_slot(&"garen", skill_index)
+	if definition == null:
+		return attack_range
+	if definition.target_type == "self" or definition.target_type == "self_area":
+		return definition.radius
+	return definition.cast_range
+
+
+func _target_distance() -> float:
+	if not _is_target_available(target):
+		return INF
+	var offset := target.global_position - global_position
+	offset.y = 0.0
+	return offset.length()
+
+
+func _target_health_ratio(candidate: CharacterBody3D) -> float:
+	if candidate.has_method("get_health_ratio"):
+		return clampf(float(candidate.call("get_health_ratio")), 0.0, 1.0)
+	return 1.0
+
+
+func _count_nearby_enemies(radius: float) -> int:
+	var count := 0
+	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
+		var candidate := candidate_node as CharacterBody3D
+		if not _is_target_available(candidate):
+			continue
+		if candidate.has_method("is_enemy_of") and not bool(candidate.call("is_enemy_of", get_team())):
+			continue
+		var planar := candidate.global_position - global_position
+		planar.y = 0.0
+		if planar.length() <= radius:
+			count += 1
+	return count
 
 
 func _set_state(next_state: CombatState) -> void:
@@ -367,6 +463,11 @@ func receive_skill_damage(amount: float, _source_name: String, _can_crit: bool, 
 	skill_controller.call("receive_incoming_damage", amount, damage_type, _can_crit)
 
 
+func apply_seven_seas_rum(duration: float, move_speed_bonus: float) -> void:
+	if skill_controller != null:
+		skill_controller.call("apply_seven_seas_rum", duration, move_speed_bonus)
+
+
 func set_external_move_speed_modifier(source_id: StringName, multiplier: float) -> void:
 	external_move_speed_modifiers[source_id] = maxf(0.0, multiplier)
 
@@ -439,6 +540,7 @@ func _apply_combat_data() -> void:
 	if fighter_ai != null:
 		arena_min = fighter_ai.arena_min
 		arena_max = fighter_ai.arena_max
+		ai_archetype = combat_database.get_ai_archetype(fighter_ai.archetype_id)
 	var hit_profile := combat_database.get_hit_profile(&"basic_melee")
 	if hit_profile != null:
 		attack_hit_range = hit_profile.size.x

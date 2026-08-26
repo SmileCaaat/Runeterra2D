@@ -30,10 +30,16 @@ const SKILL_SEVEN_SEAS := 5
 
 @export_group("Skill 2 - 黑帆")
 @export var black_sail_duration := 4.0
-@export var black_sail_damage_reduction := 0.30
-@export var black_sail_control_reduction := 0.30
-@export var passive_resistance_bonus := 0.20
-@export var black_sail_cooldown := 10.0
+@export var black_sail_damage_reduction := 0.25
+@export var black_sail_tenacity := 0.60
+@export var black_sail_guard_duration := 0.75
+@export var black_sail_shield := 65.0
+@export var black_sail_shield_bonus_health_ratio := 0.18
+@export var black_sail_cooldown := 22.0
+
+@export_group("Skill 2 - 勇气")
+@export var courage_max_stacks := 30
+@export var courage_resistance_per_stack := 1.0
 
 @export_group("Skill 3 - 翻江倒海")
 @export var ocean_storm_duration := 3.0
@@ -71,11 +77,12 @@ const SKILL_SEVEN_SEAS := 5
 @export var ghostship_camera_shake_strength := 0.105
 
 @export_group("Skill 5 - 七海霸权")
-@export var ghostship_damage := 180.0
+@export var ghostship_damage := 350.0
 @export var ghostship_radius := 5.2
-@export var ghostship_stun_duration := 2.0
-@export var rum_duration := 10.0
-@export var seven_seas_cooldown := 18.0
+@export var ghostship_stun_duration := 1.2
+@export var rum_duration := 5.0
+@export var rum_speed_bonus := 0.20
+@export var seven_seas_cooldown := 120.0
 
 @export_group("Passive - 坚忍")
 @export var passive_lockout_duration := 8.0
@@ -126,6 +133,9 @@ var impact_shake_duration := 0.0
 var impact_shake_strength := 0.0
 var impact_debris: CPUParticles3D
 var impact_debris_burst_count := 0
+var ghostship_blue_burst: CPUParticles3D
+var ghostship_white_burst: CPUParticles3D
+var ghostship_impact_burst_count := 0
 var anchor_impact_position := Vector3.ZERO
 var anchor_position_locked := false
 var anchor_rebound_lift := 0.0
@@ -138,8 +148,19 @@ var water_vapor_burst_elapsed := 0.0
 var water_vapor_mist: CPUParticles3D
 var water_vapor_burst_count := 0
 var black_sail_timer := 0.0
+var black_sail_guard_timer := 0.0
+var normal_shield := 0.0
+var black_sail_guard_shield_remaining := 0.0
+var courage_stacks := 0
+var courage_kill_ledger: Dictionary[int, WeakRef] = {}
 var rum_timer := 0.0
 var delayed_damage_pool := 0.0
+var rum_settlement_pending := false
+var rum_triangles: CPUParticles3D
+var rum_afterimages: Array[Node3D] = []
+var ocean_storm_loop_active := false
+var ocean_storm_loop_elapsed := 0.0
+var ocean_storm_loop_frame_count := 8
 var current_health := 1000.0
 var max_health := 1000.0
 var current_level := 1
@@ -175,7 +196,9 @@ func _ready() -> void:
 	_build_super_armor_afterimage()
 	_build_impact_shockwave_pool()
 	_build_impact_debris()
+	_build_ghostship_impact_bursts()
 	_build_water_vapor_burst()
+	_build_rum_visuals()
 	_build_perseverance_motes()
 	character_frames.frame_changed.connect(_capture_breaker_afterimage)
 	for effect: AnimatedSprite3D in [jolly_roger, ocean_storm, anchor_effect, ghostship]:
@@ -205,12 +228,14 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_update_breaker_afterimages(delta)
+	_update_ocean_storm_animation_loop(delta)
 	if super_armor_afterimage != null:
 		super_armor_afterimage.set_active(has_super_armor())
 	_update_impact_shockwaves(delta)
 	_update_impact_camera_shake(delta)
 	_update_anchor_tail_dissolve(delta)
 	_update_water_vapor_burst(delta)
+	_update_rum_visuals()
 	_update_timers(delta)
 	_update_rum_damage(delta)
 	_update_perseverance(delta)
@@ -235,11 +260,21 @@ func set_target(next_target: CharacterBody3D) -> void:
 
 
 func begin_skill(skill_index: int, skill_target: CharacterBody3D) -> bool:
-	if is_casting or skill_index < SKILL_BREAKER or skill_index > SKILL_SEVEN_SEAS:
+	if skill_index < SKILL_BREAKER or skill_index > SKILL_SEVEN_SEAS:
 		return false
 	if cooldowns[skill_index] > 0.0 or not is_instance_valid(skill_target):
 		return false
 	target = skill_target
+	# W is instant and intentionally does not take the cast lock: it can be
+	# activated during E without cancelling the spin.
+	if skill_index == SKILL_BLACK_SAIL:
+		cast_counts[skill_index] += 1
+		cooldowns[skill_index] = _get_cooldown(skill_index)
+		_cast_black_sail()
+		demo_timer = demo_gap
+		return true
+	if is_casting:
+		return false
 	is_casting = true
 	current_skill = skill_index
 	cast_counts[skill_index] += 1
@@ -251,6 +286,15 @@ func begin_skill(skill_index: int, skill_target: CharacterBody3D) -> bool:
 func try_begin_demo_skill() -> bool:
 	if not automatic_demo or is_casting or demo_timer > 0.0 or not is_instance_valid(target):
 		return false
+	# A hero-owned selector turns a reusable subclass archetype into a concrete
+	# decision. Once a selector is present it is authoritative: falling back to
+	# the old carousel when it returns "no cast" would reintroduce the long-R-CD
+	# lock that this system replaces.
+	if fighter != null and fighter.has_method("select_ai_skill"):
+		var selected_skill := int(fighter.call("select_ai_skill"))
+		if selected_skill > 0:
+			return try_begin_ai_skill(selected_skill)
+		return false
 	if cooldowns[next_demo_skill] > 0.0 or not _skill_in_range(next_demo_skill):
 		return false
 	var started := begin_skill(next_demo_skill, target)
@@ -259,10 +303,22 @@ func try_begin_demo_skill() -> bool:
 	return started
 
 
+func try_begin_ai_skill(skill_index: int) -> bool:
+	if not automatic_demo or is_casting or demo_timer > 0.0 or not is_instance_valid(target):
+		return false
+	if skill_index < SKILL_BREAKER or skill_index > SKILL_SEVEN_SEAS:
+		return false
+	if cooldowns[skill_index] > 0.0 or not _skill_in_range(skill_index):
+		return false
+	return begin_skill(skill_index, target)
+
+
 func get_move_speed_multiplier() -> float:
 	var multiplier := slow_multiplier
 	if breaker_timer > 0.0:
 		multiplier *= 1.0 + breaker_speed_bonus
+	if rum_timer > 0.0:
+		multiplier *= 1.0 + rum_speed_bonus
 	return multiplier
 
 
@@ -281,6 +337,38 @@ func allows_movement_while_casting() -> bool:
 
 func has_super_armor() -> bool:
 	return is_casting and current_skill == SKILL_OCEAN_STORM
+
+
+func get_normal_shield() -> float:
+	return normal_shield
+
+
+func get_courage_resistance_bonus() -> float:
+	return float(courage_stacks) * courage_resistance_per_stack
+
+
+func get_effective_armor() -> float:
+	var base_armor := garen_definition.armor if garen_definition != null else 38.0
+	return base_armor + get_courage_resistance_bonus()
+
+
+func get_effective_magic_resistance() -> float:
+	var base_resistance := garen_definition.magic_resistance if garen_definition != null else 32.0
+	return base_resistance + get_courage_resistance_bonus()
+
+
+func register_courage_kill(target_actor: CharacterBody3D) -> void:
+	if not is_instance_valid(target_actor):
+		return
+	if target_actor.has_method("is_courage_stack_eligible") and not bool(target_actor.call("is_courage_stack_eligible")):
+		return
+	if target_actor.has_method("is_targetable") and bool(target_actor.call("is_targetable")):
+		return
+	var target_id := target_actor.get_instance_id()
+	if courage_kill_ledger.has(target_id):
+		return
+	courage_kill_ledger[target_id] = weakref(target_actor)
+	courage_stacks = mini(courage_max_stacks, courage_stacks + 1)
 
 
 func should_use_breaker_attack() -> bool:
@@ -309,6 +397,7 @@ func resolve_breaker_attack(skill_target: CharacterBody3D) -> void:
 		skill_target.call("receive_skill_damage", bonus_damage, "破舰额外伤害", false, fighter.global_position, &"physical", &"breaker_hit")
 	if skill_target.has_method("apply_silence"):
 		skill_target.call("apply_silence", breaker_silence_duration)
+	register_courage_kill(skill_target)
 	damage_event_count += 1
 
 
@@ -488,6 +577,136 @@ func _build_impact_debris() -> void:
 	impact_debris.top_level = true
 
 
+func _build_ghostship_impact_bursts() -> void:
+	ghostship_blue_burst = _build_ghostship_impact_particle_burst(
+		"GhostshipImpactBlueBurst", &"ghostship_impact_blue"
+	)
+	ghostship_white_burst = _build_ghostship_impact_particle_burst(
+		"GhostshipImpactWhiteBurst", &"ghostship_impact_white"
+	)
+
+
+func _build_ghostship_impact_particle_burst(node_name: String, profile_id: StringName) -> CPUParticles3D:
+	var profile := combat_database.get_particle_profile(profile_id) if combat_database != null else null
+	var burst := CPUParticles3D.new()
+	burst.name = node_name
+	burst.emitting = false
+	burst.amount = profile.amount if profile != null else 28
+	burst.lifetime = profile.lifetime if profile != null else 0.32
+	burst.one_shot = true
+	burst.explosiveness = 1.0
+	burst.randomness = profile.randomness if profile != null else 0.42
+	burst.local_coords = false
+	burst.direction = Vector3(0.0, 0.58, 0.0)
+	burst.spread = profile.spread if profile != null else 128.0
+	burst.gravity = profile.gravity if profile != null else Vector3(0.0, -4.5, 0.0)
+	burst.initial_velocity_min = profile.velocity_min if profile != null else 4.0
+	burst.initial_velocity_max = profile.velocity_max if profile != null else 8.0
+	burst.angular_velocity_min = profile.angular_velocity_min if profile != null else -540.0
+	burst.angular_velocity_max = profile.angular_velocity_max if profile != null else 540.0
+	burst.scale_amount_min = profile.scale_min if profile != null else 0.45
+	burst.scale_amount_max = profile.scale_max if profile != null else 1.45
+	var ramp := Gradient.new()
+	ramp.offsets = PackedFloat32Array([0.0, 0.12, 0.54, 1.0])
+	ramp.colors = PackedColorArray([
+		profile.gradient_start if profile != null else Color(0.15, 0.82, 1.0, 1.0),
+		profile.gradient_mid if profile != null else Color(0.80, 0.97, 1.0, 0.92),
+		profile.gradient_late if profile != null else Color(0.24, 0.70, 1.0, 0.36),
+		profile.gradient_end if profile != null else Color(0.03, 0.18, 0.38, 0.0),
+	])
+	burst.color_ramp = ramp
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	material.vertex_color_use_as_albedo = true
+	material.emission_enabled = true
+	material.emission = profile.emission_color if profile != null else Color(0.16, 0.76, 1.0, 1.0)
+	material.emission_energy_multiplier = profile.emission_energy if profile != null else 2.0
+	var mesh := QuadMesh.new()
+	mesh.size = profile.mesh_size if profile != null else Vector2(0.18, 0.06)
+	mesh.material = material
+	burst.mesh = mesh
+	add_child(burst)
+	burst.top_level = true
+	return burst
+
+
+func _build_rum_visuals() -> void:
+	var profile := combat_database.get_particle_profile(&"seven_seas_rum_triangles") if combat_database != null else null
+	rum_triangles = CPUParticles3D.new()
+	rum_triangles.name = "RumAmberTriangles"
+	rum_triangles.emitting = false
+	rum_triangles.amount = profile.amount if profile != null else 14
+	rum_triangles.lifetime = profile.lifetime if profile != null else 1.15
+	rum_triangles.randomness = profile.randomness if profile != null else 0.40
+	rum_triangles.local_coords = true
+	rum_triangles.position = Vector3(0.0, 0.82, 0.0)
+	rum_triangles.direction = Vector3(0.0, 1.0, 0.0)
+	rum_triangles.spread = profile.spread if profile != null else 28.0
+	rum_triangles.gravity = profile.gravity if profile != null else Vector3(0.0, 0.16, 0.0)
+	rum_triangles.initial_velocity_min = profile.velocity_min if profile != null else 0.16
+	rum_triangles.initial_velocity_max = profile.velocity_max if profile != null else 0.42
+	rum_triangles.angular_velocity_min = profile.angular_velocity_min if profile != null else -34.0
+	rum_triangles.angular_velocity_max = profile.angular_velocity_max if profile != null else 34.0
+	rum_triangles.scale_amount_min = profile.scale_min if profile != null else 0.48
+	rum_triangles.scale_amount_max = profile.scale_max if profile != null else 1.05
+	var triangle_ramp := Gradient.new()
+	triangle_ramp.offsets = PackedFloat32Array([0.0, 0.48, 1.0])
+	triangle_ramp.colors = PackedColorArray([
+		profile.gradient_start if profile != null else Color(0.86, 0.64, 0.25, 0.26),
+		profile.gradient_mid if profile != null else Color(1.0, 0.83, 0.52, 0.18),
+		profile.gradient_end if profile != null else Color(0.32, 0.13, 0.02, 0.0),
+	])
+	rum_triangles.color_ramp = triangle_ramp
+	var triangle_material := StandardMaterial3D.new()
+	triangle_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	triangle_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	triangle_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	triangle_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	triangle_material.vertex_color_use_as_albedo = true
+	triangle_material.emission_enabled = true
+	triangle_material.emission = profile.emission_color if profile != null else Color(0.82, 0.48, 0.12, 1.0)
+	triangle_material.emission_energy_multiplier = profile.emission_energy if profile != null else 0.8
+	var triangle_mesh := PrismMesh.new()
+	triangle_mesh.size = Vector3(0.09, 0.09, 0.02)
+	triangle_mesh.material = triangle_material
+	rum_triangles.mesh = triangle_mesh
+	add_child(rum_triangles)
+	for frame_offset: int in [1, 2]:
+		var afterimage := SUPER_ARMOR_AFTERIMAGE.new()
+		afterimage.name = "RumAfterimage%d" % frame_offset
+		add_child(afterimage)
+		afterimage.configure(
+			character_frames, null, Color(0.88, 0.53, 0.16, 1.0), frame_offset, 0.018
+		)
+		rum_afterimages.append(afterimage)
+
+
+func _update_rum_visuals() -> void:
+	var active := rum_timer > 0.0
+	if is_instance_valid(rum_triangles):
+		if active and not rum_triangles.emitting:
+			rum_triangles.restart()
+			rum_triangles.emitting = true
+		elif not active:
+			rum_triangles.emitting = false
+	for afterimage: Node3D in rum_afterimages:
+		if afterimage.has_method("set_active"):
+			afterimage.call("set_active", active)
+
+
+func _emit_ghostship_impact_bursts(position: Vector3) -> void:
+	for burst: CPUParticles3D in [ghostship_blue_burst, ghostship_white_burst]:
+		if not is_instance_valid(burst):
+			continue
+		burst.global_position = position + Vector3.UP * 0.30
+		burst.restart()
+		burst.emitting = true
+	ghostship_impact_burst_count += 1
+
+
 func _build_water_vapor_burst() -> void:
 	var mist_profile := combat_database.get_particle_profile(&"judgment_vapor_mist") if combat_database != null else null
 	water_vapor_burst = MeshInstance3D.new()
@@ -657,6 +876,7 @@ func _handle_impact_vfx_frame(effect: AnimatedSprite3D) -> void:
 		)
 		if effect.frame == ghostship_impact_frame:
 			_emit_impact_debris(effect.global_position, true)
+			_emit_ghostship_impact_bursts(effect.global_position)
 			_start_impact_camera_shake(ghostship_camera_shake_duration, ghostship_camera_shake_strength)
 
 
@@ -787,14 +1007,21 @@ func _finish_anchor_tail() -> void:
 
 
 func receive_incoming_damage(amount: float, damage_type: StringName = &"physical", is_critical := false) -> void:
-	var resolved := amount
-	if black_sail_timer > 0.0:
+	var resolved := CombatMath.resolve_damage(amount, damage_type, get_effective_armor(), get_effective_magic_resistance(), combat_database)
+	if black_sail_timer > 0.0 and damage_type != &"true":
 		var reduction_cap := float(combat_database.get_rule(&"damage.reduction_cap", 0.90)) if combat_database != null else 0.90
 		resolved *= 1.0 - clampf(black_sail_damage_reduction, 0.0, reduction_cap)
+	var shield_absorbed := minf(normal_shield, resolved)
+	normal_shield = maxf(0.0, normal_shield - shield_absorbed)
+	black_sail_guard_shield_remaining = maxf(0.0, black_sail_guard_shield_remaining - shield_absorbed)
+	var health_damage := maxf(0.0, resolved - shield_absorbed)
 	if rum_timer > 0.0:
-		delayed_damage_pool += resolved
+		var delayed_portion := health_damage * 0.5
+		delayed_damage_pool += delayed_portion
+		current_health = maxf(0.0, current_health - (health_damage - delayed_portion))
+		rum_settlement_pending = delayed_damage_pool > 0.0
 	else:
-		current_health = maxf(0.0, current_health - resolved)
+		current_health = maxf(0.0, current_health - health_damage)
 	if resolved > 0.0 and fighter != null and fighter.has_method("present_resolved_damage"):
 		fighter.call("present_resolved_damage", resolved, damage_type, is_critical)
 	if resolved > 0.0:
@@ -940,17 +1167,27 @@ func _update_perseverance_motes() -> void:
 
 
 func get_control_duration_multiplier() -> float:
-	return 1.0 - black_sail_control_reduction if black_sail_timer > 0.0 else 1.0
-
-
-func get_passive_armor_multiplier() -> float:
-	return 1.0 + passive_resistance_bonus
+	return 1.0 - black_sail_tenacity if black_sail_guard_timer > 0.0 else 1.0
 
 
 func activate_black_sail_defenses() -> void:
 	black_sail_timer = black_sail_duration
+	black_sail_guard_timer = black_sail_guard_duration
+	black_sail_guard_shield_remaining = black_sail_shield + _bonus_health() * black_sail_shield_bonus_health_ratio
+	normal_shield += black_sail_guard_shield_remaining
 	if rum_timer > 0.0:
 		delayed_damage_pool *= 1.0 - black_sail_rum_cleanse_ratio
+
+
+func _bonus_health() -> float:
+	if combat_database == null or garen_definition == null:
+		return 0.0
+	return combat_database.get_unit_stat_value(garen_definition.id, &"bonus_health", current_level)
+
+
+func apply_seven_seas_rum(duration: float, move_speed_bonus: float) -> void:
+	rum_timer = maxf(rum_timer, duration)
+	rum_speed_bonus = maxf(rum_speed_bonus, move_speed_bonus)
 
 
 func calculate_judgment_damage(target_max_health: float, target_health_ratio: float) -> float:
@@ -996,23 +1233,19 @@ func _cast_breaker() -> void:
 
 
 func _cast_black_sail() -> void:
-	character_frames.animation = _skill_windup_animation(SKILL_BLACK_SAIL, &"channel_wndup")
-	character_frames.frame = 0
-	character_frames.pause()
-	await get_tree().create_timer(_skill_float(SKILL_BLACK_SAIL, "cast_time", 0.16)).timeout
-	character_frames.animation = _skill_animation(SKILL_BLACK_SAIL, &"channel")
-	character_frames.frame = 0
-	character_frames.pause()
 	jolly_roger.visible = true
 	jolly_roger.play(jolly_roger.animation)
 	jolly_audio.play()
 	activate_black_sail_defenses()
-	await get_tree().create_timer(_skill_float(SKILL_BLACK_SAIL, "recovery_time", 0.24)).timeout
 
 
 func _cast_ocean_storm() -> void:
 	var animation := _skill_animation(SKILL_OCEAN_STORM, &"spell3")
 	character_frames.play(animation)
+	character_frames.pause()
+	character_frames.frame = 0
+	ocean_storm_loop_elapsed = 0.0
+	ocean_storm_loop_active = true
 	ocean_storm.visible = true
 	ocean_storm.play(ocean_storm.animation)
 	ocean_audio.play()
@@ -1023,12 +1256,26 @@ func _cast_ocean_storm() -> void:
 	while elapsed < ocean_storm_duration:
 		await get_tree().create_timer(interval).timeout
 		elapsed += interval
-		if not character_frames.is_playing():
-			character_frames.play(animation)
 		resolve_ocean_storm_tick()
+	ocean_storm_loop_active = false
+	character_frames.play(animation)
+	character_frames.frame = mini(ocean_storm_loop_frame_count, character_frames.sprite_frames.get_frame_count(animation) - 1)
 	ocean_storm.visible = false
 	ocean_storm.stop()
 	ocean_audio.stop()
+
+
+func _update_ocean_storm_animation_loop(delta: float) -> void:
+	if not ocean_storm_loop_active or character_frames.sprite_frames == null:
+		return
+	var animation := _skill_animation(SKILL_OCEAN_STORM, &"spell3")
+	var available_frames := character_frames.sprite_frames.get_frame_count(animation)
+	if available_frames <= 0:
+		return
+	ocean_storm_loop_elapsed += delta
+	var frame_count := mini(ocean_storm_loop_frame_count, available_frames)
+	var frame_rate := maxf(character_frames.sprite_frames.get_animation_speed(animation), 0.01)
+	character_frames.frame = posmod(floori(ocean_storm_loop_elapsed * frame_rate), frame_count)
 
 
 func _cast_tyrant_judgment() -> void:
@@ -1056,6 +1303,7 @@ func _cast_tyrant_judgment() -> void:
 		var target_max_health := float(target.get("max_health"))
 		var damage := calculate_judgment_damage(target_max_health, health_ratio)
 		target.call("receive_skill_damage", damage, "暴君审判", false, fighter.global_position, &"true", &"judgment_hit")
+		register_courage_kill(target)
 		damage_event_count += 1
 	await get_tree().create_timer(_skill_float(SKILL_TYRANT_JUDGMENT, "recovery_time", 0.35)).timeout
 
@@ -1079,9 +1327,17 @@ func _cast_seven_seas() -> void:
 	var travel_duration := seven_seas.travel_duration if seven_seas != null else impact_time + 0.1
 	ghostship_last_scheduled_impact_time = travel_duration
 	travel.tween_property(ghostship, "global_position", area_center, travel_duration)
-	await get_tree().create_timer(travel_duration).timeout
+	var path_start := ghostship.global_position
+	var sample_count := maxi(1, ceili(travel_duration / 0.08))
+	for sample_index: int in range(sample_count):
+		var previous_progress := float(sample_index) / float(sample_count)
+		var progress := float(sample_index + 1) / float(sample_count)
+		_apply_rum_to_allied_heroes_in_path(
+			path_start.lerp(area_center, previous_progress),
+			path_start.lerp(area_center, progress)
+		)
+		await get_tree().create_timer(travel_duration / float(sample_count)).timeout
 	resolve_ghostship_impact(area_center)
-	rum_timer = rum_duration
 	await get_tree().create_timer(_skill_float(SKILL_SEVEN_SEAS, "recovery_time", 0.65)).timeout
 	ghostship.visible = false
 	ghostship.stop()
@@ -1108,6 +1364,7 @@ func resolve_ocean_storm_tick() -> int:
 			ocean_storm_hit_counts[target_id] = hit_count
 			if shred_hits > 0 and hit_count >= shred_hits and hit_count % shred_hits == 0 and enemy.has_method("apply_armor_shred"):
 				enemy.call("apply_armor_shred", shred_duration, shred_ratio)
+			register_courage_kill(enemy)
 			damage_event_count += 1
 			hit_targets += 1
 	return hit_targets
@@ -1126,12 +1383,43 @@ func resolve_ghostship_impact(area_center: Vector3) -> int:
 	for enemy: CharacterBody3D in _get_enemy_targets_in_radius(area_center, ghostship_radius):
 		if enemy.has_method("receive_skill_damage"):
 			_register_damage_source(enemy)
-			enemy.call("receive_skill_damage", ghostship_damage, "七海霸权", false, fighter.global_position, &"physical", &"ghostship_hit")
+			enemy.call("receive_skill_damage", ghostship_damage, "七海霸权", false, fighter.global_position, &"magic", &"ghostship_hit")
 		if enemy.has_method("apply_stun"):
 			enemy.call("apply_stun", ghostship_stun_duration)
+		register_courage_kill(enemy)
 		damage_event_count += 1
 		hit_targets += 1
 	return hit_targets
+
+
+func _apply_rum_to_allied_heroes_in_path(path_start: Vector3, path_end: Vector3) -> void:
+	for candidate_node: Node in get_tree().get_nodes_in_group(&"hero_actor"):
+		var ally := candidate_node as CharacterBody3D
+		if not is_instance_valid(ally) or not _is_friendly_hero(ally):
+			continue
+		if not _is_within_ship_path(ally.global_position, path_start, path_end, 1.15):
+			continue
+		if ally == fighter:
+			apply_seven_seas_rum(rum_duration, rum_speed_bonus)
+		elif ally.has_method("apply_seven_seas_rum"):
+			ally.call("apply_seven_seas_rum", rum_duration, rum_speed_bonus)
+
+
+func _is_friendly_hero(candidate: CharacterBody3D) -> bool:
+	var fighter_team := StringName(fighter.call("get_team")) if fighter.has_method("get_team") else &"friendly"
+	return not candidate.has_method("get_team") or StringName(candidate.call("get_team")) == fighter_team
+
+
+func _is_within_ship_path(point: Vector3, path_start: Vector3, path_end: Vector3, radius: float) -> bool:
+	var start := Vector2(path_start.x, path_start.z)
+	var end := Vector2(path_end.x, path_end.z)
+	var sample := Vector2(point.x, point.z)
+	var segment := end - start
+	var segment_length_squared := segment.length_squared()
+	if segment_length_squared <= 0.0001:
+		return sample.distance_to(start) <= radius
+	var progress := clampf((sample - start).dot(segment) / segment_length_squared, 0.0, 1.0)
+	return sample.distance_to(start.lerp(end, progress)) <= radius
 
 
 func _get_enemy_targets_in_radius(area_center: Vector3, radius: float) -> Array[CharacterBody3D]:
@@ -1166,20 +1454,31 @@ func _update_timers(delta: float) -> void:
 		breaker_empowered_attack = false
 	var had_black_sail := black_sail_timer > 0.0
 	black_sail_timer = maxf(0.0, black_sail_timer - delta)
+	black_sail_guard_timer = maxf(0.0, black_sail_guard_timer - delta)
+	if black_sail_guard_timer <= 0.0 and black_sail_guard_shield_remaining > 0.0:
+		normal_shield = maxf(0.0, normal_shield - black_sail_guard_shield_remaining)
+		black_sail_guard_shield_remaining = 0.0
 	jolly_roger.visible = black_sail_timer > 0.0
 	if had_black_sail and black_sail_timer <= 0.0:
 		jolly_roger.visible = false
 		jolly_roger.stop()
 		jolly_audio.stop()
+	var had_rum := rum_timer > 0.0
 	rum_timer = maxf(0.0, rum_timer - delta)
+	if had_rum and rum_timer <= 0.0 and rum_settlement_pending:
+		# Rum's postponed half resolves only when the buff ends, and can never kill.
+		current_health = maxf(1.0, current_health - delayed_damage_pool)
+		delayed_damage_pool = 0.0
+		rum_settlement_pending = false
+	for target_id: int in courage_kill_ledger.keys():
+		var tracked: Object = courage_kill_ledger[target_id].get_ref()
+		if tracked == null or (tracked.has_method("is_targetable") and bool(tracked.call("is_targetable"))):
+			courage_kill_ledger.erase(target_id)
 
 
-func _update_rum_damage(delta: float) -> void:
-	if rum_timer <= 0.0 or delayed_damage_pool <= 0.0:
-		return
-	var applied := minf(delayed_damage_pool, delayed_damage_pool * delta / maxf(rum_timer, delta))
-	delayed_damage_pool -= applied
-	current_health = maxf(1.0, current_health - applied)
+func _update_rum_damage(_delta: float) -> void:
+	# Settlement is intentionally delayed until the Rum buff expires; see _update_timers.
+	pass
 
 
 func _sync_vfx_frame(effect: AnimatedSprite3D) -> void:
@@ -1306,13 +1605,22 @@ func _apply_combat_data() -> void:
 
 	var black_sail := _definition(SKILL_BLACK_SAIL)
 	var black_sail_buff := combat_database.get_buff(&"black_sail")
-	black_sail_duration = black_sail_buff.duration if black_sail_buff != null else black_sail_duration
-	black_sail_damage_reduction = 1.0 - _modifier_value(&"black_sail", &"damage_taken", 1.0 - black_sail_damage_reduction)
-	black_sail_control_reduction = 1.0 - _modifier_value(&"black_sail", &"control_duration", 1.0 - black_sail_control_reduction)
-	passive_resistance_bonus = _modifier_value(&"black_sail_passive", &"armor", passive_resistance_bonus)
+	var black_sail_rank := get_skill_rank(SKILL_BLACK_SAIL)
+	var black_sail_rank_data := combat_database.get_skill_rank(&"garen_black_sail", black_sail_rank)
+	var reduction_rank := combat_database.get_skill_effect_rank(&"black_sail_damage_reduction", black_sail_rank)
+	var shield_rank := combat_database.get_skill_effect_rank(&"black_sail_shield", black_sail_rank)
+	var tenacity_rank := combat_database.get_skill_effect_rank(&"black_sail_tenacity", black_sail_rank)
+	black_sail_duration = black_sail_rank_data.duration if black_sail_rank_data != null else (black_sail_buff.duration if black_sail_buff != null else black_sail_duration)
+	black_sail_damage_reduction = reduction_rank.base_value if reduction_rank != null else black_sail_damage_reduction
+	black_sail_shield = shield_rank.base_value if shield_rank != null else black_sail_shield
+	black_sail_shield_bonus_health_ratio = shield_rank.scaling_coefficient if shield_rank != null else black_sail_shield_bonus_health_ratio
+	black_sail_tenacity = tenacity_rank.base_value if tenacity_rank != null else black_sail_tenacity
+	black_sail_guard_duration = _rule_float(&"garen.black_sail.guard_duration", black_sail_guard_duration)
+	courage_max_stacks = int(_rule_float(&"garen.courage.max_stacks", float(courage_max_stacks)))
+	courage_resistance_per_stack = _rule_float(&"garen.courage.resistance_per_stack", courage_resistance_per_stack)
 	var rum_cleanse_effect := _effect(&"black_sail_rum_cleanse")
 	black_sail_rum_cleanse_ratio = rum_cleanse_effect.base_value if rum_cleanse_effect != null else black_sail_rum_cleanse_ratio
-	black_sail_cooldown = black_sail.cooldown if black_sail != null else black_sail_cooldown
+	black_sail_cooldown = black_sail_rank_data.cooldown if black_sail_rank_data != null else (black_sail.cooldown if black_sail != null else black_sail_cooldown)
 
 	var ocean := _definition(SKILL_OCEAN_STORM)
 	var ocean_effect := _effect(&"ocean_damage")
@@ -1326,6 +1634,7 @@ func _apply_combat_data() -> void:
 		ocean_storm_cooldown = ocean_rank_data.cooldown if ocean_rank_data != null else ocean.cooldown
 	ocean_storm_damage = ocean_damage_rank.base_value if ocean_damage_rank != null else (ocean_effect.base_value if ocean_effect != null else ocean_storm_damage)
 	ocean_storm_damage_coefficient = ocean_damage_rank.scaling_coefficient if ocean_damage_rank != null else (ocean_effect.scaling_coefficient if ocean_effect != null else ocean_storm_damage_coefficient)
+	ocean_storm_loop_frame_count = int(_rule_float(&"garen.ocean_storm.loop_frame_count", float(ocean_storm_loop_frame_count)))
 
 	var judgment := _definition(SKILL_TYRANT_JUDGMENT)
 	var judgment_effect := _effect(&"judgment_damage")
@@ -1340,13 +1649,19 @@ func _apply_combat_data() -> void:
 	var seven_seas := _definition(SKILL_SEVEN_SEAS)
 	var seven_damage := _effect(&"seven_seas_damage")
 	var seven_stun := _effect(&"seven_seas_stun")
+	var seven_rum := _effect(&"seven_seas_rum")
 	var rum_buff := combat_database.get_buff(&"seven_seas_rum")
+	var seven_rank := get_skill_rank(SKILL_SEVEN_SEAS)
+	var seven_rank_data := combat_database.get_skill_rank(&"garen_seven_seas", seven_rank)
+	var seven_damage_rank := combat_database.get_skill_effect_rank(&"seven_seas_damage", seven_rank)
+	var seven_rum_rank := combat_database.get_skill_effect_rank(&"seven_seas_rum", seven_rank)
 	if seven_seas != null:
-		ghostship_radius = seven_seas.radius
-		seven_seas_cooldown = seven_seas.cooldown
-	ghostship_damage = seven_damage.base_value if seven_damage != null else ghostship_damage
+		ghostship_radius = seven_rank_data.radius if seven_rank_data != null else seven_seas.radius
+		seven_seas_cooldown = seven_rank_data.cooldown if seven_rank_data != null else seven_seas.cooldown
+	ghostship_damage = seven_damage_rank.base_value if seven_damage_rank != null else (seven_damage.base_value if seven_damage != null else ghostship_damage)
 	ghostship_stun_duration = seven_stun.control_duration if seven_stun != null else ghostship_stun_duration
-	rum_duration = rum_buff.duration if rum_buff != null else rum_duration
+	rum_duration = seven_rum_rank.base_value if seven_rum_rank != null else (seven_rum.base_value if seven_rum != null else (rum_buff.duration if rum_buff != null else rum_duration))
+	rum_speed_bonus = seven_rum_rank.scaling_coefficient if seven_rum_rank != null else (seven_rum.scaling_coefficient if seven_rum != null else rum_speed_bonus)
 
 	breaker_afterimage_count = int(combat_database.get_rule(&"presentation.breaker_afterimage_count", breaker_afterimage_count))
 	breaker_afterimage_lifetime = _rule_float(&"presentation.breaker_afterimage_lifetime", breaker_afterimage_lifetime)

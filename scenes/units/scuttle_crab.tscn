@@ -22,6 +22,8 @@ shader_parameter/edge_softness = 0.045
 
 [node name="ScuttleCrab" type="CharacterBody3D" groups=["depth_sort_actor"]]
 floor_snap_length = 0.3
+collision_layer = 2
+collision_mask = 3
 script = ExtResource("1_crab")
 
 [node name="Collision" type="CollisionShape3D" parent="."]

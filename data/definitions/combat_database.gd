@@ -6,6 +6,9 @@ extends Resource
 @export var source_digest := ""
 @export var rules: Array[CombatRuleDefinition] = []
 @export var stats: Array[StatDefinition] = []
+@export var hero_classes: Array[Resource] = []
+@export var hero_subclasses: Array[Resource] = []
+@export var ai_archetypes: Array[Resource] = []
 @export var units: Array[UnitDefinition] = []
 @export var unit_stats: Array[UnitStatValueDefinition] = []
 @export var skills: Array[SkillDefinition] = []
@@ -23,6 +26,9 @@ extends Resource
 
 var _rule_index: Dictionary = {}
 var _unit_index: Dictionary = {}
+var _hero_class_index: Dictionary = {}
+var _hero_subclass_index: Dictionary = {}
+var _ai_archetype_index: Dictionary = {}
 var _unit_stat_index: Dictionary = {}
 var _skill_index: Dictionary = {}
 var _skill_rank_index: Dictionary = {}
@@ -38,6 +44,9 @@ var _ai_profile_index: Dictionary = {}
 func rebuild_indexes() -> void:
 	_rule_index = _index_by_id(rules)
 	_unit_index = _index_by_id(units)
+	_hero_class_index = _index_by_id(hero_classes)
+	_hero_subclass_index = _index_by_id(hero_subclasses)
+	_ai_archetype_index = _index_by_id(ai_archetypes)
 	_unit_stat_index.clear()
 	for definition: UnitStatValueDefinition in unit_stats:
 		_unit_stat_index[_unit_stat_key(definition.unit_id, definition.stat_id)] = definition
@@ -70,6 +79,21 @@ func get_rule(rule_id: StringName, fallback: Variant = null) -> Variant:
 func get_unit(unit_id: StringName) -> UnitDefinition:
 	_ensure_indexes()
 	return _unit_index.get(unit_id) as UnitDefinition
+
+
+func get_hero_class(class_id: StringName) -> Resource:
+	_ensure_indexes()
+	return _hero_class_index.get(class_id) as Resource
+
+
+func get_hero_subclass(subclass_id: StringName) -> Resource:
+	_ensure_indexes()
+	return _hero_subclass_index.get(subclass_id) as Resource
+
+
+func get_ai_archetype(archetype_id: StringName) -> Resource:
+	_ensure_indexes()
+	return _ai_archetype_index.get(archetype_id) as Resource
 
 
 func get_unit_stat(unit_id: StringName, stat_id: StringName) -> UnitStatValueDefinition:

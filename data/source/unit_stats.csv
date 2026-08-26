@@ -1,5 +1,6 @@
 unit_id,stat_id,base_value,growth_value,growth_formula,source_base_value,source_growth_value,conversion_scale,source_key,notes
 garen,max_health,690,98,primary,690,98,1,hp_base|hp_lvl,LoL基础与成长
+garen,bonus_health,0,0,none,0,0,1,,当前无装备时的额外生命；黑帆护盾的成长源
 garen,health_regen_per_5,8,0.5,primary,8,0.5,1,hp5_base|hp5_lvl,LoL每5秒回复
 garen,max_resource,0,0,primary,0,0,1,mp_base|mp_lvl,无资源
 garen,resource_regen_per_5,0,0,primary,0,0,1,mp5_base|mp5_lvl,无资源

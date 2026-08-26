@@ -6,10 +6,10 @@ uid="uid://bp2p0bxias4l7"
 
 [deps]
 
-files=["res://data/source/units.display.translation", "res://data/source/units.unit.translation", "res://data/source/units.role.translation", "res://data/source/units.resource.translation", "res://data/source/units.range.translation", "res://data/source/units.level.translation", "res://data/source/units.ai.translation", "res://data/source/units.skill.translation"]
+files=["res://data/source/units.display.translation", "res://data/source/units.unit.translation", "res://data/source/units.instance.translation", "res://data/source/units.role.translation", "res://data/source/units.class.translation", "res://data/source/units.subclass.translation", "res://data/source/units.resource.translation", "res://data/source/units.range.translation", "res://data/source/units.level.translation", "res://data/source/units.ai.translation", "res://data/source/units.skill.translation", "res://data/source/units.courage.translation"]
 
 source_file="res://data/source/units.csv"
-dest_files=["res://data/source/units.display.translation", "res://data/source/units.unit.translation", "res://data/source/units.role.translation", "res://data/source/units.resource.translation", "res://data/source/units.range.translation", "res://data/source/units.level.translation", "res://data/source/units.ai.translation", "res://data/source/units.skill.translation"]
+dest_files=["res://data/source/units.display.translation", "res://data/source/units.unit.translation", "res://data/source/units.instance.translation", "res://data/source/units.role.translation", "res://data/source/units.class.translation", "res://data/source/units.subclass.translation", "res://data/source/units.resource.translation", "res://data/source/units.range.translation", "res://data/source/units.level.translation", "res://data/source/units.ai.translation", "res://data/source/units.skill.translation", "res://data/source/units.courage.translation"]
 
 [params]
 

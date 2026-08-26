@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="HitImpactSystemConfig" load_steps=10 format=3]
+[gd_resource type="Resource" script_class="HitImpactSystemConfig" format=3 uid="uid://cttu5pcdscr51"]
 
-[ext_resource type="Script" path="res://scripts/vfx/hit_impact_system_config.gd" id="1"]
+[ext_resource type="Script" uid="uid://baf8pocnxdihx" path="res://scripts/vfx/hit_impact_system_config.gd" id="1"]
 [ext_resource type="Resource" path="res://assets/vfx/hit/profiles/normal_hit.tres" id="2"]
 [ext_resource type="Resource" path="res://assets/vfx/hit/profiles/critical_hit.tres" id="3"]
 [ext_resource type="Resource" path="res://assets/vfx/hit/profiles/heavy_hit.tres" id="4"]
@@ -12,19 +12,11 @@
 
 [resource]
 script = ExtResource("1")
-pool_size = 8
-viewport_size = Vector2i(256, 256)
-base_pixel_size = 0.012
-normal_sequence_duration = 0.32
-critical_sequence_duration = 0.38
-normal_sequence_pixel_size = 0.0022
-critical_sequence_pixel_size = 0.0026
-critical_profile_id = &"critical"
 profiles = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9")])
-hit_profile_map = {
+hit_profile_map = Dictionary[StringName, StringName]({
 &"basic_melee": &"slash",
 &"breaker_hit": &"heavy",
 &"ghostship_hit": &"magic",
 &"judgment_hit": &"true_damage",
 &"ocean_hit": &"slash"
-}
+})

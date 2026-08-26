@@ -1,6 +1,9 @@
 asset_id,asset_type,resource_path,node_path,animation_name,audio_path,volume_db,pitch_min,pitch_max,max_distance,scale_x,scale_y,scale_z,offset_x,offset_y,pixel_size,render_priority,no_depth_test,shader_material_path,lifecycle,duration,flip_with_facing,local_x,local_y,local_z,opacity
 damage_numbers_brush_primary,combat_text_font,res://assets/ui/combat/brush_damage.png,CombatText/Miss,,,,1,1,20,1,1,1,0,0,0.004,120,true,,manual,0,false,0,0,0,1
 damage_numbers_brush_colored,combat_text_font,res://assets/ui/combat/brush_damage1.png,CombatText/Digits,,,,1,1,20,1,1,1,0,0,0.004,120,true,,manual,0,false,0,0,0,1
+garen_courage_icon,skill_icon,res://assets/icons/garen/courage.webp,UI/Skills/W,,,,1,1,20,1,1,1,0,0,0,0,true,,manual,0,false,0,0,0,1
+garen_ghostship_icon,skill_icon,res://assets/icons/garen/ghostship.png,UI/Skills/T,,,,1,1,20,1,1,1,0,0,0,0,true,,manual,0,false,0,0,0,1
+seven_seas_rum_icon,status_icon,res://assets/icons/status/rum_buff.png,UI/Buffs/Rum,,,,1,1,20,1,1,1,0,0,0,0,true,,manual,0,false,0,0,0,1
 garen_character,character_animation,res://assets/characters/rogue_admiral_garen/garen_sprite_frames.tres,CharacterFrames,,,0,1,1,20,1,1,1,245,861.5,0.004,0,false,,manual,0,true
 jolly_roger,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/JollyRoger,spell2_JollyRoger,,0,1,1,20,1,1,1,-102,429,0.004,-1,true,res://assets/vfx/garen_skills/jolly_roger_screen_material.tres,buff,4.0,false
 ocean_storm,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/OceanStorm,spell3_OceanStorm,,0,1,1,20,1.4,1.4,1.4,-102,429,0.0045,1,false,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,duration,3.0,false

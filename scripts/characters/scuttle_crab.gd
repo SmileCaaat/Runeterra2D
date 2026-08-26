@@ -218,6 +218,7 @@ func _begin_navigation_return() -> void:
 	returning_to_navigation_origin = true
 	flee_timer = 0.0
 	hurt_timer = 0.0
+	set_ghost_collision_active(true)
 	frames.play(&"dash")
 
 func _update_navigation_return(delta: float) -> void:
@@ -230,6 +231,7 @@ func _update_navigation_return(delta: float) -> void:
 	velocity.z = 0.0
 	flee_timer = 0.0
 	returning_to_navigation_origin = false
+	set_ghost_collision_active(false)
 	frames.play(&"run" if not path_points.is_empty() else &"idle")
 
 func _collided_with_stage_boundary() -> bool:

@@ -1,4 +1,4 @@
-unit_id,display_name,unit_type,instance_template_id,role,resource_type,range_type,level,ai_profile_id,skill_ids
-garen,盖伦,hero,hero,juggernaut,none,melee,1,garen_demo,garen_perseverance|garen_breaker|garen_black_sail|garen_ocean_storm|garen_tyrant_judgment|garen_seven_seas
-training_dummy,训练假人,training_dummy,monster,training,none,melee,1,dummy_passive,
-scuttle_crab,峡谷迅捷蟹,monster,monster,neutral,none,melee,1,scuttle_patrol,
+unit_id,display_name,unit_type,instance_template_id,role,class_id,subclass_id,resource_type,range_type,level,ai_profile_id,skill_ids,courage_stack_eligible
+garen,盖伦,hero,hero,juggernaut,fighter,juggernaut,none,melee,1,garen_demo,garen_perseverance|garen_breaker|garen_black_sail|garen_ocean_storm|garen_tyrant_judgment|garen_seven_seas,false
+training_dummy,训练假人,training_dummy,monster,training,,,none,melee,1,dummy_passive,,false
+scuttle_crab,峡谷迅捷蟹,monster,monster,neutral,,,none,melee,1,scuttle_patrol,,true

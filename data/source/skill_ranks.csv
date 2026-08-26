@@ -5,17 +5,19 @@ garen_breaker,2,8.0,0,0,2.4,0,1.95,0,0,movement_speed_duration,reference Q rank 
 garen_breaker,3,8.0,0,0,2.4,0,2.5,0,0,movement_speed_duration,reference Q rank 3 duration
 garen_breaker,4,8.0,0,0,2.4,0,3.05,0,0,movement_speed_duration,reference Q rank 4 duration
 garen_breaker,5,8.0,0,0,2.4,0,3.6,0,0,movement_speed_duration,reference Q rank 5 duration
-garen_black_sail,1,10.0,0.16,0.24,0,0,4.0,0,0,,prototype fixed value pending canonical rank import
-garen_black_sail,2,10.0,0.16,0.24,0,0,4.0,0,0,,prototype fixed value pending canonical rank import
-garen_black_sail,3,10.0,0.16,0.24,0,0,4.0,0,0,,prototype fixed value pending canonical rank import
-garen_black_sail,4,10.0,0.16,0.24,0,0,4.0,0,0,,prototype fixed value pending canonical rank import
-garen_black_sail,5,10.0,0.16,0.24,0,0,4.0,0,0,,prototype fixed value pending canonical rank import
+garen_black_sail,1,22.0,0,0,0,0,4.0,0,0,cooldown|duration,reference W rank 1 cooldown; instant cast retained for action combat
+garen_black_sail,2,19.5,0,0,0,0,4.0,0,0,cooldown|duration,reference W rank 2 cooldown; instant cast retained for action combat
+garen_black_sail,3,17.0,0,0,0,0,4.0,0,0,cooldown|duration,reference W rank 3 cooldown; instant cast retained for action combat
+garen_black_sail,4,14.5,0,0,0,0,4.0,0,0,cooldown|duration,reference W rank 4 cooldown; instant cast retained for action combat
+garen_black_sail,5,12.0,0,0,0,0,4.0,0,0,cooldown|duration,reference W rank 5 cooldown; instant cast retained for action combat
 garen_ocean_storm,1,9.0,0,0,2.6,2.6,3.0,0,0,cooldown|effect_radius,reference E rank 1 cooldown; spin count is derived
 garen_ocean_storm,2,8.25,0,0,2.6,2.6,3.0,0,0,cooldown|effect_radius,reference E rank 2 cooldown; spin count is derived
 garen_ocean_storm,3,7.5,0,0,2.6,2.6,3.0,0,0,cooldown|effect_radius,reference E rank 3 cooldown; spin count is derived
 garen_ocean_storm,4,6.75,0,0,2.6,2.6,3.0,0,0,cooldown|effect_radius,reference E rank 4 cooldown; spin count is derived
 garen_ocean_storm,5,6.0,0,0,2.6,2.6,3.0,0,0,cooldown|effect_radius,reference E rank 5 cooldown; spin count is derived
-garen_tyrant_judgment,1,120.0,0.435,0.35,4.0,0,0.63,0,0,cooldown|cast_time|target_range,reference R rank 1; 400 source units -> 4.0m
-garen_tyrant_judgment,2,100.0,0.435,0.35,4.0,0,0.63,0,0,cooldown|cast_time|target_range,reference R rank 2; 400 source units -> 4.0m
-garen_tyrant_judgment,3,80.0,0.435,0.35,4.0,0,0.63,0,0,cooldown|cast_time|target_range,reference R rank 3; 400 source units -> 4.0m
-garen_seven_seas,1,18.0,1.05,0.65,7.5,5.2,1.70,0,0,,project original skill single rank
+garen_tyrant_judgment,1,45.0,0.435,0.35,4.0,0,0.63,0,0,cooldown|cast_time|target_range,project R rank 1 cooldown; 400 source units -> 4.0m
+garen_tyrant_judgment,2,40.0,0.435,0.35,4.0,0,0.63,0,0,cooldown|cast_time|target_range,project R rank 2 cooldown; 400 source units -> 4.0m
+garen_tyrant_judgment,3,35.0,0.435,0.35,4.0,0,0.63,0,0,cooldown|cast_time|target_range,project R rank 3 cooldown; 400 source units -> 4.0m
+garen_seven_seas,1,120.0,1.05,0.65,7.5,5.2,1.70,0,0,awakening|ghostship,project T rank 1 awakening cooldown; travel shell retained
+garen_seven_seas,2,100.0,1.05,0.65,7.5,5.2,1.70,0,0,awakening|ghostship,project T rank 2 awakening cooldown; travel shell retained
+garen_seven_seas,3,80.0,1.05,0.65,7.5,5.2,1.70,0,0,awakening|ghostship,project T rank 3 awakening cooldown; travel shell retained

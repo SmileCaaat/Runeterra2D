@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://d1tjishego21l"
+
+[deps]
+
+files=["res://data/source/hero_classes.display.translation", "res://data/source/hero_classes.combat.translation", "res://data/source/hero_classes.notes.translation"]
+
+source_file="res://data/source/hero_classes.csv"
+dest_files=["res://data/source/hero_classes.display.translation", "res://data/source/hero_classes.combat.translation", "res://data/source/hero_classes.notes.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

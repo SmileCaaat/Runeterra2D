@@ -1,0 +1,14 @@
+subclass_id,class_id,display_name,combat_identity,ai_archetype_id,notes
+catcher,controller,捕手,以先手控制抓住目标,catcher_control,优先制造命中窗口而非持续换血
+enchanter,controller,附魔师,以保护增益和反制维持友军,enchanter_support,以友军优先级为核心
+diver,fighter,突击,以短时间切入锁定后排或关键目标,diver_commit,允许一次高承诺切入后再评估
+juggernaut,fighter,重装,低机动但近身后耐久且持续压制,juggernaut_pressure,盖伦所属分支
+burst,mage,爆发法师,用短窗口高爆发击杀目标,burst_combo,在安全距离寻找技能组合
+battlemage,mage,战斗法师,在中近距离以持续法术占据战区,battlemage_zone,保持中距离并持续施压
+artillery,mage,炮台法师,远距离消耗并依赖预判,artillery_poke,保持最大安全射程
+marksman_standard,marksman,标准射手,远程持续输出并风筝,marksman_kite,官方没有正式子类；项目可复用范式
+assassin,slayer,刺客,利用机动与爆发快速击杀脆弱目标,assassin_pick,优先孤立低血目标与撤离窗口
+skirmisher,slayer,游斗者,高机动近战持续单挑,skirmisher_duel,维持单挑节奏和反制窗口
+vanguard,tank,先锋,主动开战并吸收第一轮压力,vanguard_engage,优先多目标控制和开团位置
+warden,tank,守护者,保护友军并反制切入,warden_protect,以受威胁友军为目标中心
+specialist,specialist,专精者,按英雄专有规则执行,specialist_custom,必须由英雄档案补充专属决策

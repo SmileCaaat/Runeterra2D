@@ -42,7 +42,10 @@ Never edit `data/generated/combat_database.tres` by hand. Runtime timers, cooldo
 - `animation_events.csv`: frame/normalized/seconds events for hits, audio, VFX, movement, cancel and invulnerability windows.
 - `asset_manifest.csv`: SpriteFrames, animations, audio, scale, origin, shader, layer, depth and lifecycle binding.
 - `particle_profiles.csv`: hit-particle simulation and visual parameters.
-- `ai_profiles.csv`: fighter/wander behavior tuning, arena bounds, skill sequence and deterministic test seed.
+- `hero_classes.csv`: broad hero combat taxonomies; does not contain live balance values.
+- `hero_subclasses.csv`: branch identity and its reusable AI archetype binding.
+- `ai_archetypes.csv`: reusable distance, pressure, defense, execute and AOE decision thresholds.
+- `ai_profiles.csv`: per-unit AI binding/overrides, arena bounds, optional legacy sequence and deterministic test seed.
 
 ## ID and cell conventions
 

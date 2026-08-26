@@ -10,11 +10,15 @@ var previous_frame: Sprite3D
 var tint := Color(1.0, 0.12, 0.10, 1.0)
 var opacity := 0.62
 var active := false
+var frame_offset := 1
+var depth_offset_away_from_camera := 0.0
 
 
-func configure(source: AnimatedSprite3D, profile: AssetProfileDefinition, next_tint: Color) -> void:
+func configure(source: AnimatedSprite3D, profile: AssetProfileDefinition, next_tint: Color, next_frame_offset: int = 1, next_depth_offset_away_from_camera: float = 0.0) -> void:
 	source_sprite = source
 	tint = next_tint
+	frame_offset = maxi(1, next_frame_offset)
+	depth_offset_away_from_camera = maxf(0.0, next_depth_offset_away_from_camera)
 	opacity = profile.opacity if profile != null else opacity
 	if previous_frame == null:
 		previous_frame = Sprite3D.new()
@@ -48,13 +52,19 @@ func _process(_delta: float) -> void:
 	if frame_count <= 0:
 		previous_frame.visible = false
 		return
-	var previous_index := posmod(source_sprite.frame - 1, frame_count)
+	var previous_index := posmod(source_sprite.frame - frame_offset, frame_count)
 	var texture := source_sprite.sprite_frames.get_frame_texture(source_sprite.animation, previous_index)
 	if texture == null:
 		previous_frame.visible = false
 		return
 	previous_frame.texture = texture
 	previous_frame.global_transform = source_sprite.global_transform
+	if depth_offset_away_from_camera > 0.0:
+		var camera := get_viewport().get_camera_3d()
+		if camera != null:
+			var away_from_camera := previous_frame.global_position - camera.global_position
+			if not away_from_camera.is_zero_approx():
+				previous_frame.global_position += away_from_camera.normalized() * depth_offset_away_from_camera
 	previous_frame.offset = source_sprite.offset
 	previous_frame.pixel_size = source_sprite.pixel_size
 	previous_frame.axis = source_sprite.axis

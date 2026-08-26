@@ -5,6 +5,9 @@ extends RefCounted
 const CombatDatabaseScript = preload("res://data/definitions/combat_database.gd")
 const CombatRuleScript = preload("res://data/definitions/combat_rule_definition.gd")
 const StatScript = preload("res://data/definitions/stat_definition.gd")
+const HeroClassScript = preload("res://data/definitions/hero_class_definition.gd")
+const HeroSubclassScript = preload("res://data/definitions/hero_subclass_definition.gd")
+const AIArchetypeScript = preload("res://data/definitions/ai_archetype_definition.gd")
 const UnitScript = preload("res://data/definitions/unit_definition.gd")
 const UnitStatScript = preload("res://data/definitions/unit_stat_value_definition.gd")
 const SkillScript = preload("res://data/definitions/skill_definition.gd")
@@ -21,7 +24,7 @@ const ParticleProfileScript = preload("res://data/definitions/particle_profile_d
 const AIProfileScript = preload("res://data/definitions/ai_profile_definition.gd")
 
 const TABLE_FILES := [
-	"combat_rules.csv", "stats.csv", "units.csv", "unit_stats.csv", "skills.csv", "skill_effects.csv", "skill_ranks.csv", "skill_effect_ranks.csv", "unit_mode_modifiers.csv",
+	"combat_rules.csv", "stats.csv", "hero_classes.csv", "hero_subclasses.csv", "ai_archetypes.csv", "units.csv", "unit_stats.csv", "skills.csv", "skill_effects.csv", "skill_ranks.csv", "skill_effect_ranks.csv", "unit_mode_modifiers.csv",
 	"buffs.csv", "buff_modifiers.csv", "hit_profiles.csv", "animation_events.csv",
 	"asset_manifest.csv", "particle_profiles.csv", "ai_profiles.csv",
 ]
@@ -55,6 +58,9 @@ func build(source_dir := "res://data/source", output_path := "res://data/generat
 	var database := CombatDatabaseScript.new() as CombatDatabase
 	_populate_rules(database)
 	_populate_stats(database)
+	_populate_hero_classes(database)
+	_populate_hero_subclasses(database)
+	_populate_ai_archetypes(database)
 	_populate_units(database)
 	_populate_unit_stats(database)
 	_compile_unit_runtime_values(database)
@@ -131,6 +137,9 @@ func _normalize_optional_trailing_columns(file_name: String, header: PackedStrin
 func _validate_source() -> void:
 	_validate_unique("combat_rules.csv", "rule_id")
 	_validate_unique("stats.csv", "stat_id")
+	_validate_unique("hero_classes.csv", "class_id")
+	_validate_unique("hero_subclasses.csv", "subclass_id")
+	_validate_unique("ai_archetypes.csv", "archetype_id")
 	_validate_unique("units.csv", "unit_id")
 	_validate_unique_pair("unit_stats.csv", "unit_id", "stat_id")
 	_validate_unique("skills.csv", "skill_id")
@@ -147,6 +156,9 @@ func _validate_source() -> void:
 	_validate_unique("ai_profiles.csv", "profile_id")
 
 	var unit_ids := _id_set("units.csv", "unit_id")
+	var class_ids := _id_set("hero_classes.csv", "class_id")
+	var subclass_ids := _id_set("hero_subclasses.csv", "subclass_id")
+	var archetype_ids := _id_set("ai_archetypes.csv", "archetype_id")
 	var skill_ids := _id_set("skills.csv", "skill_id")
 	var buff_ids := _id_set("buffs.csv", "buff_id")
 	var stat_ids := _id_set("stats.csv", "stat_id")
@@ -158,10 +170,31 @@ func _validate_source() -> void:
 
 	for row: Dictionary in _tables["units.csv"]:
 		_require_ref(row, "ai_profile_id", ai_ids, true)
+		_require_ref(row, "class_id", class_ids, true)
+		_require_ref(row, "subclass_id", subclass_ids, true)
 		_validate_enum(row, "instance_template_id", ["hero", "monster"])
+		if _s(row, "unit_type") == "hero":
+			if _s(row, "class_id").is_empty():
+				_error(row, "hero units require class_id")
+			if _s(row, "subclass_id").is_empty():
+				_error(row, "hero units require subclass_id")
 		for skill_id: StringName in _names(row, "skill_ids"):
 			if not skill_ids.has(skill_id):
 				_error(row, "skill_ids references unknown skill '%s'" % skill_id)
+
+	for row: Dictionary in _tables["hero_subclasses.csv"]:
+		_require_ref(row, "class_id", class_ids)
+		_require_ref(row, "ai_archetype_id", archetype_ids)
+
+	for row: Dictionary in _tables["ai_profiles.csv"]:
+		_require_ref(row, "archetype_id", archetype_ids, true)
+
+	for row: Dictionary in _tables["units.csv"]:
+		var subclass_id := _sn(row, "subclass_id")
+		if subclass_id != &"":
+			var subclass_row: Dictionary = _rows_by_id("hero_subclasses.csv", "subclass_id").get(String(subclass_id), {})
+			if not subclass_row.is_empty() and _sn(subclass_row, "class_id") != _sn(row, "class_id"):
+				_error(row, "subclass_id must belong to class_id")
 
 	for row: Dictionary in _tables["unit_stats.csv"]:
 		_require_ref(row, "unit_id", unit_ids)
@@ -325,6 +358,39 @@ func _populate_stats(database: CombatDatabase) -> void:
 		database.stats.append(definition)
 
 
+func _populate_hero_classes(database: CombatDatabase) -> void:
+	for row: Dictionary in _tables["hero_classes.csv"]:
+		var definition := HeroClassScript.new()
+		definition.id = _sn(row, "class_id")
+		definition.display_name = _s(row, "display_name")
+		definition.combat_identity = _s(row, "combat_identity")
+		definition.notes = _s(row, "notes")
+		database.hero_classes.append(definition)
+
+
+func _populate_hero_subclasses(database: CombatDatabase) -> void:
+	for row: Dictionary in _tables["hero_subclasses.csv"]:
+		var definition := HeroSubclassScript.new()
+		definition.id = _sn(row, "subclass_id")
+		definition.class_id = _sn(row, "class_id")
+		definition.display_name = _s(row, "display_name")
+		definition.combat_identity = _s(row, "combat_identity")
+		definition.ai_archetype_id = _sn(row, "ai_archetype_id")
+		definition.notes = _s(row, "notes")
+		database.hero_subclasses.append(definition)
+
+
+func _populate_ai_archetypes(database: CombatDatabase) -> void:
+	for row: Dictionary in _tables["ai_archetypes.csv"]:
+		var definition := AIArchetypeScript.new()
+		definition.id = _sn(row, "archetype_id")
+		definition.decision_mode = _s(row, "decision_mode")
+		for field: String in ["preferred_distance", "engage_distance", "disengage_distance", "pressure_health_ratio", "defend_health_ratio", "execute_health_ratio", "awakening_health_ratio", "decision_interval"]:
+			definition.set(field, _f(row, field))
+		definition.aoe_min_targets = _i(row, "aoe_min_targets")
+		database.ai_archetypes.append(definition)
+
+
 func _populate_units(database: CombatDatabase) -> void:
 	for row: Dictionary in _tables["units.csv"]:
 		var definition := UnitScript.new() as UnitDefinition
@@ -333,11 +399,14 @@ func _populate_units(database: CombatDatabase) -> void:
 		definition.unit_type = _s(row, "unit_type")
 		definition.instance_template_id = _s(row, "instance_template_id")
 		definition.role = _sn(row, "role")
+		definition.class_id = _sn(row, "class_id")
+		definition.subclass_id = _sn(row, "subclass_id")
 		definition.resource_type = _sn(row, "resource_type")
 		definition.range_type = _sn(row, "range_type")
 		definition.level = _i(row, "level")
 		definition.ai_profile_id = _sn(row, "ai_profile_id")
 		definition.skill_ids = _names(row, "skill_ids")
+		definition.courage_stack_eligible = _b(row, "courage_stack_eligible")
 		database.units.append(definition)
 
 
@@ -572,6 +641,7 @@ func _populate_ai_profiles(database: CombatDatabase) -> void:
 	for row: Dictionary in _tables["ai_profiles.csv"]:
 		var definition := AIProfileScript.new() as AIProfileDefinition
 		definition.id = _sn(row, "profile_id")
+		definition.archetype_id = _sn(row, "archetype_id")
 		definition.behavior = _s(row, "behavior")
 		for field: String in ["chase_stop_distance", "waypoint_tolerance", "wander_wait_min", "wander_wait_max", "demo_skill_gap"]:
 			definition.set(field, _f(row, field))

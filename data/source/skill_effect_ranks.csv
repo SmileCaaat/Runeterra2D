@@ -4,6 +4,27 @@ breaker_damage,2,60,0.5,0,0,0,0,bonus_physical_damage|total_ad,Q bonus damage ca
 breaker_damage,3,90,0.5,0,0,0,0,bonus_physical_damage|total_ad,Q bonus damage cannot crit
 breaker_damage,4,120,0.5,0,0,0,0,bonus_physical_damage|total_ad,Q bonus damage cannot crit
 breaker_damage,5,150,0.5,0,0,0,0,bonus_physical_damage|total_ad,Q bonus damage cannot crit
+black_sail_damage_reduction,1,0.25,0,0,0,0,0,damage_reduction,W rank 1 25% damage reduction
+black_sail_damage_reduction,2,0.29,0,0,0,0,0,damage_reduction,W rank 2 29% damage reduction
+black_sail_damage_reduction,3,0.33,0,0,0,0,0,damage_reduction,W rank 3 33% damage reduction
+black_sail_damage_reduction,4,0.37,0,0,0,0,0,damage_reduction,W rank 4 37% damage reduction
+black_sail_damage_reduction,5,0.41,0,0,0,0,0,damage_reduction,W rank 5 41% damage reduction
+black_sail_shield,1,65,0.18,0,0,0,0,shield|bonus_health,W rank 1 shield; no world VFX
+black_sail_shield,2,85,0.18,0,0,0,0,shield|bonus_health,W rank 2 shield; no world VFX
+black_sail_shield,3,105,0.18,0,0,0,0,shield|bonus_health,W rank 3 shield; no world VFX
+black_sail_shield,4,125,0.18,0,0,0,0,shield|bonus_health,W rank 4 shield; no world VFX
+black_sail_shield,5,145,0.18,0,0,0,0,shield|bonus_health,W rank 5 shield; no world VFX
+black_sail_tenacity,1,0.60,0,0,0,0,0,tenacity,W rank 1 60% tenacity for guard duration
+black_sail_tenacity,2,0.60,0,0,0,0,0,tenacity,W rank 2 60% tenacity for guard duration
+black_sail_tenacity,3,0.60,0,0,0,0,0,tenacity,W rank 3 60% tenacity for guard duration
+black_sail_tenacity,4,0.60,0,0,0,0,0,tenacity,W rank 4 60% tenacity for guard duration
+black_sail_tenacity,5,0.60,0,0,0,0,0,tenacity,W rank 5 60% tenacity for guard duration
+seven_seas_damage,1,350,0,0,1.35,0,0,impact_damage,T rank 1 ghostship magical impact damage
+seven_seas_damage,2,475,0,0,1.35,0,0,impact_damage,T rank 2 ghostship magical impact damage
+seven_seas_damage,3,600,0,0,1.35,0,0,impact_damage,T rank 3 ghostship magical impact damage
+seven_seas_rum,1,5.0,0.20,0,0,0,0,rum_duration|move_speed,T rank 1 rum duration and move speed
+seven_seas_rum,2,6.0,0.25,0,0,0,0,rum_duration|move_speed,T rank 2 rum duration and move speed
+seven_seas_rum,3,7.0,0.30,0,0,0,0,rum_duration|move_speed,T rank 3 rum duration and move speed
 ocean_damage,1,4,0.40,0,0,0,0,physical_damage_per_spin|total_ad,E rank 1 per spin
 ocean_damage,2,7,0.43,0,0,0,0,physical_damage_per_spin|total_ad,E rank 2 per spin
 ocean_damage,3,10,0.46,0,0,0,0,physical_damage_per_spin|total_ad,E rank 3 per spin

@@ -2,6 +2,7 @@ class_name AIProfileDefinition
 extends Resource
 
 @export var id: StringName
+@export var archetype_id: StringName
 @export_enum("fighter", "wander", "stationary") var behavior := "fighter"
 @export var chase_stop_distance := 1.5
 @export var waypoint_tolerance := 0.65

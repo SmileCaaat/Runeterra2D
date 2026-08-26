@@ -101,7 +101,7 @@ func _initialize() -> void:
 	for afterimage_variant: Variant in breaker_afterimages:
 		var afterimage := afterimage_variant as Sprite3D
 		afterimage_ok = afterimage_ok and afterimage != null and not afterimage.visible
-	var passive_ok := is_equal_approx(float(skills.call("get_passive_armor_multiplier")), 1.2)
+	var passive_ok := is_zero_approx(float(skills.call("get_courage_resistance_bonus")))
 	passive_ok = passive_ok and is_equal_approx(float(skills.call("get_perseverance_regen_ratio_per_5", 1)), 0.015)
 	passive_ok = passive_ok and is_equal_approx(float(skills.call("get_perseverance_regen_ratio_per_5", 6)), 0.025)
 	passive_ok = passive_ok and is_equal_approx(float(skills.call("get_perseverance_regen_ratio_per_5", 13)), 0.081)
@@ -148,23 +148,49 @@ func _initialize() -> void:
 	skills.set("current_health", 1000.0)
 	skills.set("rum_timer", 0.0)
 	skills.set("black_sail_timer", 1.0)
+	skills.set("normal_shield", 0.0)
 	skills.call("receive_incoming_damage", 100.0)
-	var reduction_ok := is_equal_approx(float(skills.get("current_health")), 930.0)
+	var expected_w_damage := CombatMath.resolve_damage(100.0, &"physical", 38.0, 32.0, CombatData.database()) * 0.75
+	var reduction_ok := is_equal_approx(float(skills.get("current_health")), 1000.0 - expected_w_damage)
 
 	skills.set("current_health", 1000.0)
 	skills.set("black_sail_timer", 0.0)
+	skills.set("breaker_timer", 0.0)
 	skills.set("rum_timer", 10.0)
 	skills.set("delayed_damage_pool", 0.0)
+	skills.set("rum_settlement_pending", false)
 	skills.call("receive_incoming_damage", 100.0)
-	var rum_ok := is_equal_approx(float(skills.get("current_health")), 1000.0)
-	rum_ok = rum_ok and is_equal_approx(float(skills.get("delayed_damage_pool")), 100.0)
+	var expected_rum_damage := CombatMath.resolve_damage(100.0, &"physical", 38.0, 32.0, CombatData.database())
+	var rum_ok := is_equal_approx(float(skills.get("current_health")), 1000.0 - expected_rum_damage * 0.5)
+	rum_ok = rum_ok and is_equal_approx(float(skills.get("delayed_damage_pool")), expected_rum_damage * 0.5)
+	rum_ok = rum_ok and bool(skills.get("rum_settlement_pending"))
+	skills.call("apply_seven_seas_rum", 5.0, 0.20)
+	rum_ok = rum_ok and is_equal_approx(float(skills.get("rum_timer")), 10.0)
+	rum_ok = rum_ok and is_equal_approx(float(skills.call("get_move_speed_multiplier")), 1.20)
 	skills.call("activate_black_sail_defenses")
-	var cleanse_ok := is_equal_approx(float(skills.get("delayed_damage_pool")), 70.0)
+	var cleanse_ok := is_equal_approx(float(skills.get("delayed_damage_pool")), expected_rum_damage * 0.5 * 0.70)
+	cleanse_ok = cleanse_ok and is_equal_approx(float(skills.call("get_normal_shield")), 65.0)
+	cleanse_ok = cleanse_ok and is_equal_approx(float(skills.call("get_control_duration_multiplier")), 0.40)
+	skills.call("_update_timers", 0.75)
+	cleanse_ok = cleanse_ok and is_zero_approx(float(skills.call("get_normal_shield")))
+	cleanse_ok = cleanse_ok and is_equal_approx(float(skills.call("get_control_duration_multiplier")), 1.0)
+	skills.set("courage_stacks", 30)
+	cleanse_ok = cleanse_ok and is_equal_approx(float(skills.call("get_courage_resistance_bonus")), 30.0)
+	cleanse_ok = cleanse_ok and is_equal_approx(float(skills.call("get_effective_armor")), 68.0)
+	skills.set("is_casting", true)
+	skills.set("current_skill", 3)
+	skills.set("cooldowns", [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+	var w_during_e_ok := bool(skills.call("begin_skill", 2, dummy))
+	w_during_e_ok = w_during_e_ok and bool(skills.get("is_casting")) and int(skills.get("current_skill")) == 3
+	cleanse_ok = cleanse_ok and w_during_e_ok
+	skills.set("is_casting", false)
+	skills.set("current_skill", 0)
 
 	skills.set("current_health", 5.0)
-	skills.set("rum_timer", 1.0)
+	skills.set("rum_timer", 0.1)
 	skills.set("delayed_damage_pool", 1000.0)
-	skills.call("_update_rum_damage", 1.0)
+	skills.set("rum_settlement_pending", true)
+	skills.call("_update_timers", 0.1)
 	var nonlethal_ok := is_equal_approx(float(skills.get("current_health")), 1.0)
 	var judgment_ok := is_equal_approx(float(skills.call("calculate_judgment_damage", 1000.0, 0.5)), 250.0)
 	dummy.set("current_health", 1000.0)
@@ -225,6 +251,11 @@ func _initialize() -> void:
 	ghost.frame = 9
 	skills.call("_handle_impact_vfx_frame", ghost)
 	impact_shockwave_ok = impact_shockwave_ok and int(skills.get("impact_shockwave_emit_count")) > anchor_impact_count
+	var ghostship_blue_burst := skills.get("ghostship_blue_burst") as CPUParticles3D
+	var ghostship_white_burst := skills.get("ghostship_white_burst") as CPUParticles3D
+	impact_shockwave_ok = impact_shockwave_ok and ghostship_blue_burst != null and ghostship_blue_burst.emitting
+	impact_shockwave_ok = impact_shockwave_ok and ghostship_white_burst != null and ghostship_white_burst.emitting
+	impact_shockwave_ok = impact_shockwave_ok and int(skills.get("ghostship_impact_burst_count")) > 0
 	var visible_shockwaves := 0
 	for shockwave_variant: Variant in impact_shockwaves:
 		var shockwave := shockwave_variant as MeshInstance3D

@@ -6,10 +6,10 @@ uid="uid://d2mwvmfk7x51t"
 
 [deps]
 
-files=["res://data/source/unit_stats.stat.translation", "res://data/source/unit_stats.base.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.conversion.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.notes.translation"]
+files=["res://data/source/unit_stats.notes.translation", "res://data/source/unit_stats.base.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.base.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.notes.translation"]
 
 source_file="res://data/source/unit_stats.csv"
-dest_files=["res://data/source/unit_stats.stat.translation", "res://data/source/unit_stats.base.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.conversion.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.notes.translation"]
+dest_files=["res://data/source/unit_stats.notes.translation", "res://data/source/unit_stats.base.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.growth.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.base.translation", "res://data/source/unit_stats.source.translation", "res://data/source/unit_stats.notes.translation"]
 
 [params]
 

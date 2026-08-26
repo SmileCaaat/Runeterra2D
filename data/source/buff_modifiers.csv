@@ -1,8 +1,7 @@
 modifier_id,buff_id,stat_id,operation,value,phase,priority
 breaker_speed_bonus,breaker_speed,move_speed,add_percent,0.35,while_active,100
-black_sail_damage_taken,black_sail,damage_taken,multiply,0.70,while_active,100
-black_sail_control_duration,black_sail,control_duration,multiply,0.70,while_active,100
-black_sail_passive_armor,black_sail_passive,armor,add_percent,0.20,always,10
-black_sail_passive_mr,black_sail_passive,magic_resistance,add_percent,0.20,always,10
+courage_armor,courage_stacks,armor,flat,1.0,per_stack,10
+courage_magic_resistance,courage_stacks,magic_resistance,flat,1.0,per_stack,10
+seven_seas_rum_move_speed,seven_seas_rum,move_speed,add_percent,0.20,while_active,100
 scuttle_speed_zone_bonus,scuttle_speed_zone,move_speed,add_percent,0.30,while_inside,100
 judgment_armor_shred_armor,judgment_armor_shred,armor,multiply,0.75,while_active,100

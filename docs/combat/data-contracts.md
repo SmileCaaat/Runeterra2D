@@ -4,12 +4,15 @@
 
 源表位于 `data/source/`，构建器将其验证并生成 `data/generated/combat_database.tres`。禁止手工编辑生成资源。运行时状态，例如当前生命、冷却计时、Buff 层数和当前目标，不得写入共享 Resource。
 
-## 16 张源表
+## 19 张源表
 
 | 表 | 主键 | 职责与关键约束 |
 | --- | --- | --- |
 | `combat_rules.csv` | `rule_id` | 全局常数和策略；改变结构时递增 `schema.version`；单元格不能执行表达式 |
 | `stats.csv` | `stat_id` | 属性语义、单位、默认运算、上下限；只定义属性，不存英雄值 |
+| `hero_classes.csv` | `class_id` | 宽泛职业分类；记录战斗身份，不直接驱动单个英雄数值 |
+| `hero_subclasses.csv` | `subclass_id` | 职业分支、战斗身份和 AI 范式引用；例如 `fighter → juggernaut` |
+| `ai_archetypes.csv` | `archetype_id` | 分支可复用的决策距离、压制/防御/处决阈值及 AOE 条件；不保存运行时状态 |
 | `units.csv` | `unit_id` | 单位身份、角色定位、资源/射程类型、等级、技能和 AI 引用 |
 | `unit_stats.csv` | `unit_id + stat_id` | 1 级值、成长值、成长公式、来源值和单位换算 |
 | `skills.csv` | `skill_id` | 目标、施法类型、冷却、范围、持续时间、移动/朝向策略和表现引用 |
@@ -23,7 +26,7 @@
 | `animation_events.csv` | `event_id` | 动画中的命中、音效、VFX、位移、取消和无敌事件 |
 | `asset_manifest.csv` | `asset_id` | SpriteFrames、VFX、音频、Shader、缩放、局部三维位置、逐层不透明度、层级、朝向和生命周期 |
 | `particle_profiles.csv` | `profile_id` | 粒子数量、寿命、速度、颜色、重力和尺寸 |
-| `ai_profiles.csv` | `profile_id` | AI 行为、竞技场范围、技能序列和可复现随机种子 |
+| `ai_profiles.csv` | `profile_id` | 英雄/单位对 AI 范式的绑定、竞技场范围、可选遗留序列和可复现随机种子 |
 
 ## ID、类型和单位
 
@@ -88,7 +91,10 @@ Buff 绑定的表现必须拥有兼容生命周期。`lifecycle=buff` 的 VFX/�
 ## 表间引用
 
 - `units.skill_ids -> skills.skill_id`
-- `units.ai_profile_id -> ai_profiles.profile_id`
+- `units.class_id -> hero_classes.class_id`（英雄必须填写；怪物可留空）
+- `units.subclass_id -> hero_subclasses.subclass_id`，且该分支必须属于 `class_id`
+- `hero_subclasses.ai_archetype_id -> ai_archetypes.archetype_id`
+- `units.ai_profile_id -> ai_profiles.profile_id`；`ai_profiles.archetype_id -> ai_archetypes.archetype_id` 可覆盖或显式重申分支默认值
 - `units.instance_template_id -> hero | monster`；实例模板负责公共单位表现与伤害入口，具体 AI/移动/死亡状态机仍由派生角色脚本实现。
 - `unit_stats.unit_id -> units.unit_id`
 - `unit_stats.stat_id -> stats.stat_id`
@@ -116,7 +122,7 @@ Buff 绑定的表现必须拥有兼容生命周期。`lifecycle=buff` 的 VFX/�
 3. `skills`、`skill_effects` 与等级表
 4. `buffs` 与 `buff_modifiers`
 5. `hit_profiles` 与 `animation_events`
-6. `asset_manifest`、`particle_profiles` 与 `ai_profiles`
+6. `asset_manifest`、`particle_profiles`、职业/分支表与 `ai_profiles`
 7. 角色档案、公式文档和自动测试
 
 ## 构建与验证

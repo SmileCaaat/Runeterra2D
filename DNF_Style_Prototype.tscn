@@ -27,6 +27,7 @@
 [ext_resource type="Script" uid="uid://m8t41bkjgfud" path="res://scripts/rendering/unit_readability_layers.gd" id="28_unit_readability"]
 [ext_resource type="Shader" uid="uid://mptsdhv37oje" path="res://assets/shaders/stage_readability_alpha.gdshader" id="29_stage_readability_alpha"]
 [ext_resource type="SpriteFrames" path="res://assets/vfx/garen_perseverance/garen_perseverance_frames.tres" id="30_perseverance_vfx"]
+[ext_resource type="Shader" uid="uid://dhmnkmvmy6wu3" path="res://assets/shaders/stage_edge_tile.gdshader" id="31_stage_edge_tile"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_qf7t4"]
 sky_top_color = Color(0.11372549, 0.15294118, 0.21960784, 1)
@@ -53,11 +54,44 @@ shader_parameter/saturation = 0.72
 shader_parameter/contrast = 0.84
 shader_parameter/brightness = 0.9
 shader_parameter/environment_tint = Color(1, 1, 1, 1)
-shader_parameter/uv_scale = Vector2(1, 0.6001236)
-shader_parameter/uv_offset = Vector2(0, 0.1999382)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/uv_offset = Vector2(0, 0)
 
-[sub_resource type="BoxMesh" id="BoxMesh_training_ground"]
-size = Vector3(32, 0.5, 8)
+[sub_resource type="QuadMesh" id="QuadMesh_training_ground_top"]
+uv2_padding = 1.0
+size = Vector2(32, 8)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_training_ground_edge_wide"]
+render_priority = 0
+shader = ExtResource("31_stage_edge_tile")
+shader_parameter/albedo_texture = ExtResource("22_training_ground")
+shader_parameter/edge_origin = Vector2(0, 0.88)
+shader_parameter/edge_size = Vector2(1, 0.12)
+shader_parameter/tile_count = Vector2(8, 1)
+shader_parameter/saturation = 0.72
+shader_parameter/contrast = 0.84
+shader_parameter/brightness = 0.9
+shader_parameter/environment_tint = Color(1, 1, 1, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_training_ground_edge_wide"]
+material = SubResource("ShaderMaterial_training_ground_edge_wide")
+size = Vector2(32, 0.5)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_training_ground_edge_narrow"]
+render_priority = 0
+shader = ExtResource("31_stage_edge_tile")
+shader_parameter/albedo_texture = ExtResource("22_training_ground")
+shader_parameter/edge_origin = Vector2(0, 0.88)
+shader_parameter/edge_size = Vector2(1, 0.12)
+shader_parameter/tile_count = Vector2(2, 1)
+shader_parameter/saturation = 0.72
+shader_parameter/contrast = 0.84
+shader_parameter/brightness = 0.9
+shader_parameter/environment_tint = Color(1, 1, 1, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_training_ground_edge_narrow"]
+material = SubResource("ShaderMaterial_training_ground_edge_narrow")
+size = Vector2(8, 0.5)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_08h5l"]
 size = Vector3(32, 0.5, 8)
@@ -237,9 +271,30 @@ far = 100.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 0)
 
 [node name="GroundMesh" type="MeshInstance3D" parent="World/Ground" unique_id=902324901]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.25, 0)
 material_override = SubResource("ShaderMaterial_training_ground")
 cast_shadow = 0
-mesh = SubResource("BoxMesh_training_ground")
+mesh = SubResource("QuadMesh_training_ground_top")
+
+[node name="GroundEdgeFront" type="MeshInstance3D" parent="World/Ground" unique_id=189933855]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_training_ground_edge_wide")
+
+[node name="GroundEdgeBack" type="MeshInstance3D" parent="World/Ground" unique_id=1354981862]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, -4)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_training_ground_edge_wide")
+
+[node name="GroundEdgeLeft" type="MeshInstance3D" parent="World/Ground" unique_id=1652290947]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -16, 0, 0)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_training_ground_edge_narrow")
+
+[node name="GroundEdgeRight" type="MeshInstance3D" parent="World/Ground" unique_id=954044276]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 16, 0, 0)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_training_ground_edge_narrow")
 
 [node name="GroundCollision" type="CollisionShape3D" parent="World/Ground" unique_id=1406786955]
 shape = SubResource("BoxShape3D_08h5l")
@@ -358,6 +413,8 @@ script = ExtResource("17_depth_sorter")
 
 [node name="Player" type="CharacterBody3D" parent="Characters" unique_id=1535866590 groups=["depth_sort_actor", "player_actor"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 1.2)
+collision_layer = 2
+collision_mask = 3
 floor_snap_length = 0.3
 script = ExtResource("3_garen_ai")
 

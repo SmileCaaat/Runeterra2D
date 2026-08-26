@@ -16,14 +16,15 @@ func _initialize() -> void:
 	var generated_ok := generated_database != null and generated_database.source_digest == database.source_digest
 	var editor_plugin_ok := load("res://addons/combat_data/editor_plugin.gd") != null
 
-	var counts_ok := database.rules.size() == 102 and database.stats.size() == 61
-	counts_ok = counts_ok and database.units.size() == 3 and database.unit_stats.size() == 116
+	var counts_ok := database.rules.size() == 106 and database.stats.size() == 62
+	counts_ok = counts_ok and database.hero_classes.size() == 7 and database.hero_subclasses.size() == 13 and database.ai_archetypes.size() == 13
+	counts_ok = counts_ok and database.units.size() == 3 and database.unit_stats.size() == 117
 	counts_ok = counts_ok and database.skills.size() == 6
-	counts_ok = counts_ok and database.skill_effects.size() == 13 and database.skill_ranks.size() == 20
-	counts_ok = counts_ok and database.skill_effect_ranks.size() == 13 and database.unit_mode_modifiers.is_empty() and database.buffs.size() == 6
-	counts_ok = counts_ok and database.buff_modifiers.size() == 7 and database.ai_profiles.size() == 4
+	counts_ok = counts_ok and database.skill_effects.size() == 16 and database.skill_ranks.size() == 22
+	counts_ok = counts_ok and database.skill_effect_ranks.size() == 34 and database.unit_mode_modifiers.is_empty() and database.buffs.size() == 7
+	counts_ok = counts_ok and database.buff_modifiers.size() == 6 and database.ai_profiles.size() == 4
 	counts_ok = counts_ok and database.hit_profiles.size() == 5 and database.animation_events.size() == 17
-	counts_ok = counts_ok and database.asset_profiles.size() == 42 and database.particle_profiles.size() == 6
+	counts_ok = counts_ok and database.asset_profiles.size() == 45 and database.particle_profiles.size() == 9
 
 	var armor_ok := is_equal_approx(CombatMath.resolve_resistance(100.0, 100.0, 100.0), 50.0)
 	armor_ok = armor_ok and is_equal_approx(CombatMath.resolve_resistance(100.0, -100.0, 100.0), 150.0)
@@ -34,7 +35,11 @@ func _initialize() -> void:
 	var garen := database.get_unit(&"garen")
 	var identity_ok := garen != null and garen.role == &"juggernaut"
 	identity_ok = identity_ok and garen.resource_type == &"none" and garen.range_type == &"melee"
-	identity_ok = identity_ok and database.schema_version == 13
+	identity_ok = identity_ok and garen.class_id == &"fighter" and garen.subclass_id == &"juggernaut"
+	identity_ok = identity_ok and database.get_hero_class(&"fighter") != null and database.get_hero_subclass(&"juggernaut") != null
+	identity_ok = identity_ok and database.get_ai_archetype(&"juggernaut_pressure") != null
+	identity_ok = identity_ok and database.get_ai_profile(&"garen_demo").archetype_id == &"juggernaut_pressure"
+	identity_ok = identity_ok and database.schema_version == 15
 	identity_ok = identity_ok and database.get_rule(&"progression.level_cap", 0) == 30
 
 	var base_stats_ok := garen != null and is_equal_approx(garen.max_health, 690.0)
@@ -107,10 +112,21 @@ func _initialize() -> void:
 	rank_schema_ok = rank_schema_ok and database.get_skill(&"garen_tyrant_judgment").icon_profile_id == &"garen_demacian_justice_icon"
 	rank_schema_ok = rank_schema_ok and r_icon != null and ResourceLoader.exists(r_icon.resource_file)
 	var r_rank_three := database.get_skill_effect_rank(&"judgment_damage", 3)
-	rank_schema_ok = rank_schema_ok and is_equal_approx(database.get_skill_rank(&"garen_tyrant_judgment", 1).cooldown, 120.0)
-	rank_schema_ok = rank_schema_ok and is_equal_approx(database.get_skill_rank(&"garen_tyrant_judgment", 3).cooldown, 80.0)
+	rank_schema_ok = rank_schema_ok and is_equal_approx(database.get_skill_rank(&"garen_tyrant_judgment", 1).cooldown, 45.0)
+	rank_schema_ok = rank_schema_ok and is_equal_approx(database.get_skill_rank(&"garen_tyrant_judgment", 3).cooldown, 35.0)
 	rank_schema_ok = rank_schema_ok and r_rank_three != null and is_equal_approx(r_rank_three.base_value, 275.0) and is_equal_approx(r_rank_three.target_missing_health_coefficient, 0.35)
-	rank_schema_ok = rank_schema_ok and database.get_skill(&"garen_seven_seas").source_slot == &"t"
+	var seven_seas := database.get_skill(&"garen_seven_seas")
+	var seven_rank_three := database.get_skill_effect_rank(&"seven_seas_damage", 3)
+	var rum_rank_three := database.get_skill_effect_rank(&"seven_seas_rum", 3)
+	rank_schema_ok = rank_schema_ok and seven_seas != null and seven_seas.source_slot == &"t" and seven_seas.max_rank == 3
+	rank_schema_ok = rank_schema_ok and is_equal_approx(database.get_skill_rank(&"garen_seven_seas", 1).cooldown, 120.0)
+	rank_schema_ok = rank_schema_ok and is_equal_approx(database.get_skill_rank(&"garen_seven_seas", 3).cooldown, 80.0)
+	rank_schema_ok = rank_schema_ok and seven_rank_three != null and is_equal_approx(seven_rank_three.base_value, 600.0)
+	rank_schema_ok = rank_schema_ok and rum_rank_three != null and is_equal_approx(rum_rank_three.base_value, 7.0) and is_equal_approx(rum_rank_three.scaling_coefficient, 0.30)
+	var ghostship_icon := database.get_asset_profile(&"garen_ghostship_icon")
+	var rum_icon := database.get_asset_profile(&"seven_seas_rum_icon")
+	rank_schema_ok = rank_schema_ok and seven_seas.icon_profile_id == &"garen_ghostship_icon" and ghostship_icon != null and FileAccess.file_exists(ghostship_icon.resource_file)
+	rank_schema_ok = rank_schema_ok and rum_icon != null and FileAccess.file_exists(rum_icon.resource_file)
 	var perseverance := database.get_skill(&"garen_perseverance")
 	var breaker_icon := database.get_asset_profile(&"garen_decisive_strike_icon")
 	rank_schema_ok = rank_schema_ok and database.get_skill(&"garen_breaker").max_rank == 5
@@ -144,7 +160,7 @@ func _initialize() -> void:
 	rank_schema_ok = rank_schema_ok and is_equal_approx(float(database.get_rule(&"presentation.damage_number_critical_scale", 0.0)), 1.42)
 
 	var ocean := database.get_skill(&"garen_ocean_storm")
-	var seven := database.get_skill(&"garen_seven_seas")
+	var seven := seven_seas
 	var semantic_ok := garen != null and garen.skill_ids.size() == 6
 	semantic_ok = semantic_ok and ocean != null and ocean.target_type == "self_area"
 	semantic_ok = semantic_ok and ocean.movement_policy == "allowed" and ocean.icon_profile_id == &"garen_judgment_icon"
@@ -156,16 +172,30 @@ func _initialize() -> void:
 	semantic_ok = semantic_ok and database.get_asset_profile(&"judgment_armor_shred_icon") != null
 	semantic_ok = semantic_ok and seven != null and seven.target_type == "ground_area" and seven.snapshot_target_position
 	semantic_ok = semantic_ok and is_equal_approx(seven.travel_duration, 1.35)
+	semantic_ok = semantic_ok and seven.identity_status == &"adapted"
 	var seven_impact_effects := database.get_skill_effects(&"garen_seven_seas", "on_impact")
-	semantic_ok = semantic_ok and seven_impact_effects.size() == 3
+	semantic_ok = semantic_ok and seven_impact_effects.size() == 2
 	for effect: SkillEffectDefinition in seven_impact_effects:
 		semantic_ok = semantic_ok and is_equal_approx(effect.delay, 1.35)
+	var rum_effects := database.get_skill_effects(&"garen_seven_seas", "on_path")
+	semantic_ok = semantic_ok and rum_effects.size() == 1 and rum_effects[0].target_selector == &"allies_in_path"
 
 	var black_sail := database.get_buff(&"black_sail")
+	var black_sail_guard := database.get_buff(&"black_sail_guard")
+	var courage := database.get_buff(&"courage_stacks")
 	var jolly := database.get_asset_profile(&"jolly_roger")
-	var lifecycle_ok := black_sail != null and jolly != null
+	var courage_icon := database.get_asset_profile(&"garen_courage_icon")
+	var black_sail_skill := database.get_skill(&"garen_black_sail")
+	var lifecycle_ok := black_sail != null and black_sail_guard != null and courage != null and jolly != null
 	lifecycle_ok = lifecycle_ok and black_sail.vfx_profile_id == jolly.id and jolly.lifecycle == "buff"
 	lifecycle_ok = lifecycle_ok and is_equal_approx(black_sail.duration, jolly.duration)
+	lifecycle_ok = lifecycle_ok and courage.max_stacks == 30 and is_equal_approx(float(database.get_rule(&"garen.courage.resistance_per_stack", 0.0)), 1.0)
+	lifecycle_ok = lifecycle_ok and is_equal_approx(black_sail_guard.duration, 0.75)
+	lifecycle_ok = lifecycle_ok and black_sail_skill.icon_profile_id == &"garen_courage_icon" and courage_icon != null and FileAccess.file_exists(courage_icon.resource_file)
+	lifecycle_ok = lifecycle_ok and is_equal_approx(database.get_skill_rank(&"garen_black_sail", 1).cooldown, 22.0)
+	lifecycle_ok = lifecycle_ok and is_equal_approx(database.get_skill_rank(&"garen_black_sail", 5).cooldown, 12.0)
+	lifecycle_ok = lifecycle_ok and is_equal_approx(database.get_skill_effect_rank(&"black_sail_damage_reduction", 5).base_value, 0.41)
+	lifecycle_ok = lifecycle_ok and is_equal_approx(database.get_skill_effect_rank(&"black_sail_shield", 1).base_value, 65.0)
 
 	var basic_hit := database.get_hit_profile(&"basic_melee")
 	var attack_event := database.get_animation_event(&"garen", &"attack1", "hit")

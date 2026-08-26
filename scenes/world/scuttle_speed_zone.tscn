@@ -61,6 +61,7 @@ radius = 2.6
 
 [node name="ScuttleSpeedZone" type="Area3D" unique_id=768029275 groups=["scuttle_speed_zone"]]
 collision_layer = 0
+collision_mask = 2
 script = ExtResource("1_zone")
 
 [node name="ActivationSequence" type="AnimatedSprite3D" parent="." unique_id=826141135]

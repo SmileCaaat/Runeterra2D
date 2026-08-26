@@ -114,6 +114,18 @@ raw = base_value
 
 当前 `SkillEffectDefinition` 已具有这些字段，但运行时仍有部分技能由角色控制器显式执行。新增英雄不能假定通用效果执行器已经覆盖全部触发器；必须用测试证明实际接线。
 
+### 黑帆（Courage W）
+
+来源类型：五级冷却、减伤和护盾基础值参考用户于 2026-08-26 提供的 PC Courage 快照；勇气叠层改为 Gemheart 快节奏横版动作项目规则。
+
+```text
+courage_bonus_resistance = min(kills, 30) × 1
+damage_after_w = damage_after_resistance × (1 - ranked_reduction)
+shield = ranked_base_shield + 0.18 × bonus_health
+```
+
+`ranked_reduction = 25/29/33/37/41%`，护盾基础值为 `65/85/105/125/145`，冷却为 `22/19.5/17/14.5/12s`。勇气只由标记为 `courage_stack_eligible` 的击杀叠加，训练假人明确排除。真实伤害跳过抗性和黑帆减伤，但仍可被普通护盾吸收。黑帆首 `0.75s` 的 60% 韧性通过控制时长乘区实现。
+
 ### 坚忍（Perseverance）
 
 来源类型：回复比例与 8 秒受伤抑制为 `reference`，连续结算为 `simplified/project`。Garen 在 1–30 级采用用户提供的当前模板分段值：1 级 1.5%、6 级 2.5%、13 级 8.1%、30 级 14.9%，单位均为“每 5 秒最大生命回复比例”。
@@ -135,8 +147,8 @@ healing_per_second = Hmax × regen_ratio_per_5 / 5
 | 破舰 | `base_raw = AD × (crit_damage if base_attack_crit else 1)`；`bonus_raw(rank) = [30,60,90,120,150] + 0.50×AD`；`raw = base_raw + bonus_raw` | `adapted/reference` | Q 等级为技能等级（开局 1 级），普攻本体可暴击、Q 额外伤害不可暴击；35% 加速持续 `[1.4,1.95,2.5,3.05,3.6]s` |
 | 黑帆 | 承伤 `incoming × 0.70`；控制时长 `duration × 0.70`；被动抗性乘数 `1.20` | `adapted/reference` | 机制参考 W，项目采用固定比例 |
 | 翻江倒海 | `per_spin(rank) = [4,7,10,13,16] + [0.40,0.43,0.46,0.49,0.52]×AD`；`spins = 7 + floor(bonus_AS / 0.25)` | `adapted/reference` | 每转物理伤害可暴击；最近目标乘 `1.25`；同一目标第 6 次及后续每第 6 次命中施加 25% 破甲 6 秒 |
-| 暴君审判 | `base(rank) + Hmax × missing_ratio × coefficient(rank)`；`base=[125,200,275]`，`coefficient=[0.25,0.30,0.35]`，真实伤害 | `adapted/reference` | 三档冷却 `[120,100,80]s`，施法 `0.435s`，400 来源距离换算为 `4.0m`；真伤绕过抗性，普通护盾在扣生命前吸收它 |
-| 七海霸权 | `180` 物理范围伤害并眩晕 `2.0s` | `project` | 原创扩展，没有外部公式来源 |
+| 暴君审判 | `base(rank) + Hmax × missing_ratio × coefficient(rank)`；`base=[125,200,275]`，`coefficient=[0.25,0.30,0.35]`，真实伤害 | `adapted/reference` | 项目冷却 `[45,40,35]s`；施法 `0.435s`，400 来源距离换算为 `4.0m`；真伤绕过抗性，普通护盾在扣生命前吸收它。120 秒级超长冷却预留给 T 觉醒技能 |
+| 七海霸权 | `impact(rank)=[350,475,600]` 魔法范围伤害，眩晕 `1.2s`；`rum(rank)=[5,6,7]s`，移速 `[20,25,30]%` | `adapted/reference` | 参考用户提供的 Dota Ghostship 截图后适配为 T 觉醒；冷却 `[120,100,80]s`。路径上的友军均获得朗姆酒 |
 | 坚忍（被动） | `Hmax × regen_ratio_per_5 / 5`，受伤后抑制 `8s` | `simplified/reference` | 比例沿 1–30 级分段成长；当前任何有效入伤均会重置抑制 |
 
 Garen 技能入口：
@@ -154,7 +166,7 @@ Garen 技能入口：
 - 命中有效区间：动画归一化时间满足 `active_start <= t <= active_end`。
 - 击退：初速度来自 `knockback_speed`，每帧向零衰减 `knockback_decay × delta`。
 - 纵深判定：攻击者和目标在 Z 轴或平面距离上必须满足 `depth_tolerance` 与命中形状。
-- 朗姆酒延迟伤害：伤害进入 `delayed_damage_pool`，在剩余 Buff 时间内按剩余池比例摊销，生命下限为 `1`；黑帆可令池中伤害乘以 `0.70`。
+- 朗姆酒延迟伤害：每次承伤在护盾、抗性与减伤结算后，`50%` 立即扣血、`50%` 进入 `delayed_damage_pool`；Buff 结束时一次清算该池，生命下限为 `1`。黑帆可令当前池中伤害乘以 `0.70`。
 - hitstop、hitstun、poise damage、launch velocity 和取消窗口均来自命中/动画事件配表，不从 LoL 数值推导。
 - 迅捷蟹刷新、逃跑、归航和加速法阵表现参数来自 `combat_rules`；法阵持续时间与 30% 移速来自 `buffs` 和 `buff_modifiers`，移动形态速度来自 `unit_stats`。
 - 七海霸权视觉横向覆盖约为 `1166 px × 0.006 m/px × 1.5 = 10.494 m`；项目将圆形伤害直径取为 `10.4 m`，即 `skills.radius=5.2 m`，并同步 `ghostship_hit` 的 X/Z 尺寸与纵深容差。

@@ -1,6 +1,7 @@
 stat_id,display_name,category,unit,default_operation,minimum,maximum,description
 health,生命值,resource,point,flat,0,1000000,单位当前生命
 max_health,最大生命值,resource,point,flat,1,1000000,单位生命上限
+bonus_health,额外生命值,resource,point,flat,0,1000000,装备和效果提供的额外生命；用于护盾等成长
 health_regen_per_5,生命回复,defense,point_per_5_seconds,flat,0,1000000,每5秒自然回复生命
 max_resource,最大资源,resource,point,flat,0,1000000,法力或其他施法资源上限
 resource_regen_per_5,资源回复,resource,point_per_5_seconds,flat,0,1000000,每5秒自然回复资源
