@@ -1,6 +1,7 @@
 extends Node3D
 
 const BREAKER_AFTERIMAGE_SHADER := preload("res://assets/vfx/garen_skills/garen_breaker_afterimage.gdshader")
+const SUPER_ARMOR_AFTERIMAGE := preload("res://scripts/presentation/super_armor_afterimage.gd")
 const IMPACT_SHOCKWAVE_SHADER := preload("res://assets/vfx/garen_skills/garen_impact_shockwave.gdshader")
 const WATER_VAPOR_BURST_SHADER := preload("res://assets/vfx/garen_skills/garen_water_vapor_burst.gdshader")
 const SKILL_BREAKER := 1
@@ -17,6 +18,7 @@ const SKILL_SEVEN_SEAS := 5
 @export var breaker_duration := 4.5
 @export var breaker_speed_bonus := 0.35
 @export var breaker_damage := 115.0
+@export var breaker_damage_coefficient := 0.5
 @export var breaker_silence_duration := 1.5
 @export var breaker_cooldown := 6.0
 
@@ -38,12 +40,13 @@ const SKILL_SEVEN_SEAS := 5
 @export var ocean_storm_tick := 0.5
 @export var ocean_storm_radius := 2.6
 @export var ocean_storm_damage := 48.0
+@export var ocean_storm_damage_coefficient := 0.40
 @export var ocean_storm_cooldown := 8.0
 
 @export_group("Skill 4 - 暴君审判")
-@export var judgment_base_damage := 130.0
-@export var judgment_missing_health_damage := 260.0
-@export var judgment_cooldown := 11.0
+@export var judgment_base_damage := 125.0
+@export var judgment_missing_health_damage := 0.25
+@export var judgment_cooldown := 120.0
 
 @export_group("Skill 4/5 - 命中震荡")
 @export_range(1, 3, 1) var impact_shockwave_pool_size := 2
@@ -74,12 +77,22 @@ const SKILL_SEVEN_SEAS := 5
 @export var rum_duration := 10.0
 @export var seven_seas_cooldown := 18.0
 
+@export_group("Passive - 坚忍")
+@export var passive_lockout_duration := 8.0
+@export var passive_regen_period := 5.0
+@export var passive_regen_ratio_per_5 := 0.015
+@export var passive_early_level_increment := 0.002
+@export var passive_mid_level_increment := 0.008
+@export var passive_late_level_increment := 0.004
+
 @onready var fighter: CharacterBody3D = get_parent() as CharacterBody3D
 @onready var character_frames: AnimatedSprite3D = fighter.get_node("CharacterFrames") as AnimatedSprite3D
 @onready var jolly_roger: AnimatedSprite3D = $JollyRoger
 @onready var ocean_storm: AnimatedSprite3D = $OceanStorm
 @onready var anchor_effect: AnimatedSprite3D = $Anchor
 @onready var ghostship: AnimatedSprite3D = $Ghostship
+@onready var perseverance_front: AnimatedSprite3D = $PerseveranceFront
+@onready var perseverance_hip: AnimatedSprite3D = $PerseveranceHip
 @onready var jolly_audio: AudioStreamPlayer3D = $JollyRogerAudio
 @onready var ocean_audio: AudioStreamPlayer3D = $OceanStormAudio
 @onready var anchor_audio: AudioStreamPlayer3D = $AnchorAudio
@@ -94,6 +107,7 @@ var breaker_afterimages: Array[Sprite3D] = []
 var breaker_afterimage_ages: Array[float] = []
 var breaker_afterimage_cursor := 0
 var breaker_afterimage_capture_count := 0
+var super_armor_afterimage: Node3D
 var impact_shockwaves: Array[MeshInstance3D] = []
 var impact_shockwave_ages: Array[float] = []
 var impact_shockwave_lifetimes: Array[float] = []
@@ -128,6 +142,18 @@ var rum_timer := 0.0
 var delayed_damage_pool := 0.0
 var current_health := 1000.0
 var max_health := 1000.0
+var current_level := 1
+var passive_damage_lockout_remaining := 0.0
+var passive_recovery_active := false
+var passive_recovery_activation_count := 0
+var passive_vfx_opacity := 0.70
+var passive_vfx_fade_in := 0.30
+var passive_vfx_fade_out := 0.50
+var passive_vfx_frame_rate := 6.0
+var passive_vfx_alpha := 0.0
+var passive_vfx_should_show := false
+var perseverance_motes: GPUParticles3D
+var perseverance_mote_material: StandardMaterial3D
 var slow_multiplier := 1.0
 var demo_timer := 0.5
 var next_demo_skill := SKILL_BREAKER
@@ -138,15 +164,19 @@ var combat_database: CombatDatabase
 var garen_definition: UnitDefinition
 var skill_definitions: Dictionary = {}
 var black_sail_rum_cleanse_ratio := 0.30
+var skill_ranks: Dictionary[int, int] = {SKILL_BREAKER: 1, SKILL_BLACK_SAIL: 1, SKILL_OCEAN_STORM: 1, SKILL_TYRANT_JUDGMENT: 1, SKILL_SEVEN_SEAS: 1}
+var ocean_storm_hit_counts: Dictionary[int, int] = {}
 var audio_cue_play_counts: Dictionary[StringName, int] = {}
 
 
 func _ready() -> void:
 	_apply_combat_data()
 	_build_breaker_afterimage_pool()
+	_build_super_armor_afterimage()
 	_build_impact_shockwave_pool()
 	_build_impact_debris()
 	_build_water_vapor_burst()
+	_build_perseverance_motes()
 	character_frames.frame_changed.connect(_capture_breaker_afterimage)
 	for effect: AnimatedSprite3D in [jolly_roger, ocean_storm, anchor_effect, ghostship]:
 		if effect.material_override != null:
@@ -166,16 +196,25 @@ func _ready() -> void:
 	anchor_effect.top_level = true
 	ghostship.top_level = true
 	anchor_effect.animation_finished.connect(_on_anchor_animation_finished)
+	for effect: AnimatedSprite3D in _perseverance_vfx():
+		effect.visible = false
+		effect.modulate.a = 0.0
+		effect.play(effect.animation)
+		_apply_sprite_asset_profile(effect, _perseverance_asset_id(effect))
 
 
 func _process(delta: float) -> void:
 	_update_breaker_afterimages(delta)
+	if super_armor_afterimage != null:
+		super_armor_afterimage.set_active(has_super_armor())
 	_update_impact_shockwaves(delta)
 	_update_impact_camera_shake(delta)
 	_update_anchor_tail_dissolve(delta)
 	_update_water_vapor_burst(delta)
 	_update_timers(delta)
 	_update_rum_damage(delta)
+	_update_perseverance(delta)
+	_update_perseverance_vfx(delta)
 	if anchor_effect.visible:
 		if anchor_position_locked:
 			anchor_effect.global_position = anchor_impact_position + Vector3.UP * anchor_rebound_lift
@@ -240,8 +279,16 @@ func allows_movement_while_casting() -> bool:
 	return is_casting and current_skill == SKILL_OCEAN_STORM
 
 
+func has_super_armor() -> bool:
+	return is_casting and current_skill == SKILL_OCEAN_STORM
+
+
 func should_use_breaker_attack() -> bool:
 	return breaker_empowered_attack and breaker_timer > 0.0
+
+
+func get_skill_rank(skill_slot: int) -> int:
+	return int(skill_ranks.get(skill_slot, 1))
 
 
 func resolve_breaker_attack(skill_target: CharacterBody3D) -> void:
@@ -249,8 +296,17 @@ func resolve_breaker_attack(skill_target: CharacterBody3D) -> void:
 	if not should_use_breaker_attack():
 		return
 	breaker_empowered_attack = false
-	if skill_target.has_method("receive_skill_damage"):
-		skill_target.call("receive_skill_damage", breaker_damage, "破舰", true, fighter.global_position, &"physical", &"breaker_hit")
+	var attack_damage := garen_definition.attack_damage if garen_definition != null else 69.0
+	var bonus_damage := breaker_damage + attack_damage * breaker_damage_coefficient
+	if skill_target.has_method("receive_breaker_attack"):
+		skill_target.call("receive_breaker_attack", attack_damage, bonus_damage, fighter.global_position, &"breaker_hit")
+	else:
+		# Compatibility path for future targets that have not implemented compound hits yet.
+		if skill_target.has_method("receive_hit"):
+			skill_target.call("receive_hit", fighter.global_position, &"spell1")
+		if skill_target.has_method("receive_skill_damage"):
+			skill_target.call("receive_skill_damage", bonus_damage, "破舰额外伤害", false, fighter.global_position, &"physical", &"breaker_hit")
+		skill_target.call("receive_skill_damage", bonus_damage, "破舰额外伤害", false, fighter.global_position, &"physical", &"breaker_hit")
 	if skill_target.has_method("apply_silence"):
 		skill_target.call("apply_silence", breaker_silence_duration)
 	damage_event_count += 1
@@ -279,6 +335,18 @@ func _build_breaker_afterimage_pool() -> void:
 		afterimage.top_level = true
 		breaker_afterimages.append(afterimage)
 		breaker_afterimage_ages.append(breaker_afterimage_lifetime)
+
+
+func _build_super_armor_afterimage() -> void:
+	super_armor_afterimage = SUPER_ARMOR_AFTERIMAGE.new()
+	super_armor_afterimage.name = "SuperArmorAfterimage"
+	add_child(super_armor_afterimage)
+	var profile := combat_database.get_asset_profile(&"super_armor_afterimage") if combat_database != null else null
+	var color := Color.from_string(
+		String(combat_database.get_rule(&"presentation.super_armor_afterimage_color", "ff2424ff")) if combat_database != null else "ff2424ff",
+		Color(1.0, 0.12, 0.10, 1.0)
+	)
+	super_armor_afterimage.configure(character_frames, profile, color)
 
 
 func _capture_breaker_afterimage() -> void:
@@ -718,7 +786,7 @@ func _finish_anchor_tail() -> void:
 		material.set_shader_parameter(&"tail_dissolve", 0.0)
 
 
-func receive_incoming_damage(amount: float) -> void:
+func receive_incoming_damage(amount: float, damage_type: StringName = &"physical", is_critical := false) -> void:
 	var resolved := amount
 	if black_sail_timer > 0.0:
 		var reduction_cap := float(combat_database.get_rule(&"damage.reduction_cap", 0.90)) if combat_database != null else 0.90
@@ -727,6 +795,148 @@ func receive_incoming_damage(amount: float) -> void:
 		delayed_damage_pool += resolved
 	else:
 		current_health = maxf(0.0, current_health - resolved)
+	if resolved > 0.0 and fighter != null and fighter.has_method("present_resolved_damage"):
+		fighter.call("present_resolved_damage", resolved, damage_type, is_critical)
+	if resolved > 0.0:
+		passive_damage_lockout_remaining = passive_lockout_duration
+		passive_recovery_active = false
+
+
+func get_perseverance_regen_ratio_per_5(level := current_level) -> float:
+	var resolved_level := clampi(level, 1, int(combat_database.get_rule(&"progression.level_cap", 30)) if combat_database != null else 30)
+	var early_levels := mini(maxi(resolved_level - 1, 0), 5)
+	var middle_levels := mini(maxi(resolved_level - 6, 0), 7)
+	var late_levels := maxi(resolved_level - 13, 0)
+	return passive_regen_ratio_per_5 \
+		+ passive_early_level_increment * float(early_levels) \
+		+ passive_mid_level_increment * float(middle_levels) \
+		+ passive_late_level_increment * float(late_levels)
+
+
+func _update_perseverance(delta: float) -> void:
+	if current_health <= 0.0:
+		passive_recovery_active = false
+		passive_vfx_should_show = false
+		return
+	if passive_damage_lockout_remaining > 0.0:
+		passive_damage_lockout_remaining = maxf(0.0, passive_damage_lockout_remaining - delta)
+		passive_recovery_active = false
+		passive_vfx_should_show = false
+		return
+	if current_health >= max_health:
+		passive_recovery_active = false
+		# Presentation follows P readiness, not the small amount of missing health.
+		# Otherwise a full-health player in the training scene never exposes the
+		# passive's three-layer VFX, even though P is available.
+		passive_vfx_should_show = true
+		return
+	if not passive_recovery_active:
+		passive_recovery_active = true
+		passive_vfx_should_show = true
+		passive_recovery_activation_count += 1
+		play_audio_cue(&"garen_passive_recovery_activate", fighter.global_position, 1.0)
+	var period := maxf(passive_regen_period, 0.01)
+	var healed := max_health * get_perseverance_regen_ratio_per_5() * delta / period
+	current_health = minf(max_health, current_health + healed)
+
+
+func _update_perseverance_vfx(delta: float) -> void:
+	var fade_duration := passive_vfx_fade_in if passive_vfx_should_show else passive_vfx_fade_out
+	var target_alpha := 1.0 if passive_vfx_should_show else 0.0
+	passive_vfx_alpha = move_toward(passive_vfx_alpha, target_alpha, delta / maxf(fade_duration, 0.01))
+	for effect: AnimatedSprite3D in _perseverance_vfx():
+		if passive_vfx_should_show and not effect.visible:
+			effect.visible = true
+			effect.play(effect.animation)
+		effect.modulate.a = passive_vfx_opacity * _perseverance_profile_opacity(effect) * passive_vfx_alpha
+		if not passive_vfx_should_show and is_zero_approx(passive_vfx_alpha):
+			effect.visible = false
+			effect.pause()
+	_update_perseverance_motes()
+
+
+func _perseverance_vfx() -> Array[AnimatedSprite3D]:
+	return [perseverance_front, perseverance_hip]
+
+
+func _perseverance_asset_id(effect: AnimatedSprite3D) -> StringName:
+	if effect == perseverance_front:
+		return &"garen_perseverance_front"
+	return &"garen_perseverance_hip"
+
+
+func _perseverance_profile_opacity(effect: AnimatedSprite3D) -> float:
+	if combat_database == null:
+		return 1.0
+	var profile := combat_database.get_asset_profile(_perseverance_asset_id(effect))
+	return profile.opacity if profile != null else 1.0
+
+
+func _build_perseverance_motes() -> void:
+	var profile := combat_database.get_particle_profile(&"garen_perseverance_motes") if combat_database != null else null
+	var asset_profile := combat_database.get_asset_profile(&"garen_perseverance_motes") if combat_database != null else null
+	perseverance_motes = GPUParticles3D.new()
+	perseverance_motes.name = "PerseveranceMotes"
+	perseverance_motes.emitting = false
+	perseverance_motes.amount = profile.amount if profile != null else 14
+	perseverance_motes.lifetime = profile.lifetime if profile != null else 2.6
+	perseverance_motes.randomness = profile.randomness if profile != null else 0.35
+	perseverance_motes.local_coords = true
+	perseverance_motes.visibility_aabb = AABB(Vector3(-1.1, -0.1, -0.9), Vector3(2.2, 3.2, 1.8))
+	perseverance_motes.position = asset_profile.local_position if asset_profile != null else Vector3(0.08, 0.36, 0.10)
+	var process := ParticleProcessMaterial.new()
+	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	process.emission_box_extents = Vector3(0.48, 0.05, 0.30)
+	process.direction = Vector3.UP
+	process.spread = profile.spread if profile != null else 28.0
+	process.gravity = profile.gravity if profile != null else Vector3(0.0, 0.08, 0.0)
+	process.initial_velocity_min = profile.velocity_min if profile != null else 0.10
+	process.initial_velocity_max = profile.velocity_max if profile != null else 0.25
+	process.angular_velocity_min = profile.angular_velocity_min if profile != null else -18.0
+	process.angular_velocity_max = profile.angular_velocity_max if profile != null else 18.0
+	process.scale_min = profile.scale_min if profile != null else 0.65
+	process.scale_max = profile.scale_max if profile != null else 1.15
+	perseverance_motes.process_material = process
+	var color_ramp := Gradient.new()
+	color_ramp.offsets = PackedFloat32Array([0.0, 0.30, 0.78, 1.0])
+	color_ramp.colors = PackedColorArray([
+		profile.gradient_start if profile != null else Color(0.85, 1.0, 0.90, 0.50),
+		profile.gradient_mid if profile != null else Color(0.56, 1.0, 0.65, 0.42),
+		profile.gradient_late if profile != null else Color(0.30, 0.85, 0.47, 0.22),
+		profile.gradient_end if profile != null else Color(0.16, 0.42, 0.20, 0.0),
+	])
+	var ramp_texture := GradientTexture1D.new()
+	ramp_texture.gradient = color_ramp
+	process.color_ramp = ramp_texture
+	var mote_mesh := QuadMesh.new()
+	mote_mesh.size = profile.mesh_size if profile != null else Vector2(0.07, 0.11)
+	perseverance_mote_material = StandardMaterial3D.new()
+	perseverance_mote_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	perseverance_mote_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	perseverance_mote_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	perseverance_mote_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	perseverance_mote_material.no_depth_test = asset_profile.no_depth_test if asset_profile != null else true
+	perseverance_mote_material.render_priority = asset_profile.render_priority if asset_profile != null else 2
+	perseverance_mote_material.vertex_color_use_as_albedo = true
+	perseverance_mote_material.albedo_color = Color(1.0, 1.0, 1.0, 0.0)
+	perseverance_mote_material.emission_enabled = true
+	perseverance_mote_material.emission = profile.emission_color if profile != null else Color(0.50, 1.0, 0.61, 1.0)
+	perseverance_mote_material.emission_energy_multiplier = profile.emission_energy if profile != null else 0.7
+	mote_mesh.material = perseverance_mote_material
+	perseverance_motes.draw_pass_1 = mote_mesh
+	add_child(perseverance_motes)
+
+
+func _update_perseverance_motes() -> void:
+	if not is_instance_valid(perseverance_motes):
+		return
+	if passive_vfx_should_show and not perseverance_motes.emitting:
+		perseverance_motes.emitting = true
+		perseverance_motes.restart()
+	if perseverance_mote_material != null:
+		perseverance_mote_material.albedo_color.a = passive_vfx_alpha
+	if not passive_vfx_should_show and is_zero_approx(passive_vfx_alpha):
+		perseverance_motes.emitting = false
 
 
 func get_control_duration_multiplier() -> float:
@@ -743,8 +953,9 @@ func activate_black_sail_defenses() -> void:
 		delayed_damage_pool *= 1.0 - black_sail_rum_cleanse_ratio
 
 
-func calculate_judgment_damage(target_health_ratio: float) -> float:
-	return judgment_base_damage + judgment_missing_health_damage * (1.0 - clampf(target_health_ratio, 0.0, 1.0))
+func calculate_judgment_damage(target_max_health: float, target_health_ratio: float) -> float:
+	var missing_ratio := 1.0 - clampf(target_health_ratio, 0.0, 1.0)
+	return judgment_base_damage + maxf(target_max_health, 1.0) * judgment_missing_health_damage * missing_ratio
 
 
 func prepare_ghostship_direction(destination: Vector3) -> float:
@@ -805,10 +1016,13 @@ func _cast_ocean_storm() -> void:
 	ocean_storm.visible = true
 	ocean_storm.play(ocean_storm.animation)
 	ocean_audio.play()
+	ocean_storm_hit_counts.clear()
+	var spins := _ocean_storm_spin_count()
+	var interval := ocean_storm_duration / maxf(float(spins), 1.0)
 	var elapsed := 0.0
 	while elapsed < ocean_storm_duration:
-		await get_tree().create_timer(ocean_storm_tick).timeout
-		elapsed += ocean_storm_tick
+		await get_tree().create_timer(interval).timeout
+		elapsed += interval
 		if not character_frames.is_playing():
 			character_frames.play(animation)
 		resolve_ocean_storm_tick()
@@ -838,11 +1052,10 @@ func _cast_tyrant_judgment() -> void:
 	await get_tree().create_timer(_skill_float(SKILL_TYRANT_JUDGMENT, "cast_time", 0.28)).timeout
 	if is_instance_valid(target) and target.has_method("receive_skill_damage"):
 		_register_damage_source(target)
-		var missing_ratio := 0.0
-		if target.has_method("get_health_ratio"):
-			missing_ratio = 1.0 - float(target.call("get_health_ratio"))
-		var damage := calculate_judgment_damage(1.0 - missing_ratio)
-		target.call("receive_skill_damage", damage, "暴君审判", false, fighter.global_position, &"magic", &"judgment_hit")
+		var health_ratio := float(target.call("get_health_ratio")) if target.has_method("get_health_ratio") else 1.0
+		var target_max_health := float(target.get("max_health"))
+		var damage := calculate_judgment_damage(target_max_health, health_ratio)
+		target.call("receive_skill_damage", damage, "暴君审判", false, fighter.global_position, &"true", &"judgment_hit")
 		damage_event_count += 1
 	await get_tree().create_timer(_skill_float(SKILL_TYRANT_JUDGMENT, "recovery_time", 0.35)).timeout
 
@@ -875,14 +1088,37 @@ func _cast_seven_seas() -> void:
 
 
 func resolve_ocean_storm_tick() -> int:
+	var enemies := _get_enemy_targets_in_radius(fighter.global_position, ocean_storm_radius)
+	enemies.sort_custom(func(a: CharacterBody3D, b: CharacterBody3D) -> bool: return fighter.global_position.distance_squared_to(a.global_position) < fighter.global_position.distance_squared_to(b.global_position))
 	var hit_targets := 0
-	for enemy: CharacterBody3D in _get_enemy_targets_in_radius(fighter.global_position, ocean_storm_radius):
+	var total_ad := garen_definition.attack_damage if garen_definition != null else 69.0
+	var base_damage := ocean_storm_damage + total_ad * ocean_storm_damage_coefficient
+	var nearest_multiplier := _rule_float(&"garen.ocean_storm.nearest_damage_multiplier", 1.25)
+	var shred_hits := int(_rule_float(&"garen.ocean_storm.armor_shred_hits", 6.0))
+	var shred_ratio := _rule_float(&"garen.ocean_storm.armor_shred_ratio", 0.25)
+	var shred_duration := _rule_float(&"garen.ocean_storm.armor_shred_duration", 6.0)
+	for index: int in enemies.size():
+		var enemy := enemies[index]
 		if enemy.has_method("receive_skill_damage"):
 			_register_damage_source(enemy)
-			enemy.call("receive_skill_damage", ocean_storm_damage, "翻江倒海", true, fighter.global_position, &"physical", &"ocean_hit")
+			var damage := base_damage * (nearest_multiplier if index == 0 else 1.0)
+			enemy.call("receive_skill_damage", damage, "翻江倒海", true, fighter.global_position, &"physical", &"ocean_hit")
+			var target_id := enemy.get_instance_id()
+			var hit_count := int(ocean_storm_hit_counts.get(target_id, 0)) + 1
+			ocean_storm_hit_counts[target_id] = hit_count
+			if shred_hits > 0 and hit_count >= shred_hits and hit_count % shred_hits == 0 and enemy.has_method("apply_armor_shred"):
+				enemy.call("apply_armor_shred", shred_duration, shred_ratio)
 			damage_event_count += 1
 			hit_targets += 1
 	return hit_targets
+
+
+func _ocean_storm_spin_count() -> int:
+	var base_spins := int(_rule_float(&"garen.ocean_storm.base_spins", 7.0))
+	# Equipment-derived bonus attack speed will populate this term once that system exists.
+	var bonus_attack_speed := 0.0
+	var per_spin := _rule_float(&"garen.ocean_storm.bonus_attack_speed_per_spin", 0.25)
+	return base_spins + floori(bonus_attack_speed / maxf(per_spin, 0.01))
 
 
 func resolve_ghostship_impact(area_center: Vector3) -> int:
@@ -1033,6 +1269,7 @@ func _apply_combat_data() -> void:
 	if garen_definition != null:
 		max_health = garen_definition.max_health
 		current_health = max_health
+		current_level = garen_definition.level
 		var ai := combat_database.get_ai_profile(garen_definition.ai_profile_id)
 		if ai != null:
 			demo_gap = ai.demo_skill_gap
@@ -1040,14 +1277,32 @@ func _apply_combat_data() -> void:
 		skill_definitions[slot] = combat_database.get_skill_by_slot(&"garen", slot)
 
 	var breaker := _definition(SKILL_BREAKER)
+	var perseverance := combat_database.get_skill(&"garen_perseverance")
+	var perseverance_effect := _effect(&"perseverance_regen")
+	passive_lockout_duration = _rule_float(&"garen.perseverance.lockout_duration", passive_lockout_duration)
+	passive_regen_period = _rule_float(&"garen.perseverance.period", passive_regen_period)
+	passive_regen_ratio_per_5 = perseverance_effect.base_value if perseverance_effect != null else passive_regen_ratio_per_5
+	passive_early_level_increment = _rule_float(&"garen.perseverance.early_level_increment", passive_early_level_increment)
+	passive_mid_level_increment = _rule_float(&"garen.perseverance.mid_level_increment", passive_mid_level_increment)
+	passive_late_level_increment = _rule_float(&"garen.perseverance.late_level_increment", passive_late_level_increment)
+	passive_vfx_opacity = _rule_float(&"presentation.perseverance_vfx_opacity", passive_vfx_opacity)
+	passive_vfx_fade_in = _rule_float(&"presentation.perseverance_vfx_fade_in", passive_vfx_fade_in)
+	passive_vfx_fade_out = _rule_float(&"presentation.perseverance_vfx_fade_out", passive_vfx_fade_out)
+	passive_vfx_frame_rate = _rule_float(&"presentation.perseverance_vfx_frame_rate", passive_vfx_frame_rate)
+	if perseverance != null:
+		passive_regen_period = perseverance.tick_interval if perseverance.tick_interval > 0.0 else passive_regen_period
 	var breaker_buff := combat_database.get_buff(&"breaker_speed")
 	var breaker_damage_effect := _effect(&"breaker_damage")
 	var breaker_silence_effect := _effect(&"breaker_silence")
-	breaker_duration = breaker_buff.duration if breaker_buff != null else breaker_duration
+	var breaker_rank: int = int(skill_ranks.get(SKILL_BREAKER, 1))
+	var breaker_rank_data := combat_database.get_skill_rank(&"garen_breaker", breaker_rank)
+	var breaker_damage_rank := combat_database.get_skill_effect_rank(&"breaker_damage", breaker_rank)
+	breaker_duration = breaker_rank_data.duration if breaker_rank_data != null else (breaker_buff.duration if breaker_buff != null else breaker_duration)
 	breaker_speed_bonus = _modifier_value(&"breaker_speed", &"move_speed", breaker_speed_bonus)
-	breaker_damage = breaker_damage_effect.base_value if breaker_damage_effect != null else breaker_damage
+	breaker_damage = breaker_damage_rank.base_value if breaker_damage_rank != null else (breaker_damage_effect.base_value if breaker_damage_effect != null else breaker_damage)
+	breaker_damage_coefficient = breaker_damage_rank.scaling_coefficient if breaker_damage_rank != null else (breaker_damage_effect.scaling_coefficient if breaker_damage_effect != null else breaker_damage_coefficient)
 	breaker_silence_duration = breaker_silence_effect.control_duration if breaker_silence_effect != null else breaker_silence_duration
-	breaker_cooldown = breaker.cooldown if breaker != null else breaker_cooldown
+	breaker_cooldown = breaker_rank_data.cooldown if breaker_rank_data != null else (breaker.cooldown if breaker != null else breaker_cooldown)
 
 	var black_sail := _definition(SKILL_BLACK_SAIL)
 	var black_sail_buff := combat_database.get_buff(&"black_sail")
@@ -1061,19 +1316,26 @@ func _apply_combat_data() -> void:
 
 	var ocean := _definition(SKILL_OCEAN_STORM)
 	var ocean_effect := _effect(&"ocean_damage")
+	var ocean_rank := get_skill_rank(SKILL_OCEAN_STORM)
+	var ocean_rank_data := combat_database.get_skill_rank(&"garen_ocean_storm", ocean_rank)
+	var ocean_damage_rank := combat_database.get_skill_effect_rank(&"ocean_damage", ocean_rank)
 	if ocean != null:
-		ocean_storm_duration = ocean.duration
-		ocean_storm_tick = ocean.tick_interval
-		ocean_storm_radius = ocean.radius
-		ocean_storm_cooldown = ocean.cooldown
-	ocean_storm_damage = ocean_effect.base_value if ocean_effect != null else ocean_storm_damage
+		ocean_storm_duration = ocean_rank_data.duration if ocean_rank_data != null else ocean.duration
+		ocean_storm_tick = ocean_rank_data.tick_interval if ocean_rank_data != null else ocean.tick_interval
+		ocean_storm_radius = ocean_rank_data.radius if ocean_rank_data != null else ocean.radius
+		ocean_storm_cooldown = ocean_rank_data.cooldown if ocean_rank_data != null else ocean.cooldown
+	ocean_storm_damage = ocean_damage_rank.base_value if ocean_damage_rank != null else (ocean_effect.base_value if ocean_effect != null else ocean_storm_damage)
+	ocean_storm_damage_coefficient = ocean_damage_rank.scaling_coefficient if ocean_damage_rank != null else (ocean_effect.scaling_coefficient if ocean_effect != null else ocean_storm_damage_coefficient)
 
 	var judgment := _definition(SKILL_TYRANT_JUDGMENT)
 	var judgment_effect := _effect(&"judgment_damage")
-	judgment_cooldown = judgment.cooldown if judgment != null else judgment_cooldown
+	var judgment_rank := get_skill_rank(SKILL_TYRANT_JUDGMENT)
+	var judgment_rank_data := combat_database.get_skill_rank(&"garen_tyrant_judgment", judgment_rank)
+	var judgment_damage_rank := combat_database.get_skill_effect_rank(&"judgment_damage", judgment_rank)
+	judgment_cooldown = judgment_rank_data.cooldown if judgment_rank_data != null else (judgment.cooldown if judgment != null else judgment_cooldown)
 	if judgment_effect != null:
-		judgment_base_damage = judgment_effect.base_value
-		judgment_missing_health_damage = judgment_effect.target_missing_health_coefficient
+		judgment_base_damage = judgment_damage_rank.base_value if judgment_damage_rank != null else judgment_effect.base_value
+		judgment_missing_health_damage = judgment_damage_rank.target_missing_health_coefficient if judgment_damage_rank != null else judgment_effect.target_missing_health_coefficient
 
 	var seven_seas := _definition(SKILL_SEVEN_SEAS)
 	var seven_damage := _effect(&"seven_seas_damage")
@@ -1215,3 +1477,24 @@ func _apply_asset_profile(effect: AnimatedSprite3D, audio: AudioStreamPlayer3D, 
 			audio.stream = stream
 		audio.volume_db = audio_profile.volume_db
 		audio.max_distance = audio_profile.max_distance
+
+
+func _apply_sprite_asset_profile(effect: AnimatedSprite3D, asset_id: StringName) -> void:
+	if combat_database == null:
+		return
+	var profile := combat_database.get_asset_profile(asset_id)
+	if profile == null:
+		return
+	var frames := load(profile.resource_file) as SpriteFrames
+	if frames != null:
+		effect.sprite_frames = frames
+	effect.animation = profile.animation_name
+	effect.position = profile.local_position
+	effect.scale = profile.scale
+	effect.offset = profile.offset
+	effect.pixel_size = profile.pixel_size
+	if effect.sprite_frames != null:
+		var source_frame_rate := effect.sprite_frames.get_animation_speed(effect.animation)
+		effect.speed_scale = passive_vfx_frame_rate / maxf(source_frame_rate, 0.01)
+	effect.render_priority = profile.render_priority
+	effect.no_depth_test = profile.no_depth_test

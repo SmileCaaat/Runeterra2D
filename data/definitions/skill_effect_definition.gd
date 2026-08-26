@@ -5,7 +5,7 @@ extends Resource
 @export var skill_id: StringName
 @export var order := 0
 @export_enum("on_cast", "on_next_attack", "periodic", "on_impact", "on_expire") var trigger := "on_cast"
-@export_enum("damage", "apply_buff", "apply_control", "cleanse", "delayed_damage", "shield") var effect_type := "damage"
+@export_enum("damage", "restore", "apply_buff", "apply_control", "cleanse", "delayed_damage", "shield") var effect_type := "damage"
 @export_enum("self", "target", "enemies_in_area", "allies_in_area", "self_and_allies") var target_selector := "target"
 @export_enum("physical", "magic", "true", "none") var damage_type := "none"
 @export var base_value := 0.0

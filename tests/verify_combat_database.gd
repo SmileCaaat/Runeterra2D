@@ -16,23 +16,26 @@ func _initialize() -> void:
 	var generated_ok := generated_database != null and generated_database.source_digest == database.source_digest
 	var editor_plugin_ok := load("res://addons/combat_data/editor_plugin.gd") != null
 
-	var counts_ok := database.rules.size() == 67 and database.stats.size() == 48
-	counts_ok = counts_ok and database.units.size() == 3 and database.unit_stats.size() == 109
-	counts_ok = counts_ok and database.skills.size() == 5
-	counts_ok = counts_ok and database.skill_effects.size() == 11 and database.buffs.size() == 5
-	counts_ok = counts_ok and database.buff_modifiers.size() == 6 and database.ai_profiles.size() == 4
+	var counts_ok := database.rules.size() == 102 and database.stats.size() == 61
+	counts_ok = counts_ok and database.units.size() == 3 and database.unit_stats.size() == 116
+	counts_ok = counts_ok and database.skills.size() == 6
+	counts_ok = counts_ok and database.skill_effects.size() == 13 and database.skill_ranks.size() == 20
+	counts_ok = counts_ok and database.skill_effect_ranks.size() == 13 and database.unit_mode_modifiers.is_empty() and database.buffs.size() == 6
+	counts_ok = counts_ok and database.buff_modifiers.size() == 7 and database.ai_profiles.size() == 4
 	counts_ok = counts_ok and database.hit_profiles.size() == 5 and database.animation_events.size() == 17
-	counts_ok = counts_ok and database.asset_profiles.size() == 28 and database.particle_profiles.size() == 4
+	counts_ok = counts_ok and database.asset_profiles.size() == 42 and database.particle_profiles.size() == 6
 
 	var armor_ok := is_equal_approx(CombatMath.resolve_resistance(100.0, 100.0, 100.0), 50.0)
 	armor_ok = armor_ok and is_equal_approx(CombatMath.resolve_resistance(100.0, -100.0, 100.0), 150.0)
+	armor_ok = armor_ok and is_equal_approx(CombatMath.resolve_damage(250.0, &"true", 100.0, 100.0, database), 250.0)
 	var haste_ok := is_equal_approx(CombatMath.cooldown_with_haste(10.0, 100.0, database), 5.0)
 	var tenacity_ok := is_equal_approx(CombatMath.control_duration(2.0, 0.25, database), 1.5)
 
 	var garen := database.get_unit(&"garen")
 	var identity_ok := garen != null and garen.role == &"juggernaut"
 	identity_ok = identity_ok and garen.resource_type == &"none" and garen.range_type == &"melee"
-	identity_ok = identity_ok and database.schema_version == 3
+	identity_ok = identity_ok and database.schema_version == 13
+	identity_ok = identity_ok and database.get_rule(&"progression.level_cap", 0) == 30
 
 	var base_stats_ok := garen != null and is_equal_approx(garen.max_health, 690.0)
 	base_stats_ok = base_stats_ok and is_equal_approx(garen.attack_damage, 69.0)
@@ -54,7 +57,8 @@ func _initialize() -> void:
 	var growth_ok := is_equal_approx(database.get_unit_stat_value(&"garen", &"max_health", 1), 690.0)
 	growth_ok = growth_ok and is_equal_approx(database.get_unit_stat_value(&"garen", &"max_health", 2), 760.56)
 	growth_ok = growth_ok and is_equal_approx(database.get_unit_stat_value(&"garen", &"max_health", 18), 2356.0)
-	growth_ok = growth_ok and is_equal_approx(database.get_unit_stat_value(&"garen", &"max_health", 99), 2356.0)
+	growth_ok = growth_ok and is_equal_approx(database.get_unit_stat_value(&"garen", &"max_health", 30), 4128.82)
+	growth_ok = growth_ok and is_equal_approx(database.get_unit_stat_value(&"garen", &"max_health", 99), 4128.82)
 	growth_ok = growth_ok and is_equal_approx(database.get_unit_stat_value(&"garen", &"attack_damage", 18), 145.5)
 	growth_ok = growth_ok and is_equal_approx(database.get_unit_stat_value(&"garen", &"attack_speed", 18), 1.0128125)
 
@@ -66,6 +70,7 @@ func _initialize() -> void:
 	world_units_ok = world_units_ok and is_equal_approx(garen.acquisition_radius, 6.0)
 	var target_dummy := database.get_unit(&"training_dummy")
 	world_units_ok = world_units_ok and target_dummy != null
+	world_units_ok = world_units_ok and garen.instance_template_id == "hero" and target_dummy.instance_template_id == "monster"
 	world_units_ok = world_units_ok and is_equal_approx(target_dummy.max_health, 1000.0)
 	world_units_ok = world_units_ok and is_equal_approx(target_dummy.attack_speed, 0.66)
 	world_units_ok = world_units_ok and is_equal_approx(target_dummy.attack_range, 1.75)
@@ -74,7 +79,7 @@ func _initialize() -> void:
 	world_units_ok = world_units_ok and is_equal_approx(database.get_unit_stat_value(&"training_dummy", &"pathing_radius", 1), 0.30)
 	world_units_ok = world_units_ok and target_dummy.ai_profile_id == &"dummy_passive"
 	var scuttle := database.get_unit(&"scuttle_crab")
-	world_units_ok = world_units_ok and scuttle != null and scuttle.role == &"neutral"
+	world_units_ok = world_units_ok and scuttle != null and scuttle.role == &"neutral" and scuttle.instance_template_id == "monster"
 	world_units_ok = world_units_ok and is_equal_approx(scuttle.max_health, 1007.5)
 	world_units_ok = world_units_ok and is_equal_approx(scuttle.move_speed, 2.55)
 	world_units_ok = world_units_ok and is_equal_approx(scuttle.armor, 42.0)
@@ -87,12 +92,68 @@ func _initialize() -> void:
 	var timing_ok := garen != null and is_equal_approx(garen.attack_windup, 0.18)
 	timing_ok = timing_ok and is_equal_approx(garen.attack_windup_modifier, 0.5)
 	timing_ok = timing_ok and is_equal_approx(garen.attack_delay_offset, -0.12)
+	timing_ok = timing_ok and is_zero_approx(garen.missile_speed)
+	timing_ok = timing_ok and is_equal_approx(garen.critical_damage_base, 2.0)
+	timing_ok = timing_ok and is_zero_approx(garen.critical_damage_modifier)
+	var rank_schema_ok := database.get_skill_rank(&"garen_breaker", 1) != null
+	rank_schema_ok = rank_schema_ok and is_equal_approx(database.get_skill_rank(&"garen_breaker", 1).duration, 1.4)
+	rank_schema_ok = rank_schema_ok and is_equal_approx(database.get_skill_rank(&"garen_breaker", 5).duration, 3.6)
+	var breaker_damage_rank := database.get_skill_effect_rank(&"breaker_damage", 5)
+	rank_schema_ok = rank_schema_ok and breaker_damage_rank != null
+	rank_schema_ok = rank_schema_ok and is_equal_approx(breaker_damage_rank.base_value, 150.0) and is_equal_approx(breaker_damage_rank.scaling_coefficient, 0.5)
+	rank_schema_ok = rank_schema_ok and database.get_skill(&"garen_breaker").source_slot == &"q"
+	rank_schema_ok = rank_schema_ok and database.get_skill(&"garen_tyrant_judgment").max_rank == 3
+	var r_icon := database.get_asset_profile(&"garen_demacian_justice_icon")
+	rank_schema_ok = rank_schema_ok and database.get_skill(&"garen_tyrant_judgment").icon_profile_id == &"garen_demacian_justice_icon"
+	rank_schema_ok = rank_schema_ok and r_icon != null and ResourceLoader.exists(r_icon.resource_file)
+	var r_rank_three := database.get_skill_effect_rank(&"judgment_damage", 3)
+	rank_schema_ok = rank_schema_ok and is_equal_approx(database.get_skill_rank(&"garen_tyrant_judgment", 1).cooldown, 120.0)
+	rank_schema_ok = rank_schema_ok and is_equal_approx(database.get_skill_rank(&"garen_tyrant_judgment", 3).cooldown, 80.0)
+	rank_schema_ok = rank_schema_ok and r_rank_three != null and is_equal_approx(r_rank_three.base_value, 275.0) and is_equal_approx(r_rank_three.target_missing_health_coefficient, 0.35)
+	rank_schema_ok = rank_schema_ok and database.get_skill(&"garen_seven_seas").source_slot == &"t"
+	var perseverance := database.get_skill(&"garen_perseverance")
+	var breaker_icon := database.get_asset_profile(&"garen_decisive_strike_icon")
+	rank_schema_ok = rank_schema_ok and database.get_skill(&"garen_breaker").max_rank == 5
+	rank_schema_ok = rank_schema_ok and database.get_skill(&"garen_breaker").icon_profile_id == &"garen_decisive_strike_icon"
+	rank_schema_ok = rank_schema_ok and breaker_icon != null and ResourceLoader.exists(breaker_icon.resource_file)
+	rank_schema_ok = rank_schema_ok and perseverance != null and perseverance.source_slot == &"p"
+	rank_schema_ok = rank_schema_ok and perseverance.icon_profile_id == &"garen_perseverance_icon"
+	var perseverance_icon := database.get_asset_profile(&"garen_perseverance_icon")
+	rank_schema_ok = rank_schema_ok and perseverance_icon != null and ResourceLoader.exists(perseverance_icon.resource_file)
+	var perseverance_front := database.get_asset_profile(&"garen_perseverance_front")
+	var perseverance_hip := database.get_asset_profile(&"garen_perseverance_hip")
+	rank_schema_ok = rank_schema_ok and perseverance_front != null and perseverance_hip != null
+	rank_schema_ok = rank_schema_ok and database.get_asset_profile(&"garen_perseverance_back") == null
+	rank_schema_ok = rank_schema_ok and is_equal_approx(perseverance_front.pixel_size, 0.015)
+	rank_schema_ok = rank_schema_ok and is_equal_approx(perseverance_hip.pixel_size, 0.015)
+	rank_schema_ok = rank_schema_ok and perseverance_front.animation_name == &"hip" and perseverance_hip.animation_name == &"slow1"
+	rank_schema_ok = rank_schema_ok and perseverance_front.local_position.is_equal_approx(Vector3(0.12230945, -0.09625608, 0.08000004))
+	rank_schema_ok = rank_schema_ok and perseverance_hip.local_position.is_equal_approx(Vector3(0.07588625, 0.45039487, 0.120000005))
+	rank_schema_ok = rank_schema_ok and is_equal_approx(perseverance_front.opacity, 0.3529412) and is_equal_approx(perseverance_hip.opacity, 0.27450982)
+	var perseverance_motes := database.get_particle_profile(&"garen_perseverance_motes")
+	rank_schema_ok = rank_schema_ok and perseverance_motes != null and perseverance_motes.amount == 14 and is_equal_approx(perseverance_motes.lifetime, 2.6)
+	rank_schema_ok = rank_schema_ok and is_equal_approx(float(database.get_rule(&"presentation.perseverance_vfx_frame_rate", 0.0)), 6.0)
+	rank_schema_ok = rank_schema_ok and database.get_unit_mode_modifiers(&"garen", &"training").is_empty()
+	var super_armor_profile := database.get_asset_profile(&"super_armor_afterimage")
+	rank_schema_ok = rank_schema_ok and super_armor_profile != null and is_equal_approx(super_armor_profile.opacity, 0.62)
+	rank_schema_ok = rank_schema_ok and String(database.get_rule(&"presentation.super_armor_afterimage_color", "")) == "ff2424ff"
+	var damage_digits := database.get_asset_profile(&"damage_numbers_brush_colored")
+	var damage_miss := database.get_asset_profile(&"damage_numbers_brush_primary")
+	rank_schema_ok = rank_schema_ok and damage_digits != null and damage_miss != null
+	rank_schema_ok = rank_schema_ok and damage_digits.asset_type == "combat_text_font" and FileAccess.file_exists(damage_digits.resource_file)
+	rank_schema_ok = rank_schema_ok and is_equal_approx(float(database.get_rule(&"presentation.damage_number_critical_scale", 0.0)), 1.42)
 
 	var ocean := database.get_skill(&"garen_ocean_storm")
 	var seven := database.get_skill(&"garen_seven_seas")
-	var semantic_ok := garen != null and garen.skill_ids.size() == 5
+	var semantic_ok := garen != null and garen.skill_ids.size() == 6
 	semantic_ok = semantic_ok and ocean != null and ocean.target_type == "self_area"
-	semantic_ok = semantic_ok and ocean.movement_policy == "allowed" and is_equal_approx(ocean.tick_interval, 0.5)
+	semantic_ok = semantic_ok and ocean.movement_policy == "allowed" and ocean.icon_profile_id == &"garen_judgment_icon"
+	semantic_ok = semantic_ok and is_equal_approx(database.get_skill_rank(&"garen_ocean_storm", 1).cooldown, 9.0)
+	semantic_ok = semantic_ok and is_equal_approx(database.get_skill_rank(&"garen_ocean_storm", 5).cooldown, 6.0)
+	var ocean_rank_five := database.get_skill_effect_rank(&"ocean_damage", 5)
+	semantic_ok = semantic_ok and ocean_rank_five != null and is_equal_approx(ocean_rank_five.base_value, 16.0) and is_equal_approx(ocean_rank_five.scaling_coefficient, 0.52)
+	semantic_ok = semantic_ok and database.get_buff(&"judgment_armor_shred") != null
+	semantic_ok = semantic_ok and database.get_asset_profile(&"judgment_armor_shred_icon") != null
 	semantic_ok = semantic_ok and seven != null and seven.target_type == "ground_area" and seven.snapshot_target_position
 	semantic_ok = semantic_ok and is_equal_approx(seven.travel_duration, 1.35)
 	var seven_impact_effects := database.get_skill_effects(&"garen_seven_seas", "on_impact")
@@ -130,13 +191,13 @@ func _initialize() -> void:
 	audio_ok = audio_ok and ghostship_audio.max_distance >= 44.0
 	audio_ok = audio_ok and is_equal_approx(float(database.get_rule(&"presentation.seven_seas_buff_audio_delay", 0.0)), 0.15)
 
-	print("COMBAT_DATABASE build=%s generated=%s plugin=%s counts=%s identity=%s base=%s source=%s growth=%s world_units=%s timing=%s armor=%s haste=%s tenacity=%s semantic=%s lifecycle=%s action=%s audio=%s digest=%s" % [
+	print("COMBAT_DATABASE build=%s generated=%s plugin=%s counts=%s identity=%s base=%s source=%s growth=%s world_units=%s timing=%s ranks=%s armor=%s haste=%s tenacity=%s semantic=%s lifecycle=%s action=%s audio=%s digest=%s" % [
 		build_ok, generated_ok, editor_plugin_ok, counts_ok, identity_ok, base_stats_ok, source_ok, growth_ok, world_units_ok, timing_ok,
-		armor_ok, haste_ok, tenacity_ok, semantic_ok, lifecycle_ok, action_ok, audio_ok,
+		rank_schema_ok, armor_ok, haste_ok, tenacity_ok, semantic_ok, lifecycle_ok, action_ok, audio_ok,
 		database.source_digest.left(12),
 	])
 	var passed: bool = build_ok and generated_ok and editor_plugin_ok and counts_ok and armor_ok and haste_ok and tenacity_ok
-	passed = passed and identity_ok and base_stats_ok and source_ok and growth_ok and world_units_ok and timing_ok
+	passed = passed and identity_ok and base_stats_ok and source_ok and growth_ok and world_units_ok and timing_ok and rank_schema_ok
 	passed = passed and semantic_ok and lifecycle_ok and action_ok and audio_ok
 	if not passed:
 		push_error("Combat database verification failed")

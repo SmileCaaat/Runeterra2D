@@ -4,6 +4,10 @@ extends Resource
 @export var id: StringName
 @export var owner_id: StringName
 @export var slot := 0
+@export_enum("basic_attack", "passive", "active", "original") var ability_kind := "active"
+@export var source_slot: StringName
+@export_enum("faithful", "simplified", "adapted", "original", "original_legacy", "missing") var identity_status := "simplified"
+@export_range(1, 5, 1) var max_rank := 1
 @export var display_name := ""
 @export_enum("self", "unit", "direction", "ground_area", "self_area") var target_type := "unit"
 @export_enum("instant", "cast", "channel", "empower", "travel") var cast_type := "instant"
@@ -26,4 +30,5 @@ extends Resource
 @export var travel_duration := 0.0
 @export var vfx_profile_id: StringName
 @export var audio_profile_id: StringName
+@export var icon_profile_id: StringName
 @export var tags: Array[StringName] = []

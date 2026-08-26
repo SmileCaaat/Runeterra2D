@@ -1,4 +1,7 @@
-extends CharacterBody3D
+extends "res://scripts/actors/monster_instance.gd"
+
+const STATUS_ICON_SLOTS := preload("res://scripts/presentation/status_icon_slots.gd")
+const ARMOR_SHRED_BURST := preload("res://scripts/presentation/status_debuff_burst.gd")
 
 @export_enum("friendly", "enemy") var team := "enemy"
 @export var max_health := 1000.0
@@ -51,10 +54,16 @@ var hit_sound_count := 0
 var respawn_count := 0
 var reset_count := 0
 var facing_timer := 0.0
+var normal_shield := 0.0
 var last_attacker_position := Vector3.ZERO
 var reaction_scale := Vector2.ONE
 var reaction_velocity := Vector2.ZERO
 var reaction_flash_timer := 0.0
+var base_armor := 0.0
+var armor_shred_timer := 0.0
+var armor_shred_ratio := 0.0
+var status_icon_slots: StatusIconSlots
+var armor_shred_burst: StatusDebuffBurst
 var unflipped_offset := Vector2.ZERO
 var random := RandomNumberGenerator.new()
 var combat_database: CombatDatabase
@@ -64,6 +73,12 @@ var attacker_definition: UnitDefinition
 
 func _ready() -> void:
 	_apply_combat_data()
+	base_armor = armor
+	status_icon_slots = STATUS_ICON_SLOTS.new()
+	status_icon_slots.name = "StatusIconSlots"
+	add_child(status_icon_slots)
+	armor_shred_burst = ARMOR_SHRED_BURST.get_or_create(self)
+	bind_monster_instance(combat_database, unit_definition)
 	random.seed = 20260824 + get_instance_id()
 	current_health = max_health
 	home_position = global_position
@@ -77,6 +92,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_update_armor_shred(delta)
 	_update_visual_feedback(delta)
 	if is_dead:
 		death_timer = maxf(0.0, death_timer - delta)
@@ -117,10 +133,34 @@ func receive_skill_damage(
 	_apply_damage(amount, skill_name, can_crit, attacker_position, damage_type, hit_profile_id)
 
 
+func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, hit_profile_id: StringName = &"breaker_hit") -> void:
+	# Q keeps one impact while only its base attack portion can critically strike.
+	skill_damage_count += 1
+	_apply_damage(base_attack, "破舰", true, attacker_position, &"physical", hit_profile_id, bonus_damage)
+
+
 func apply_silence(duration: float) -> void:
 	if is_dead:
 		return
 	silence_timer = maxf(silence_timer, duration)
+
+
+func apply_armor_shred(duration: float, reduction_ratio: float) -> void:
+	if is_dead:
+		return
+	armor_shred_timer = maxf(armor_shred_timer, duration)
+	armor_shred_ratio = clampf(reduction_ratio, 0.0, 0.95)
+	armor = base_armor * (1.0 - armor_shred_ratio)
+	armor_shred_burst.play_burst()
+
+
+func _update_armor_shred(delta: float) -> void:
+	if armor_shred_timer <= 0.0:
+		return
+	armor_shred_timer = maxf(0.0, armor_shred_timer - delta)
+	if armor_shred_timer <= 0.0:
+		armor_shred_ratio = 0.0
+		armor = base_armor
 
 
 func apply_stun(duration: float) -> void:
@@ -131,6 +171,14 @@ func apply_stun(duration: float) -> void:
 
 func get_health_ratio() -> float:
 	return current_health / maxf(max_health, 1.0)
+
+
+func apply_normal_shield(amount: float) -> void:
+	normal_shield = maxf(0.0, normal_shield + amount)
+
+
+func get_normal_shield() -> float:
+	return normal_shield
 
 
 func get_team() -> StringName:
@@ -160,7 +208,8 @@ func _apply_damage(
 	can_crit: bool,
 	attacker_position: Vector3,
 	damage_type: StringName,
-	hit_profile_id: StringName
+	hit_profile_id: StringName,
+	flat_post_crit_bonus: float = 0.0
 ) -> void:
 	if is_dead:
 		return
@@ -168,14 +217,17 @@ func _apply_damage(
 	var hit_profile := combat_database.get_hit_profile(hit_profile_id) if combat_database != null else null
 	hit_timer = hit_profile.hitstun if hit_profile != null else 0.18
 	var critical := can_crit and random.randf() < critical_chance
-	var raw_damage := amount * (critical_multiplier if critical else 1.0)
+	var raw_damage := amount * (critical_multiplier if critical else 1.0) + flat_post_crit_bonus
 	var resolved_damage := CombatMath.resolve_damage(
 		raw_damage, damage_type, armor, magic_resistance, combat_database
 	) if combat_database != null else raw_damage
 	var minimum_damage := float(combat_database.get_rule(&"damage.minimum_damage", 1.0)) if combat_database != null else 1.0
 	resolved_damage = maxf(minimum_damage, resolved_damage)
-	var applied_damage := minf(current_health, resolved_damage)
-	current_health = maxf(0.0, current_health - resolved_damage)
+	present_resolved_damage(resolved_damage, damage_type, critical)
+	var health_damage := maxf(0.0, resolved_damage - normal_shield)
+	normal_shield = maxf(0.0, normal_shield - resolved_damage)
+	var applied_damage := minf(current_health, health_damage)
+	current_health = maxf(0.0, current_health - health_damage)
 	_record_damage(applied_damage)
 	_face_attacker(attacker_position)
 
@@ -232,6 +284,7 @@ func _reset_training_session(restore_health: bool) -> void:
 	damage_inactivity_timer = 0.0
 	if restore_health and not is_dead:
 		current_health = max_health
+		normal_shield = 0.0
 	reset_count += 1
 	_update_label()
 
@@ -260,6 +313,7 @@ func _respawn() -> void:
 	velocity = Vector3.ZERO
 	knockback = Vector3.ZERO
 	current_health = max_health
+	normal_shield = 0.0
 	collision_shape.set_deferred(&"disabled", false)
 	_configure_team_groups()
 	state_label.visible = true

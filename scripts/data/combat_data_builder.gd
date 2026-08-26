@@ -9,6 +9,9 @@ const UnitScript = preload("res://data/definitions/unit_definition.gd")
 const UnitStatScript = preload("res://data/definitions/unit_stat_value_definition.gd")
 const SkillScript = preload("res://data/definitions/skill_definition.gd")
 const SkillEffectScript = preload("res://data/definitions/skill_effect_definition.gd")
+const SkillRankScript = preload("res://data/definitions/skill_rank_definition.gd")
+const SkillEffectRankScript = preload("res://data/definitions/skill_effect_rank_definition.gd")
+const UnitModeModifierScript = preload("res://data/definitions/unit_mode_modifier_definition.gd")
 const BuffScript = preload("res://data/definitions/buff_definition.gd")
 const BuffModifierScript = preload("res://data/definitions/buff_modifier_definition.gd")
 const HitProfileScript = preload("res://data/definitions/hit_profile_definition.gd")
@@ -18,10 +21,16 @@ const ParticleProfileScript = preload("res://data/definitions/particle_profile_d
 const AIProfileScript = preload("res://data/definitions/ai_profile_definition.gd")
 
 const TABLE_FILES := [
-	"combat_rules.csv", "stats.csv", "units.csv", "unit_stats.csv", "skills.csv", "skill_effects.csv",
+	"combat_rules.csv", "stats.csv", "units.csv", "unit_stats.csv", "skills.csv", "skill_effects.csv", "skill_ranks.csv", "skill_effect_ranks.csv", "unit_mode_modifiers.csv",
 	"buffs.csv", "buff_modifiers.csv", "hit_profiles.csv", "animation_events.csv",
 	"asset_manifest.csv", "particle_profiles.csv", "ai_profiles.csv",
 ]
+
+# Asset-manifest fields are append-only. Older rows may omit a newly introduced
+# trailing presentation field and are normalized to an empty value here.
+const OPTIONAL_TRAILING_COLUMNS := {
+	"asset_manifest.csv": [&"local_x", &"local_y", &"local_z", &"opacity"],
+}
 
 var errors: PackedStringArray = []
 var warnings: PackedStringArray = []
@@ -51,6 +60,9 @@ func build(source_dir := "res://data/source", output_path := "res://data/generat
 	_compile_unit_runtime_values(database)
 	_populate_skills(database)
 	_populate_skill_effects(database)
+	_populate_skill_ranks(database)
+	_populate_skill_effect_ranks(database)
+	_populate_unit_mode_modifiers(database)
 	_populate_buffs(database)
 	_populate_buff_modifiers(database)
 	_populate_hit_profiles(database)
@@ -92,6 +104,7 @@ func _read_csv(file_name: String) -> Array[Dictionary]:
 		var values := file.get_csv_line()
 		if values.size() == 1 and values[0].strip_edges().is_empty():
 			continue
+		_normalize_optional_trailing_columns(file_name, header, values)
 		if values.size() != header.size():
 			errors.append("%s:%d expected %d columns but found %d" % [file_name, line_number, header.size(), values.size()])
 			continue
@@ -102,6 +115,19 @@ func _read_csv(file_name: String) -> Array[Dictionary]:
 	return rows
 
 
+func _normalize_optional_trailing_columns(file_name: String, header: PackedStringArray, values: PackedStringArray) -> void:
+	var optional_columns: Array = OPTIONAL_TRAILING_COLUMNS.get(file_name, [])
+	if optional_columns.is_empty() or values.size() >= header.size():
+		return
+	var required_column_count := header.size() - optional_columns.size()
+	if values.size() < required_column_count:
+		return
+	for optional_index: int in optional_columns.size():
+		if String(header[required_column_count + optional_index]).strip_edges() != String(optional_columns[optional_index]):
+			return
+	values.resize(header.size())
+
+
 func _validate_source() -> void:
 	_validate_unique("combat_rules.csv", "rule_id")
 	_validate_unique("stats.csv", "stat_id")
@@ -109,6 +135,9 @@ func _validate_source() -> void:
 	_validate_unique_pair("unit_stats.csv", "unit_id", "stat_id")
 	_validate_unique("skills.csv", "skill_id")
 	_validate_unique("skill_effects.csv", "effect_id")
+	_validate_unique_pair("skill_ranks.csv", "skill_id", "rank")
+	_validate_unique_pair("skill_effect_ranks.csv", "effect_id", "rank")
+	_validate_unique_triple("unit_mode_modifiers.csv", "unit_id", "mode", "stat_id")
 	_validate_unique("buffs.csv", "buff_id")
 	_validate_unique("buff_modifiers.csv", "modifier_id")
 	_validate_unique("hit_profiles.csv", "profile_id")
@@ -122,12 +151,14 @@ func _validate_source() -> void:
 	var buff_ids := _id_set("buffs.csv", "buff_id")
 	var stat_ids := _id_set("stats.csv", "stat_id")
 	var hit_ids := _id_set("hit_profiles.csv", "profile_id")
+	var effect_ids := _id_set("skill_effects.csv", "effect_id")
 	var asset_ids := _id_set("asset_manifest.csv", "asset_id")
 	var particle_ids := _id_set("particle_profiles.csv", "profile_id")
 	var ai_ids := _id_set("ai_profiles.csv", "profile_id")
 
 	for row: Dictionary in _tables["units.csv"]:
 		_require_ref(row, "ai_profile_id", ai_ids, true)
+		_validate_enum(row, "instance_template_id", ["hero", "monster"])
 		for skill_id: StringName in _names(row, "skill_ids"):
 			if not skill_ids.has(skill_id):
 				_error(row, "skill_ids references unknown skill '%s'" % skill_id)
@@ -149,8 +180,14 @@ func _validate_source() -> void:
 		_require_ref(row, "owner_id", unit_ids)
 		_require_ref(row, "vfx_profile_id", asset_ids, true)
 		_require_ref(row, "audio_profile_id", asset_ids, true)
+		_require_ref(row, "icon_profile_id", asset_ids, true)
 		_validate_enum(row, "target_type", ["self", "unit", "direction", "ground_area", "self_area"])
 		_validate_enum(row, "cast_type", ["instant", "cast", "channel", "empower", "travel"])
+		_validate_enum(row, "ability_kind", ["basic_attack", "passive", "active", "original"])
+		_validate_enum(row, "source_slot", ["basic", "p", "q", "w", "e", "r", "t"])
+		_validate_enum(row, "identity_status", ["faithful", "simplified", "adapted", "original", "original_legacy", "missing"])
+		if _i(row, "max_rank") < 1 or _i(row, "max_rank") > 5:
+			_error(row, "max_rank must be between 1 and 5")
 		_validate_enum(row, "movement_policy", ["locked", "allowed", "slowed", "forced"])
 		_require_nonnegative(row, "cooldown")
 		_require_nonnegative(row, "duration")
@@ -166,10 +203,29 @@ func _validate_source() -> void:
 		_require_ref(row, "buff_id", buff_ids, true)
 		_require_ref(row, "hit_profile_id", hit_ids, true)
 		_require_ref(row, "scaling_stat", stat_ids, true)
-		_validate_enum(row, "effect_type", ["damage", "apply_buff", "apply_control", "cleanse", "delayed_damage", "shield"])
+		_validate_enum(row, "effect_type", ["damage", "restore", "apply_buff", "apply_control", "cleanse", "delayed_damage", "shield"])
 		_validate_enum(row, "damage_type", ["physical", "magic", "true", "none"])
 		if _s(row, "effect_type") == "damage" and _f(row, "base_value") < 0.0:
 			_error(row, "damage base_value cannot be negative")
+
+	for row: Dictionary in _tables["skill_ranks.csv"]:
+		_require_ref(row, "skill_id", skill_ids)
+		if _i(row, "rank") < 1:
+			_error(row, "rank must be at least 1")
+		var skill_row: Dictionary = _rows_by_id("skills.csv", "skill_id").get(_s(row, "skill_id"), {})
+		if not skill_row.is_empty() and _i(row, "rank") > _i(skill_row, "max_rank"):
+			_error(row, "rank exceeds skill max_rank")
+
+	for row: Dictionary in _tables["skill_effect_ranks.csv"]:
+		_require_ref(row, "effect_id", effect_ids)
+		if _i(row, "rank") < 1:
+			_error(row, "rank must be at least 1")
+
+	for row: Dictionary in _tables["unit_mode_modifiers.csv"]:
+		_require_ref(row, "unit_id", unit_ids)
+		_require_ref(row, "stat_id", stat_ids)
+		_validate_enum(row, "mode", ["training", "pve", "pvp", "aram", "arena", "urf", "one_for_all", "nexus_blitz", "swiftplay"])
+		_validate_enum(row, "operation", ["flat", "add_percent", "multiply", "override"])
 
 	for row: Dictionary in _tables["buffs.csv"]:
 		_require_ref(row, "vfx_profile_id", asset_ids, true)
@@ -200,7 +256,7 @@ func _validate_source() -> void:
 	for row: Dictionary in _tables["asset_manifest.csv"]:
 		for field: String in ["resource_path", "audio_path", "shader_material_path"]:
 			var path := _s(row, field)
-			if not path.is_empty() and not ResourceLoader.exists(path):
+			if not path.is_empty() and not ResourceLoader.exists(path) and not FileAccess.file_exists(path):
 				_error(row, "%s does not exist: %s" % [field, path])
 
 	_validate_animation_names()
@@ -275,6 +331,7 @@ func _populate_units(database: CombatDatabase) -> void:
 		definition.id = _sn(row, "unit_id")
 		definition.display_name = _s(row, "display_name")
 		definition.unit_type = _s(row, "unit_type")
+		definition.instance_template_id = _s(row, "instance_template_id")
 		definition.role = _sn(row, "role")
 		definition.resource_type = _sn(row, "resource_type")
 		definition.range_type = _sn(row, "range_type")
@@ -314,6 +371,9 @@ func _compile_unit_runtime_values(database: CombatDatabase) -> void:
 		&"selection_radius": &"selection_radius", &"selection_height": &"selection_height",
 		&"acquisition_radius": &"acquisition_radius", &"attack_windup": &"attack_windup",
 		&"attack_windup_modifier": &"attack_windup_modifier", &"attack_delay_offset": &"attack_delay_offset",
+		&"missile_speed": &"missile_speed", &"attack_cast_time": &"attack_cast_time", &"attack_total_time": &"attack_total_time",
+		&"attack_range_growth": &"attack_range_growth", &"move_speed_growth": &"move_speed_growth",
+		&"critical_damage_base": &"critical_damage_base", &"critical_damage_modifier": &"critical_damage_modifier",
 	}
 	for unit: UnitDefinition in database.units:
 		for stat_id: StringName in direct_properties:
@@ -331,6 +391,10 @@ func _populate_skills(database: CombatDatabase) -> void:
 		definition.id = _sn(row, "skill_id")
 		definition.owner_id = _sn(row, "owner_id")
 		definition.slot = _i(row, "slot")
+		definition.ability_kind = _s(row, "ability_kind")
+		definition.source_slot = _sn(row, "source_slot")
+		definition.identity_status = _s(row, "identity_status")
+		definition.max_rank = _i(row, "max_rank")
 		definition.display_name = _s(row, "display_name")
 		for field: String in ["target_type", "cast_type", "movement_policy", "facing_policy"]:
 			definition.set(field, _s(row, field))
@@ -343,6 +407,7 @@ func _populate_skills(database: CombatDatabase) -> void:
 		definition.empowered_animation_name = _sn(row, "empowered_animation_name")
 		definition.vfx_profile_id = _sn(row, "vfx_profile_id")
 		definition.audio_profile_id = _sn(row, "audio_profile_id")
+		definition.icon_profile_id = _sn(row, "icon_profile_id")
 		definition.tags = _names(row, "tags")
 		database.skills.append(definition)
 
@@ -365,6 +430,43 @@ func _populate_skill_effects(database: CombatDatabase) -> void:
 		definition.hit_profile_id = _sn(row, "hit_profile_id")
 		definition.tags = _names(row, "tags")
 		database.skill_effects.append(definition)
+
+
+func _populate_skill_ranks(database: CombatDatabase) -> void:
+	for row: Dictionary in _tables["skill_ranks.csv"]:
+		var definition := SkillRankScript.new() as SkillRankDefinition
+		definition.skill_id = _sn(row, "skill_id")
+		definition.rank = _i(row, "rank")
+		for field: String in ["cooldown", "cast_time", "recovery_time", "cast_range", "radius", "duration", "tick_interval", "resource_cost"]:
+			definition.set(field, _f(row, field))
+		definition.source_key = _s(row, "source_key")
+		definition.notes = _s(row, "notes")
+		database.skill_ranks.append(definition)
+
+
+func _populate_skill_effect_ranks(database: CombatDatabase) -> void:
+	for row: Dictionary in _tables["skill_effect_ranks.csv"]:
+		var definition := SkillEffectRankScript.new() as SkillEffectRankDefinition
+		definition.effect_id = _sn(row, "effect_id")
+		definition.rank = _i(row, "rank")
+		for field: String in ["base_value", "scaling_coefficient", "target_missing_health_coefficient", "delay", "interval", "control_duration"]:
+			definition.set(field, _f(row, field))
+		definition.source_key = _s(row, "source_key")
+		definition.notes = _s(row, "notes")
+		database.skill_effect_ranks.append(definition)
+
+
+func _populate_unit_mode_modifiers(database: CombatDatabase) -> void:
+	for row: Dictionary in _tables["unit_mode_modifiers.csv"]:
+		var definition := UnitModeModifierScript.new() as UnitModeModifierDefinition
+		definition.unit_id = _sn(row, "unit_id")
+		definition.mode = _sn(row, "mode")
+		definition.stat_id = _sn(row, "stat_id")
+		definition.operation = _s(row, "operation")
+		definition.value = _f(row, "value")
+		definition.source_key = _s(row, "source_key")
+		definition.notes = _s(row, "notes")
+		database.unit_mode_modifiers.append(definition)
 
 
 func _populate_buffs(database: CombatDatabase) -> void:
@@ -436,10 +538,11 @@ func _populate_asset_profiles(database: CombatDatabase) -> void:
 		definition.node_path = _s(row, "node_path")
 		definition.animation_name = _sn(row, "animation_name")
 		definition.audio_path = _s(row, "audio_path")
-		for field: String in ["volume_db", "pitch_min", "pitch_max", "max_distance", "pixel_size", "duration"]:
+		for field: String in ["volume_db", "pitch_min", "pitch_max", "max_distance", "pixel_size", "opacity", "duration"]:
 			definition.set(field, _f(row, field))
 		definition.scale = Vector3(_f(row, "scale_x"), _f(row, "scale_y"), _f(row, "scale_z"))
 		definition.offset = Vector2(_f(row, "offset_x"), _f(row, "offset_y"))
+		definition.local_position = Vector3(_f(row, "local_x"), _f(row, "local_y"), _f(row, "local_z"))
 		definition.render_priority = _i(row, "render_priority")
 		definition.no_depth_test = _b(row, "no_depth_test")
 		definition.shader_material_path = _s(row, "shader_material_path")
@@ -497,6 +600,19 @@ func _validate_unique_pair(table: String, first_field: String, second_field: Str
 		var key := "%s|%s" % [_s(row, first_field), _s(row, second_field)]
 		if _s(row, first_field).is_empty() or _s(row, second_field).is_empty():
 			_error(row, "%s and %s cannot be empty" % [first_field, second_field])
+		elif seen.has(key):
+			_error(row, "duplicate composite id '%s'" % key)
+		else:
+			seen[key] = true
+
+
+func _validate_unique_triple(table: String, first_field: String, second_field: String, third_field: String) -> void:
+	var seen := {}
+	for row: Dictionary in _tables.get(table, []):
+		var values := [_s(row, first_field), _s(row, second_field), _s(row, third_field)]
+		var key := "%s|%s|%s" % values
+		if values.has(""):
+			_error(row, "%s, %s and %s cannot be empty" % [first_field, second_field, third_field])
 		elif seen.has(key):
 			_error(row, "duplicate composite id '%s'" % key)
 		else:

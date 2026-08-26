@@ -62,6 +62,9 @@ func _initialize() -> void:
 	stats_ok = stats_ok and is_equal_approx(float(enemy_one.get("move_speed")), 3.70)
 	stats_ok = stats_ok and is_equal_approx(float(enemy_one.get("gameplay_radius")), 0.65)
 	stats_ok = stats_ok and is_equal_approx(float(enemy_one.get("pathing_radius")), 0.30)
+	var template_ok := fighter.has_method("present_resolved_damage") and enemy_one.has_method("present_resolved_damage")
+	template_ok = template_ok and fighter.call("get_instance_template_id") == &"hero"
+	template_ok = template_ok and enemy_one.call("get_instance_template_id") == &"monster"
 
 	var home := enemy_one.global_position
 	var static_ok := true
@@ -112,10 +115,10 @@ func _initialize() -> void:
 	death_ok = death_ok and shadow.visible and enemy_outline.visible and enemy_glow.visible
 	death_ok = death_ok and enemy_one.is_in_group(&"enemy_actor")
 
-	print("TARGET_DUMMY roster=%s animation=%s depth_sort=%s visual=%s stats=%s static=%s metrics=%s return=%s death=%s" % [
-		roster_ok, animation_ok, depth_sort_ok, visual_ok, stats_ok, static_ok, metrics_ok, return_ok, death_ok,
+	print("TARGET_DUMMY roster=%s animation=%s depth_sort=%s visual=%s stats=%s template=%s static=%s metrics=%s return=%s death=%s" % [
+		roster_ok, animation_ok, depth_sort_ok, visual_ok, stats_ok, template_ok, static_ok, metrics_ok, return_ok, death_ok,
 	])
-	var passed := roster_ok and animation_ok and depth_sort_ok and visual_ok and stats_ok and static_ok and metrics_ok and return_ok and death_ok
+	var passed := roster_ok and animation_ok and depth_sort_ok and visual_ok and stats_ok and template_ok and static_ok and metrics_ok and return_ok and death_ok
 	if not passed:
 		push_error("Target Dummy workflow verification failed")
 	quit(0 if passed else 2)

@@ -10,6 +10,9 @@ extends Resource
 @export var unit_stats: Array[UnitStatValueDefinition] = []
 @export var skills: Array[SkillDefinition] = []
 @export var skill_effects: Array[SkillEffectDefinition] = []
+@export var skill_ranks: Array[SkillRankDefinition] = []
+@export var skill_effect_ranks: Array[SkillEffectRankDefinition] = []
+@export var unit_mode_modifiers: Array[UnitModeModifierDefinition] = []
 @export var buffs: Array[BuffDefinition] = []
 @export var buff_modifiers: Array[BuffModifierDefinition] = []
 @export var hit_profiles: Array[HitProfileDefinition] = []
@@ -22,6 +25,9 @@ var _rule_index: Dictionary = {}
 var _unit_index: Dictionary = {}
 var _unit_stat_index: Dictionary = {}
 var _skill_index: Dictionary = {}
+var _skill_rank_index: Dictionary = {}
+var _skill_effect_rank_index: Dictionary = {}
+var _unit_mode_modifier_index: Dictionary = {}
 var _buff_index: Dictionary = {}
 var _hit_profile_index: Dictionary = {}
 var _asset_profile_index: Dictionary = {}
@@ -36,6 +42,18 @@ func rebuild_indexes() -> void:
 	for definition: UnitStatValueDefinition in unit_stats:
 		_unit_stat_index[_unit_stat_key(definition.unit_id, definition.stat_id)] = definition
 	_skill_index = _index_by_id(skills)
+	_skill_rank_index.clear()
+	for definition: SkillRankDefinition in skill_ranks:
+		_skill_rank_index[_skill_rank_key(definition.skill_id, definition.rank)] = definition
+	_skill_effect_rank_index.clear()
+	for definition: SkillEffectRankDefinition in skill_effect_ranks:
+		_skill_effect_rank_index[_skill_rank_key(definition.effect_id, definition.rank)] = definition
+	_unit_mode_modifier_index.clear()
+	for definition: UnitModeModifierDefinition in unit_mode_modifiers:
+		var key := _unit_mode_modifier_key(definition.unit_id, definition.mode)
+		if not _unit_mode_modifier_index.has(key):
+			_unit_mode_modifier_index[key] = []
+		(_unit_mode_modifier_index[key] as Array).append(definition)
 	_buff_index = _index_by_id(buffs)
 	_hit_profile_index = _index_by_id(hit_profiles)
 	_asset_profile_index = _index_by_id(asset_profiles)
@@ -97,6 +115,24 @@ func get_skill_effects(skill_id: StringName, trigger := "") -> Array[SkillEffect
 			matches.append(definition)
 	matches.sort_custom(func(a: SkillEffectDefinition, b: SkillEffectDefinition) -> bool: return a.order < b.order)
 	return matches
+
+
+func get_skill_rank(skill_id: StringName, rank: int) -> SkillRankDefinition:
+	_ensure_indexes()
+	return _skill_rank_index.get(_skill_rank_key(skill_id, rank)) as SkillRankDefinition
+
+
+func get_skill_effect_rank(effect_id: StringName, rank: int) -> SkillEffectRankDefinition:
+	_ensure_indexes()
+	return _skill_effect_rank_index.get(_skill_rank_key(effect_id, rank)) as SkillEffectRankDefinition
+
+
+func get_unit_mode_modifiers(unit_id: StringName, mode: StringName) -> Array[UnitModeModifierDefinition]:
+	_ensure_indexes()
+	var values: Array[UnitModeModifierDefinition] = []
+	for definition: UnitModeModifierDefinition in _unit_mode_modifier_index.get(_unit_mode_modifier_key(unit_id, mode), []):
+		values.append(definition)
+	return values
 
 
 func get_buff(buff_id: StringName) -> BuffDefinition:
@@ -166,6 +202,14 @@ func _index_by_id(definitions: Array) -> Dictionary:
 
 func _unit_stat_key(unit_id: StringName, stat_id: StringName) -> StringName:
 	return StringName("%s|%s" % [unit_id, stat_id])
+
+
+func _skill_rank_key(id: StringName, rank: int) -> StringName:
+	return StringName("%s|%d" % [id, rank])
+
+
+func _unit_mode_modifier_key(unit_id: StringName, mode: StringName) -> StringName:
+	return StringName("%s|%s" % [unit_id, mode])
 
 
 func _primary_growth(base_value: float, growth_value: float, level: int) -> float:

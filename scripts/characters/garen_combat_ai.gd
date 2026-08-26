@@ -1,4 +1,4 @@
-extends CharacterBody3D
+extends "res://scripts/actors/hero_instance.gd"
 
 signal attack_landed(animation_name: StringName)
 
@@ -37,11 +37,12 @@ var arena_min := Vector2(-14.5, -4.3)
 var arena_max := Vector2(14.5, 4.3)
 var external_move_speed_modifiers: Dictionary = {}
 var attack_pitches: Array[float] = [1.08, 1.0, 0.88]
+var breaker_lunge_pending := false
 
 
 func _ready() -> void:
-	add_to_group(&"hero_actor")
 	_apply_combat_data()
+	bind_hero_instance(combat_database, garen_definition)
 	target = get_node_or_null(target_path) as CharacterBody3D
 	if not _is_target_available(target):
 		target = _find_closest_target()
@@ -108,7 +109,7 @@ func _physics_process(delta: float) -> void:
 			_slow_down(delta)
 			_check_attack_hit(distance)
 		_:
-			if distance <= attack_range:
+			if distance <= attack_range or (bool(skill_controller.call("should_use_breaker_attack")) and distance <= _breaker_lunge_range()):
 				_start_next_attack()
 			else:
 				_set_state(CombatState.CHASE)
@@ -135,11 +136,15 @@ func _start_next_attack() -> void:
 		combo_index = (combo_index + 1) % attack_combo.size()
 		current_attack_name = attack_combo[combo_index]
 		state_label.text = "AI · COMBO %d" % (combo_index + 1)
+	if current_attack_is_breaker and _should_lunge_to_target():
+		breaker_lunge_pending = true
+		await _perform_breaker_lunge()
+		breaker_lunge_pending = false
 	character_frames.play(current_attack_name)
 
 
 func _check_attack_hit(distance: float) -> void:
-	if attack_hit_sent:
+	if attack_hit_sent or breaker_lunge_pending:
 		return
 	var frame_count := character_frames.sprite_frames.get_frame_count(character_frames.animation)
 	var hit_event := combat_database.get_animation_event(&"garen", character_frames.animation, "hit") if combat_database != null else null
@@ -292,6 +297,22 @@ func can_start_skill() -> bool:
 	return state != CombatState.ATTACK
 
 
+func try_interrupt() -> bool:
+	# E's super armor rejects external interruption while preserving movement.
+	return not bool(skill_controller.call("has_super_armor"))
+
+
+func receive_knockback(direction: Vector3, speed: float) -> bool:
+	# Shared future-facing forced-movement entry point for enemies and skills.
+	if bool(skill_controller.call("has_super_armor")):
+		return false
+	var planar := direction
+	planar.y = 0.0
+	if planar.length_squared() > 0.0001:
+		velocity += planar.normalized() * speed
+	return true
+
+
 func _refresh_target() -> void:
 	if _is_target_available(target):
 		return
@@ -329,6 +350,23 @@ func get_team() -> StringName:
 	return StringName(team)
 
 
+func get_health_ratio() -> float:
+	if skill_controller == null:
+		return 1.0
+	var maximum := float(skill_controller.get("max_health"))
+	return float(skill_controller.get("current_health")) / maxf(maximum, 1.0)
+
+
+func is_targetable() -> bool:
+	if skill_controller == null:
+		return true
+	return float(skill_controller.get("current_health")) > 0.0
+
+
+func receive_skill_damage(amount: float, _source_name: String, _can_crit: bool, _attacker_position: Vector3, damage_type: StringName = &"physical", _hit_profile_id: StringName = &"basic_melee") -> void:
+	skill_controller.call("receive_incoming_damage", amount, damage_type, _can_crit)
+
+
 func set_external_move_speed_modifier(source_id: StringName, multiplier: float) -> void:
 	external_move_speed_modifiers[source_id] = maxf(0.0, multiplier)
 
@@ -342,6 +380,43 @@ func _external_move_speed_multiplier() -> float:
 	for value: Variant in external_move_speed_modifiers.values():
 		result *= float(value)
 	return result
+
+
+func _breaker_lunge_range() -> float:
+	var breaker := combat_database.get_skill_by_slot(&"garen", 1) if combat_database != null else null
+	return breaker.cast_range if breaker != null else 2.4
+
+
+func _should_lunge_to_target() -> bool:
+	if not _is_target_available(target):
+		return false
+	var horizontal := target.global_position - global_position
+	horizontal.y = 0.0
+	return horizontal.length() > attack_range and horizontal.length() <= _breaker_lunge_range()
+
+
+func _perform_breaker_lunge() -> void:
+	if not _is_target_available(target):
+		return
+	var offset := target.global_position - global_position
+	offset.y = 0.0
+	var distance := offset.length()
+	if distance <= attack_range or distance > _breaker_lunge_range():
+		return
+	var direction := offset.normalized()
+	_face_direction(direction)
+	var standoff := float(combat_database.get_rule(&"garen.breaker.lunge_standoff", 0.85)) if combat_database != null else 0.85
+	var destination := target.global_position - direction * standoff
+	destination.y = global_position.y
+	destination.x = clampf(destination.x, arena_min.x, arena_max.x)
+	destination.z = clampf(destination.z, arena_min.y, arena_max.y)
+	var origin := global_position
+	var duration := float(combat_database.get_rule(&"garen.breaker.lunge_duration", 0.12)) if combat_database != null else 0.12
+	var elapsed := 0.0
+	while elapsed < duration and _is_target_available(target):
+		await get_tree().process_frame
+		elapsed += get_process_delta_time()
+		global_position = origin.lerp(destination, ease(clampf(elapsed / duration, 0.0, 1.0), -1.6))
 
 
 func _apply_combat_data() -> void:

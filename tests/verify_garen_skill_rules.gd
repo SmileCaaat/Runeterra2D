@@ -38,6 +38,21 @@ func _initialize() -> void:
 	skills.set("breaker_timer", 4.5)
 	var breaker_ok := is_equal_approx(float(skills.call("get_move_speed_multiplier")), 1.35)
 	breaker_ok = breaker_ok and StringName(skills.call("get_run_animation")) == &"run_spell"
+	breaker_ok = breaker_ok and int(skills.call("get_skill_rank", 1)) == 1
+	breaker_ok = breaker_ok and is_equal_approx(float(skills.get("breaker_duration")), 1.4)
+	breaker_ok = breaker_ok and is_equal_approx(float(skills.get("breaker_damage")), 30.0)
+	breaker_ok = breaker_ok and is_equal_approx(float(skills.get("breaker_damage_coefficient")), 0.5)
+	breaker_ok = breaker_ok and is_equal_approx(float(skills.get("breaker_cooldown")), 8.0)
+	dummy.set("armor", 0.0)
+	dummy.set("critical_chance", 0.0)
+	dummy.set("current_health", 1000.0)
+	dummy.set("skill_damage_count", 0)
+	skills.set("breaker_empowered_attack", true)
+	skills.call("resolve_breaker_attack", dummy)
+	var q_expected_damage := 69.0 + 30.0 + 69.0 * 0.5
+	breaker_ok = breaker_ok and is_equal_approx(1000.0 - float(dummy.get("current_health")), q_expected_damage)
+	breaker_ok = breaker_ok and int(dummy.get("skill_damage_count")) == 1
+	breaker_ok = breaker_ok and float(dummy.get("silence_timer")) >= 1.5
 	var character_frames := player.get_node("CharacterFrames") as AnimatedSprite3D
 	var breaker_afterimages: Array = skills.get("breaker_afterimages")
 	var afterimage_ok := breaker_afterimages.size() == 3
@@ -87,6 +102,48 @@ func _initialize() -> void:
 		var afterimage := afterimage_variant as Sprite3D
 		afterimage_ok = afterimage_ok and afterimage != null and not afterimage.visible
 	var passive_ok := is_equal_approx(float(skills.call("get_passive_armor_multiplier")), 1.2)
+	passive_ok = passive_ok and is_equal_approx(float(skills.call("get_perseverance_regen_ratio_per_5", 1)), 0.015)
+	passive_ok = passive_ok and is_equal_approx(float(skills.call("get_perseverance_regen_ratio_per_5", 6)), 0.025)
+	passive_ok = passive_ok and is_equal_approx(float(skills.call("get_perseverance_regen_ratio_per_5", 13)), 0.081)
+	passive_ok = passive_ok and is_equal_approx(float(skills.call("get_perseverance_regen_ratio_per_5", 30)), 0.149)
+	skills.set("current_level", 1)
+	skills.set("max_health", 1000.0)
+	skills.set("current_health", 500.0)
+	skills.set("passive_damage_lockout_remaining", 0.0)
+	skills.set("passive_recovery_active", false)
+	var passive_activation_count := int(skills.get("passive_recovery_activation_count"))
+	skills.call("_update_perseverance", 5.0)
+	passive_ok = passive_ok and is_equal_approx(float(skills.get("current_health")), 515.0)
+	passive_ok = passive_ok and int(skills.get("passive_recovery_activation_count")) == passive_activation_count + 1
+	var passive_front := skills.get_node("PerseveranceFront") as AnimatedSprite3D
+	var passive_hip := skills.get_node("PerseveranceHip") as AnimatedSprite3D
+	skills.set("current_health", float(skills.get("max_health")))
+	skills.set("passive_damage_lockout_remaining", 0.0)
+	skills.call("_update_perseverance", 0.0)
+	skills.call("_update_perseverance_vfx", 0.3)
+	passive_ok = passive_ok and passive_front.visible and passive_hip.visible
+	passive_ok = passive_ok and is_equal_approx(passive_front.modulate.a, 0.3529412) and is_equal_approx(passive_hip.modulate.a, 0.27450982)
+	skills.set("current_health", 500.0)
+	skills.call("_update_perseverance_vfx", 0.3)
+	passive_ok = passive_ok and passive_front.visible and passive_hip.visible
+	passive_ok = passive_ok and passive_front.no_depth_test and passive_hip.no_depth_test
+	passive_ok = passive_ok and is_equal_approx(passive_front.pixel_size, 0.015) and is_equal_approx(passive_hip.pixel_size, 0.015)
+	passive_ok = passive_ok and passive_front.position.is_equal_approx(Vector3(0.12230945, -0.09625608, 0.08000004))
+	passive_ok = passive_ok and passive_hip.position.is_equal_approx(Vector3(0.07588625, 0.45039487, 0.120000005))
+	passive_ok = passive_ok and passive_front.animation == &"hip" and passive_hip.animation == &"slow1"
+	passive_ok = passive_ok and is_equal_approx(passive_front.speed_scale, 0.5) and is_equal_approx(passive_hip.speed_scale, 0.5)
+	passive_ok = passive_ok and is_equal_approx(passive_front.modulate.a, 0.3529412) and is_equal_approx(passive_hip.modulate.a, 0.27450982)
+	passive_ok = passive_ok and passive_front.is_playing() and passive_hip.is_playing()
+	var passive_motes := skills.get_node("PerseveranceMotes") as GPUParticles3D
+	passive_ok = passive_ok and passive_motes != null and passive_motes.emitting and passive_motes.amount == 14
+	skills.call("receive_incoming_damage", 10.0)
+	passive_ok = passive_ok and is_equal_approx(float(skills.get("passive_damage_lockout_remaining")), 8.0)
+	var locked_health := float(skills.get("current_health"))
+	skills.call("_update_perseverance", 8.0)
+	passive_ok = passive_ok and is_equal_approx(float(skills.get("current_health")), locked_health)
+	skills.call("_update_perseverance_vfx", 0.5)
+	passive_ok = passive_ok and not passive_front.visible and not passive_hip.visible
+	passive_ok = passive_ok and not passive_motes.emitting
 
 	skills.set("current_health", 1000.0)
 	skills.set("rum_timer", 0.0)
@@ -109,7 +166,14 @@ func _initialize() -> void:
 	skills.set("delayed_damage_pool", 1000.0)
 	skills.call("_update_rum_damage", 1.0)
 	var nonlethal_ok := is_equal_approx(float(skills.get("current_health")), 1.0)
-	var judgment_ok := is_equal_approx(float(skills.call("calculate_judgment_damage", 0.5)), 260.0)
+	var judgment_ok := is_equal_approx(float(skills.call("calculate_judgment_damage", 1000.0, 0.5)), 250.0)
+	dummy.set("current_health", 1000.0)
+	dummy.set("armor", 100.0)
+	dummy.set("magic_resistance", 100.0)
+	dummy.call("apply_normal_shield", 100.0)
+	dummy.call("receive_skill_damage", 250.0, "暴君审判", false, player.global_position, &"true", &"judgment_hit")
+	judgment_ok = judgment_ok and is_equal_approx(float(dummy.get("current_health")), 850.0)
+	judgment_ok = judgment_ok and is_zero_approx(float(dummy.call("get_normal_shield")))
 
 	skills.set("black_sail_timer", 1.0)
 	skills.call("_update_timers", 0.25)
@@ -263,8 +327,25 @@ func _initialize() -> void:
 	skills.set("is_casting", true)
 	skills.set("current_skill", 3)
 	var moving_storm_ok := bool(skills.call("allows_movement_while_casting"))
+	moving_storm_ok = moving_storm_ok and bool(skills.call("has_super_armor"))
+	moving_storm_ok = moving_storm_ok and not bool(player.call("try_interrupt"))
+	moving_storm_ok = moving_storm_ok and not bool(player.call("receive_knockback", Vector3.RIGHT, 4.0))
+	var super_armor_afterimage := skills.get_node("SuperArmorAfterimage") as Node3D
+	var super_armor_ghost := super_armor_afterimage.get_node("PreviousFrame") as Sprite3D
+	character_frames.animation = &"spell3"
+	character_frames.frame = mini(1, character_frames.sprite_frames.get_frame_count(&"spell3") - 1)
+	super_armor_afterimage.call("set_active", true)
+	super_armor_afterimage.call("_process", 0.0)
+	var super_armor_visual_ok := super_armor_ghost.visible
+	super_armor_visual_ok = super_armor_visual_ok and super_armor_ghost.texture == character_frames.sprite_frames.get_frame_texture(&"spell3", 0)
+	var super_armor_material := super_armor_ghost.material_override as ShaderMaterial
+	var super_armor_tint: Variant = super_armor_material.get_shader_parameter(&"ocean_tint") if super_armor_material != null else null
+	super_armor_visual_ok = super_armor_visual_ok and super_armor_tint is Color and (super_armor_tint as Color).r > 0.95 and (super_armor_tint as Color).g < 0.2
 	skills.set("current_skill", 4)
 	moving_storm_ok = moving_storm_ok and not bool(skills.call("allows_movement_while_casting"))
+	moving_storm_ok = moving_storm_ok and not bool(skills.call("has_super_armor"))
+	super_armor_afterimage.call("set_active", false)
+	super_armor_visual_ok = super_armor_visual_ok and not super_armor_ghost.visible
 	skills.set("is_casting", false)
 	var layering_ok := ocean.scale.is_equal_approx(Vector3.ONE * 1.4)
 	layering_ok = layering_ok and ocean.render_priority > 0 and anchor.render_priority > 0
@@ -362,12 +443,12 @@ func _initialize() -> void:
 			if show_over_models_value is bool:
 				ground_occlusion_ok = ground_occlusion_ok and bool(show_over_models_value) == effect.no_depth_test
 
-	print("SKILL_RULES breaker=%s afterimage=%s impact_shockwave=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s vfx_anchor=%s ghost_area=%s aoe=%s moving_storm=%s layering=%s filter=%s shader=%s canvas_fade=%s inward_edge=%s ground_occlusion=%s audio=%s" % [
-		breaker_ok, afterimage_ok, impact_shockwave_ok, passive_ok, reduction_ok, rum_ok, cleanse_ok, nonlethal_ok, judgment_ok,
+	print("SKILL_RULES breaker=%s afterimage=%s super_armor_visual=%s impact_shockwave=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s vfx_anchor=%s ghost_area=%s aoe=%s moving_storm=%s layering=%s filter=%s shader=%s canvas_fade=%s inward_edge=%s ground_occlusion=%s audio=%s" % [
+		breaker_ok, afterimage_ok, super_armor_visual_ok, impact_shockwave_ok, passive_ok, reduction_ok, rum_ok, cleanse_ok, nonlethal_ok, judgment_ok,
 		jolly_duration_ok, anchor_follow_ok, ghost_flip_ok, vfx_anchor_ok, ghost_area_ok, aoe_ok,
 		moving_storm_ok, layering_ok, filter_clip_ok, shader_ok, canvas_fade_ok, inward_edge_ok, ground_occlusion_ok, audio_ok,
 	])
-	var passed := breaker_ok and afterimage_ok and impact_shockwave_ok and passive_ok and reduction_ok and rum_ok
+	var passed := breaker_ok and afterimage_ok and super_armor_visual_ok and impact_shockwave_ok and passive_ok and reduction_ok and rum_ok
 	passed = passed and cleanse_ok and nonlethal_ok and judgment_ok
 	passed = passed and jolly_duration_ok and anchor_follow_ok and ghost_flip_ok
 	passed = passed and vfx_anchor_ok and ghost_area_ok and aoe_ok

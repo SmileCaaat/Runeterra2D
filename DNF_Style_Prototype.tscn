@@ -16,7 +16,7 @@
 [ext_resource type="Script" uid="uid://ciwom2obe6fuw" path="res://scripts/rendering/character_depth_sorter.gd" id="17_depth_sorter"]
 [ext_resource type="Script" uid="uid://cng0mh5tto5jy" path="res://scripts/systems/scuttle_crab_spawner.gd" id="18_scuttle_spawner"]
 [ext_resource type="PackedScene" path="res://scenes/units/scuttle_crab.tscn" id="19_scuttle"]
-[ext_resource type="PackedScene" path="res://scenes/world/scuttle_speed_zone.tscn" id="20_scuttle_zone"]
+[ext_resource type="PackedScene" uid="uid://tcvh448gvv08" path="res://scenes/world/scuttle_speed_zone.tscn" id="20_scuttle_zone"]
 [ext_resource type="Texture2D" uid="uid://bvh85v65ky44o" path="res://assets/stages/training_ground/bg_far.png" id="21_training_background_far"]
 [ext_resource type="Texture2D" uid="uid://b3005w2r0jvtf" path="res://assets/stages/training_ground/ground.png" id="22_training_ground"]
 [ext_resource type="Script" uid="uid://c51jyi7nie7nv" path="res://scripts/stages/training_stage_controller.gd" id="23_training_stage"]
@@ -26,6 +26,7 @@
 [ext_resource type="Shader" uid="uid://crybm280dsrm7" path="res://assets/shaders/stage_readability.gdshader" id="27_stage_readability"]
 [ext_resource type="Script" uid="uid://m8t41bkjgfud" path="res://scripts/rendering/unit_readability_layers.gd" id="28_unit_readability"]
 [ext_resource type="Shader" uid="uid://mptsdhv37oje" path="res://assets/shaders/stage_readability_alpha.gdshader" id="29_stage_readability_alpha"]
+[ext_resource type="SpriteFrames" path="res://assets/vfx/garen_perseverance/garen_perseverance_frames.tres" id="30_perseverance_vfx"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_qf7t4"]
 sky_top_color = Color(0.11372549, 0.15294118, 0.21960784, 1)
@@ -461,6 +462,28 @@ billboard = 1
 render_priority = 2
 sprite_frames = ExtResource("9_skill_vfx")
 animation = &"spell5_Ghostship"
+
+[node name="PerseveranceFront" type="AnimatedSprite3D" parent="Characters/Player/SkillController" unique_id=2095220155]
+transform = Transform3D(1.4105068, 0, 0, 0, 0.95627636, 0, 0, 0, 1, 0.12230945, -0.09625608, 0.08000004)
+cast_shadow = 0
+offset = Vector2(0, 56)
+modulate = Color(1, 1, 1, 0.3529412)
+pixel_size = 0.015
+billboard = 1
+no_depth_test = true
+render_priority = 1
+sprite_frames = ExtResource("30_perseverance_vfx")
+animation = &"hip"
+
+[node name="PerseveranceHip" type="AnimatedSprite3D" parent="Characters/Player/SkillController" unique_id=1172620898]
+transform = Transform3D(1.643449, 0, 0, 0, 1, 0, 0, 0, 1, 0.07588625, 0.45039487, 0.120000005)
+cast_shadow = 0
+modulate = Color(1, 1, 1, 0.27450982)
+billboard = 1
+no_depth_test = true
+render_priority = 2
+sprite_frames = ExtResource("30_perseverance_vfx")
+animation = &"slow1"
 
 [node name="JollyRogerAudio" type="AudioStreamPlayer3D" parent="Characters/Player/SkillController" unique_id=1884743143]
 stream = ExtResource("10_jolly_audio")

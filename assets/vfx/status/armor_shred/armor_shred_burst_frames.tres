@@ -1,0 +1,34 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/vfx/status/armor_shred/0.png" id="1_6i285"]
+[ext_resource type="Texture2D" path="res://assets/vfx/status/armor_shred/1.png" id="2_3ki2s"]
+[ext_resource type="Texture2D" path="res://assets/vfx/status/armor_shred/2.png" id="3_dngus"]
+[ext_resource type="Texture2D" path="res://assets/vfx/status/armor_shred/3.png" id="4_wgfvb"]
+[ext_resource type="Texture2D" path="res://assets/vfx/status/armor_shred/4.png" id="5_dsro4"]
+[ext_resource type="Texture2D" path="res://assets/vfx/status/armor_shred/5.png" id="6_3aq66"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_6i285")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_3ki2s")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_dngus")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_wgfvb")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_dsro4")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_3aq66")
+}],
+"loop": 0,
+"name": &"burst",
+"speed": 15.0
+}]

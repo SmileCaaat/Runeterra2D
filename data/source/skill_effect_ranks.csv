@@ -1,0 +1,14 @@
+effect_id,rank,base_value,scaling_coefficient,target_missing_health_coefficient,delay,interval,control_duration,source_key,notes
+breaker_damage,1,30,0.5,0,0,0,0,bonus_physical_damage|total_ad,Q bonus damage cannot crit
+breaker_damage,2,60,0.5,0,0,0,0,bonus_physical_damage|total_ad,Q bonus damage cannot crit
+breaker_damage,3,90,0.5,0,0,0,0,bonus_physical_damage|total_ad,Q bonus damage cannot crit
+breaker_damage,4,120,0.5,0,0,0,0,bonus_physical_damage|total_ad,Q bonus damage cannot crit
+breaker_damage,5,150,0.5,0,0,0,0,bonus_physical_damage|total_ad,Q bonus damage cannot crit
+ocean_damage,1,4,0.40,0,0,0,0,physical_damage_per_spin|total_ad,E rank 1 per spin
+ocean_damage,2,7,0.43,0,0,0,0,physical_damage_per_spin|total_ad,E rank 2 per spin
+ocean_damage,3,10,0.46,0,0,0,0,physical_damage_per_spin|total_ad,E rank 3 per spin
+ocean_damage,4,13,0.49,0,0,0,0,physical_damage_per_spin|total_ad,E rank 4 per spin
+ocean_damage,5,16,0.52,0,0,0,0,physical_damage_per_spin|total_ad,E rank 5 per spin
+judgment_damage,1,125,0,0.25,0.435,0,0,true_damage|target_missing_health,R rank 1 true damage
+judgment_damage,2,200,0,0.30,0.435,0,0,true_damage|target_missing_health,R rank 2 true damage
+judgment_damage,3,275,0,0.35,0.435,0,0,true_damage|target_missing_health,R rank 3 true damage

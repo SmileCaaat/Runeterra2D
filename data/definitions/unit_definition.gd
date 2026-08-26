@@ -4,6 +4,7 @@ extends Resource
 @export var id: StringName
 @export var display_name := ""
 @export_enum("hero", "monster", "training_dummy", "summon") var unit_type := "hero"
+@export_enum("hero", "monster") var instance_template_id := "hero"
 @export var role: StringName
 @export var resource_type: StringName
 @export var range_type: StringName
@@ -18,8 +19,11 @@ extends Resource
 @export var acceleration := 12.0
 @export var attack_range := 1.5
 @export var attack_speed := 1.0
+@export var missile_speed := 0.0
 @export_range(0.0, 1.0, 0.001) var critical_chance := 0.0
 @export var critical_damage := 1.75
+@export var critical_damage_base := 1.75
+@export var critical_damage_modifier := 0.0
 @export var ability_haste := 0.0
 @export_range(0.0, 1.0, 0.001) var tenacity := 0.0
 @export var poise := 0.0
@@ -31,5 +35,9 @@ extends Resource
 @export var attack_windup := 0.3
 @export var attack_windup_modifier := 1.0
 @export var attack_delay_offset := 0.0
+@export var attack_cast_time := 0.0
+@export var attack_total_time := 0.0
+@export var attack_range_growth := 0.0
+@export var move_speed_growth := 0.0
 @export var ai_profile_id: StringName
 @export var skill_ids: Array[StringName] = []

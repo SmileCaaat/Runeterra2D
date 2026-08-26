@@ -1,4 +1,4 @@
-extends CharacterBody3D
+extends "res://scripts/actors/monster_instance.gd"
 
 @export_range(0.1, 5.0, 0.1) var wander_speed := 1.25
 @export_range(0.5, 5.0, 0.1) var waypoint_tolerance := 0.65
@@ -44,6 +44,7 @@ func _ready() -> void:
 	if ai_definition != null:
 		random.seed = ai_definition.deterministic_seed
 	current_health = max_health
+	bind_monster_instance(combat_database, unit_definition)
 	var source_material := body_mesh.material_override as StandardMaterial3D
 	if source_material != null:
 		body_material = source_material.duplicate() as StandardMaterial3D
@@ -108,6 +109,7 @@ func _apply_damage(amount: float, source_name: String, can_crit: bool, attacker_
 	var resolved_damage := CombatMath.resolve_damage(raw_damage, damage_type, armor, magic_resistance, combat_database) if combat_database != null else raw_damage
 	var minimum_damage := float(combat_database.get_rule(&"damage.minimum_damage", 1.0)) if combat_database != null else 1.0
 	resolved_damage = maxf(minimum_damage, resolved_damage)
+	present_resolved_damage(resolved_damage, damage_type, critical)
 	var health_floor := 1.0 if unit_definition != null and unit_definition.unit_type == "training_dummy" else 0.0
 	current_health = maxf(health_floor, current_health - resolved_damage)
 	var away := global_position - attacker_position

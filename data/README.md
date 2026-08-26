@@ -23,16 +23,19 @@ Never edit `data/generated/combat_database.tres` by hand. Runtime timers, cooldo
 
 `combat_rules` global defaults -> game mode -> unit -> skill/effect -> active buff -> resolved combat value.
 
-The current prototype does not yet have a separate game-mode table, so it uses the global rules directly.
+`unit_mode_modifiers.csv` now provides typed per-unit mode deltas. The runtime aggregation pass is deliberately not implemented yet: tables can be authored and validated before a mode resolver is introduced.
 
 ## Source tables
 
 - `combat_rules.csv`: global constants, progression coefficients and policy enums. Formula code lives in typed scripts; arbitrary code is never evaluated from a cell.
 - `stats.csv`: canonical stat IDs, units, valid ranges and default modifier operation.
-- `units.csv`: hero, monster, summon and training-dummy identity, role, resource type, skill and AI references.
+- `units.csv`: hero, monster, summon and training-dummy identity, reusable `instance_template_id`（当前为 `hero` 或 `monster`）, role, resource type, skill and AI references.
 - `unit_stats.csv`: level-1 values, growth coefficients, growth formula, auditable source values and world-unit conversion.
 - `skills.csv`: targeting, cast model, cooldown, range, radius, duration, movement/facing policy and animation/presentation references.
 - `skill_effects.csv`: ordered damage, buff, control, cleanse, delayed-damage and shield operations.
+- `skill_ranks.csv`: typed per-rank cast shell values. Do not encode rank arrays in scalar cells.
+- `skill_effect_ranks.csv`: typed per-rank damage, coefficient, interval and control values for an effect.
+- `unit_mode_modifiers.csv`: optional game-mode stat deltas with an explicit operation; mode application remains a later runtime resolver.
 - `buffs.csv`: lifetime, stacking, refresh, dispel, visibility, nonlethal and VFX lifecycle semantics.
 - `buff_modifiers.csv`: stat modifiers with explicit operation, phase and priority.
 - `hit_profiles.csv`: shape, size, depth tolerance, active window, hitstop, hitstun, poise damage, knockback and impact presentation.
@@ -55,9 +58,11 @@ The current prototype does not yet have a separate game-mode table, so it uses t
 
 The normalized unit-stat table keeps both runtime values and source values. For example, Garen's source move speed `340` is stored beside runtime speed `3.4` with `conversion_scale=0.01`; this avoids mixing LoL units with Godot world meters while keeping every conversion reviewable.
 
-Primary growing stats use `base + growth * n * (0.7025 + 0.0175 * n)`, where `n = level - 1`. Attack speed applies the same growth factor through `attack_speed_ratio`. Monster endpoint interpolation can use `linear = base + growth * n`. Levels are clamped by `progression.level_cap`. Each stat row explicitly declares `none`, `linear`, `primary` or `attack_speed` growth.
+Primary growing stats use `base + growth * n * (0.7025 + 0.0175 * n)`, where `n = level - 1`. Attack speed applies the same growth factor through `attack_speed_ratio`. Monster endpoint interpolation can use `linear = base + growth * n`. Levels are clamped by `progression.level_cap` (currently 30). Each stat row explicitly declares `none`, `linear`, `primary` or `attack_speed` growth.
 
 Reference semantics and current Garen source values were checked against [Champion statistics](https://wiki.leagueoflegends.com/en-us/Champion_statistic) and [Template:Data Garen](https://wiki.leagueoflegends.com/en-us/Template:Data_Garen).
+
+ChampionData-compatible reference fields such as `missile_speed`, `attack_cast_time`, `attack_total_time`, `critical_damage_base`, `critical_damage_modifier`, `attack_range_growth` and `move_speed_growth` are stored separately from the current prototype's resolved action values. This keeps a future ranged/basic-attack implementation traceable without claiming that every source field is already simulated.
 
 ## Design boundary
 

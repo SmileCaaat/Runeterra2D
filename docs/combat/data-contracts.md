@@ -4,7 +4,7 @@
 
 源表位于 `data/source/`，构建器将其验证并生成 `data/generated/combat_database.tres`。禁止手工编辑生成资源。运行时状态，例如当前生命、冷却计时、Buff 层数和当前目标，不得写入共享 Resource。
 
-## 13 张源表
+## 16 张源表
 
 | 表 | 主键 | 职责与关键约束 |
 | --- | --- | --- |
@@ -14,11 +14,14 @@
 | `unit_stats.csv` | `unit_id + stat_id` | 1 级值、成长值、成长公式、来源值和单位换算 |
 | `skills.csv` | `skill_id` | 目标、施法类型、冷却、范围、持续时间、移动/朝向策略和表现引用 |
 | `skill_effects.csv` | `effect_id` | 有序触发效果：伤害、Buff、控制、净化、延迟伤害和护盾 |
+| `skill_ranks.csv` | `skill_id + rank` | 每级技能外壳数值：冷却、施放/恢复、范围、半径、持续与资源 |
+| `skill_effect_ranks.csv` | `effect_id + rank` | 每级效果数值：基础值、系数、延迟、间隔与控制持续 |
+| `unit_mode_modifiers.csv` | `unit_id + mode + stat_id` | 可选模式修正；明确操作和来源，不替代 Buff |
 | `buffs.csv` | `buff_id` | 持续、层数、刷新、驱散、非致死和 VFX 生命周期 |
 | `buff_modifiers.csv` | `modifier_id` | Buff 对属性的运算、阶段和优先级 |
 | `hit_profiles.csv` | `profile_id` | 命中形状、尺寸、纵深、有效帧、停顿、硬直、削韧和击退 |
 | `animation_events.csv` | `event_id` | 动画中的命中、音效、VFX、位移、取消和无敌事件 |
-| `asset_manifest.csv` | `asset_id` | SpriteFrames、VFX、音频、Shader、缩放、层级、朝向和生命周期 |
+| `asset_manifest.csv` | `asset_id` | SpriteFrames、VFX、音频、Shader、缩放、局部三维位置、逐层不透明度、层级、朝向和生命周期 |
 | `particle_profiles.csv` | `profile_id` | 粒子数量、寿命、速度、颜色、重力和尺寸 |
 | `ai_profiles.csv` | `profile_id` | AI 行为、竞技场范围、技能序列和可复现随机种子 |
 
@@ -51,10 +54,11 @@
 
 单位成长公式允许 `none`、`linear`、`primary` 和 `attack_speed`。`linear` 用于按等级等距成长的怪物数据；英雄的 LoL 式非线性成长继续使用 `primary`，不得混用。
 
-当前技能值是单个标量，不支持每技能等级数组。若参考技能拥有分级数值，必须在英雄档案中记录原公式，并选择以下一种方式：
+`skills.csv` 的 `ability_kind`、`source_slot`、`identity_status` 和 `max_rank` 将英雄身份与参考槽位显式保存。当前单值字段仍是原型默认值；正式的分级值必须写入 `skill_ranks.csv` 与 `skill_effect_ranks.csv`，而非在单元格内编码数组。
 
-1. 原型阶段明确采用固定简化值；或
-2. 正式扩展 schema，新增经过类型化和测试的技能等级数据。
+项目统一技能记法为“P/Q/W/E/R/T”：P 是被动技能位，Q/W/E/R 是基础主动技能位，T 是项目扩展技能位。`source_slot` 只允许 `basic`、`p`、`q`、`w`、`e`、`r`、`t`；T 不代表参考游戏存在第五主动技能，其参考/原创身份仍由 `identity_status` 表达。
+
+原型阶段可用重复的每级值表达“当前固定简化值”，但必须在 `notes` 标为待导入，不能伪装成来源数值。
 
 禁止把 `30|60|90` 填入期望浮点数的字段来绕过 schema。
 
@@ -85,11 +89,16 @@ Buff 绑定的表现必须拥有兼容生命周期。`lifecycle=buff` 的 VFX/�
 
 - `units.skill_ids -> skills.skill_id`
 - `units.ai_profile_id -> ai_profiles.profile_id`
+- `units.instance_template_id -> hero | monster`；实例模板负责公共单位表现与伤害入口，具体 AI/移动/死亡状态机仍由派生角色脚本实现。
 - `unit_stats.unit_id -> units.unit_id`
 - `unit_stats.stat_id -> stats.stat_id`
 - `skills.owner_id -> units.unit_id`
 - `skills.vfx/audio_profile_id -> asset_manifest.asset_id`
 - `skill_effects.skill_id -> skills.skill_id`
+- `skill_ranks.skill_id -> skills.skill_id`，且 `rank <= skills.max_rank`
+- `skill_effect_ranks.effect_id -> skill_effects.effect_id`
+- `unit_mode_modifiers.unit_id -> units.unit_id`
+- `unit_mode_modifiers.stat_id -> stats.stat_id`
 - `skill_effects.buff_id -> buffs.buff_id`
 - `skill_effects.hit_profile_id -> hit_profiles.profile_id`
 - `buff_modifiers.buff_id -> buffs.buff_id`
@@ -104,7 +113,7 @@ Buff 绑定的表现必须拥有兼容生命周期。`lifecycle=buff` 的 VFX/�
 
 1. `stats` 与 `combat_rules`
 2. `units` 与 `unit_stats`
-3. `skills` 与 `skill_effects`
+3. `skills`、`skill_effects` 与等级表
 4. `buffs` 与 `buff_modifiers`
 5. `hit_profiles` 与 `animation_events`
 6. `asset_manifest`、`particle_profiles` 与 `ai_profiles`

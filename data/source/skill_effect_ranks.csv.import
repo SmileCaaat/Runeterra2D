@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://vuipid4mv3xo"
+
+[deps]
+
+files=["res://data/source/skill_effect_ranks.rank.translation", "res://data/source/skill_effect_ranks.base.translation", "res://data/source/skill_effect_ranks.scaling.translation", "res://data/source/skill_effect_ranks.target.translation", "res://data/source/skill_effect_ranks.delay.translation", "res://data/source/skill_effect_ranks.interval.translation", "res://data/source/skill_effect_ranks.control.translation", "res://data/source/skill_effect_ranks.source.translation", "res://data/source/skill_effect_ranks.notes.translation"]
+
+source_file="res://data/source/skill_effect_ranks.csv"
+dest_files=["res://data/source/skill_effect_ranks.rank.translation", "res://data/source/skill_effect_ranks.base.translation", "res://data/source/skill_effect_ranks.scaling.translation", "res://data/source/skill_effect_ranks.target.translation", "res://data/source/skill_effect_ranks.delay.translation", "res://data/source/skill_effect_ranks.interval.translation", "res://data/source/skill_effect_ranks.control.translation", "res://data/source/skill_effect_ranks.source.translation", "res://data/source/skill_effect_ranks.notes.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

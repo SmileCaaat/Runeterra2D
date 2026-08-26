@@ -1,4 +1,7 @@
-extends CharacterBody3D
+extends "res://scripts/actors/monster_instance.gd"
+
+const STATUS_ICON_SLOTS := preload("res://scripts/presentation/status_icon_slots.gd")
+const ARMOR_SHRED_BURST := preload("res://scripts/presentation/status_debuff_burst.gd")
 
 signal return_completed(killer_team: StringName)
 signal defeated(killer_team: StringName)
@@ -43,6 +46,12 @@ var returning_to_navigation_origin := false
 var dissolving := false
 var random := RandomNumberGenerator.new()
 var combat_database: CombatDatabase
+var base_armor := 42.0
+var armor_shred_timer := 0.0
+var armor_shred_ratio := 0.0
+var normal_shield := 0.0
+var status_icon_slots: StatusIconSlots
+var armor_shred_burst: StatusDebuffBurst
 var unit_definition: UnitDefinition
 var ai_definition: AIProfileDefinition
 var attacker_definition: UnitDefinition
@@ -52,6 +61,12 @@ var hit_audio_pitch_max := 1.06
 func _ready() -> void:
 	spawn_position = global_position
 	_apply_combat_data()
+	base_armor = armor
+	status_icon_slots = STATUS_ICON_SLOTS.new()
+	status_icon_slots.name = "StatusIconSlots"
+	add_child(status_icon_slots)
+	armor_shred_burst = ARMOR_SHRED_BURST.get_or_create(self)
+	bind_monster_instance(combat_database, unit_definition)
 	random.seed = 20260824 + get_instance_id()
 	max_health = _health_for_level()
 	current_health = max_health
@@ -70,6 +85,7 @@ func configure_route(points: PackedVector3Array, arena_center: Vector3) -> void:
 	spawn_position = global_position
 
 func _physics_process(delta: float) -> void:
+	_update_armor_shred(delta)
 	_sync_outline()
 	if dissolving:
 		velocity = Vector3.ZERO
@@ -108,6 +124,11 @@ func receive_hit(attacker_position: Vector3, attack_name: StringName) -> void:
 func receive_skill_damage(amount: float, _skill_name: String, _can_crit: bool, attacker_position: Vector3, damage_type: StringName = &"physical", _hit_profile_id: StringName = &"basic_melee") -> void:
 	_apply_damage(amount, attacker_position, damage_type, _can_crit, _hit_profile_id)
 
+
+func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, hit_profile_id: StringName = &"breaker_hit") -> void:
+	# Keep Q's base attack crit separate from its non-crit bonus, but emit one hit reaction.
+	_apply_damage(base_attack, attacker_position, &"physical", true, hit_profile_id, bonus_damage)
+
 func register_damage_source(attacker_position: Vector3, source_team: StringName) -> void:
 	last_threat_position = attacker_position
 	killer_team = source_team
@@ -117,6 +138,22 @@ func apply_silence(_duration: float) -> void:
 
 func apply_stun(_duration: float) -> void:
 	_trigger_flee(last_threat_position)
+
+
+func apply_armor_shred(duration: float, reduction_ratio: float) -> void:
+	armor_shred_timer = maxf(armor_shred_timer, duration)
+	armor_shred_ratio = clampf(reduction_ratio, 0.0, 0.95)
+	armor = base_armor * (1.0 - armor_shred_ratio)
+	armor_shred_burst.play_burst()
+
+
+func _update_armor_shred(delta: float) -> void:
+	if armor_shred_timer <= 0.0:
+		return
+	armor_shred_timer = maxf(0.0, armor_shred_timer - delta)
+	if armor_shred_timer <= 0.0:
+		armor_shred_ratio = 0.0
+		armor = base_armor
 
 func get_team() -> StringName:
 	return &"neutral"
@@ -130,19 +167,30 @@ func is_targetable() -> bool:
 func get_health_ratio() -> float:
 	return current_health / maxf(max_health, 1.0)
 
-func _apply_damage(amount: float, attacker_position: Vector3, damage_type: StringName, can_crit: bool, hit_profile_id: StringName) -> void:
+
+func apply_normal_shield(amount: float) -> void:
+	normal_shield = maxf(0.0, normal_shield + amount)
+
+
+func get_normal_shield() -> float:
+	return normal_shield
+
+func _apply_damage(amount: float, attacker_position: Vector3, damage_type: StringName, can_crit: bool, hit_profile_id: StringName, flat_post_crit_bonus: float = 0.0) -> void:
 	if not is_targetable(): return
 	last_threat_position = attacker_position
 	var critical_chance := attacker_definition.critical_chance if attacker_definition != null else 0.0
 	var critical_damage := attacker_definition.critical_damage if attacker_definition != null else 1.75
 	var critical := can_crit and random.randf() < critical_chance
-	var raw_damage := amount * (critical_damage if critical else 1.0)
+	var raw_damage := amount * (critical_damage if critical else 1.0) + flat_post_crit_bonus
 	var hit_profile := combat_database.get_hit_profile(hit_profile_id) if combat_database != null else null
 	var damage := CombatMath.resolve_damage(
 		raw_damage, damage_type, armor, magic_resistance, combat_database
 	) if combat_database != null else raw_damage
 	damage = maxf(_rule_float(&"damage.minimum_damage", 1.0), damage)
-	current_health = maxf(0.0, current_health - damage)
+	present_resolved_damage(damage, damage_type, critical)
+	var health_damage := maxf(0.0, damage - normal_shield)
+	normal_shield = maxf(0.0, normal_shield - damage)
+	current_health = maxf(0.0, current_health - health_damage)
 	_trigger_flee(attacker_position)
 	if returning_to_navigation_origin:
 		hurt_timer = 0.0

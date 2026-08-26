@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://b3y8062yhujwo"
+
+[deps]
+
+files=["res://data/source/skill_ranks.rank.translation", "res://data/source/skill_ranks.cooldown.translation", "res://data/source/skill_ranks.cast.translation", "res://data/source/skill_ranks.recovery.translation", "res://data/source/skill_ranks.cast.translation", "res://data/source/skill_ranks.radius.translation", "res://data/source/skill_ranks.duration.translation", "res://data/source/skill_ranks.tick.translation", "res://data/source/skill_ranks.resource.translation", "res://data/source/skill_ranks.source.translation", "res://data/source/skill_ranks.notes.translation"]
+
+source_file="res://data/source/skill_ranks.csv"
+dest_files=["res://data/source/skill_ranks.rank.translation", "res://data/source/skill_ranks.cooldown.translation", "res://data/source/skill_ranks.cast.translation", "res://data/source/skill_ranks.recovery.translation", "res://data/source/skill_ranks.cast.translation", "res://data/source/skill_ranks.radius.translation", "res://data/source/skill_ranks.duration.translation", "res://data/source/skill_ranks.tick.translation", "res://data/source/skill_ranks.resource.translation", "res://data/source/skill_ranks.source.translation", "res://data/source/skill_ranks.notes.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

@@ -13,8 +13,11 @@ acceleration,加速度,movement,meter_per_second_squared,flat,0,1000,移动速�
 attack_range,攻击距离,presence,meter,flat,0,100,普通攻击可触达的平面距离
 attack_speed,攻击速度,offense,ratio,multiply,0.1,10,普通攻击动画速度系数
 attack_speed_ratio,攻速倍率,offense,ratio,multiply,0.1,10,加成攻速的换算倍率
+missile_speed,飞行物速度,action,meter_per_second,flat,0,1000,远程基础攻击或投射物的世界速度；近战为零
 critical_chance,暴击率,offense,ratio,flat,0,1,攻击与可暴击技能的暴击概率
 critical_damage,暴击伤害,offense,ratio,flat,1,10,暴击伤害倍率
+critical_damage_base,基础暴击伤害,offense,ratio,flat,1,10,参考来源中的基础暴击倍率；最终值由基础值与修正值解析
+critical_damage_modifier,暴击伤害修正,offense,ratio,add_percent,-1,10,基础暴击倍率外的加性修正；暂未接入最终伤害解析
 ability_haste,技能急速,utility,point,flat,-99,10000,降低技能冷却
 tenacity,韧性,defense,ratio,flat,0,0.8,减少可缩减控制持续时间
 slow_resistance,减速抗性,defense,ratio,flat,0,1,降低减速强度
@@ -27,6 +30,12 @@ life_steal,生命偷取,offense,ratio,flat,0,10,根据普攻结算后伤害恢�
 physical_vamp,物理吸血,offense,ratio,flat,0,10,根据物理伤害恢复生命
 omnivamp,全能吸血,offense,ratio,flat,0,10,根据多类伤害恢复生命
 damage_taken,承受伤害,defense,ratio,multiply,0.1,10,承伤乘区
+damage_dealt,造成伤害,offense,ratio,multiply,0.1,10,造成伤害乘区；用于模式或规则修正
+healing_modifier,治疗修正,utility,ratio,multiply,0,10,治疗量乘区；用于模式或规则修正
+shielding_modifier,护盾修正,utility,ratio,multiply,0,10,护盾量乘区；用于模式或规则修正
+resource_regen_modifier,资源回复修正,resource,ratio,multiply,0,10,资源回复乘区；用于模式或规则修正
+total_attack_speed_modifier,总攻速修正,offense,ratio,multiply,0,10,总攻击速度乘区；用于模式或规则修正
+move_speed_modifier,移速修正,movement,ratio,multiply,0,10,移动速度乘区；用于模式或规则修正
 control_duration,受控时长,defense,ratio,multiply,0.1,10,控制时长乘区
 poise,霸体值,action,point,flat,0,100000,承受削韧的容量
 poise_regen,霸体恢复,action,point_per_second,flat,0,100000,霸体恢复速度
@@ -34,6 +43,10 @@ knockback_resistance,击退抗性,action,ratio,flat,0,1,降低击退和击飞强
 attack_windup,攻击前摇,action,ratio,flat,0,1,攻击动画进入命中窗口前的比例
 attack_windup_modifier,前摇攻速修正,action,ratio,multiply,0,10,攻速对攻击前摇的影响程度
 attack_delay_offset,攻击延迟偏移,action,ratio,flat,-1,1,基础攻击前摇计算偏移
+attack_cast_time,攻击施放时间,action,second,flat,0,10,来源攻击开始至攻击事件的时间；可用于推导前摇
+attack_total_time,攻击总时长,action,second,flat,0,10,来源基础攻击完整周期；可用于推导前摇
+attack_range_growth,攻击距离成长,presence,meter_per_level,flat,0,100,每级攻击距离成长；默认零
+move_speed_growth,移动速度成长,movement,meter_per_second_per_level,flat,0,100,每级移动速度成长；默认零
 acquisition_radius,索敌半径,presence,meter,flat,0,100,自动获取目标范围
 selection_radius,选取半径,presence,meter,flat,0,100,交互选取宽度
 selection_height,选取高度,presence,meter,flat,0,100,交互选取高度

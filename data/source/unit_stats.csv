@@ -12,8 +12,11 @@ garen,acceleration,14,0,none,14,0,1,,横版动作自定义
 garen,attack_range,1.75,0,none,175,0,0.01,range,转换为Godot米
 garen,attack_speed,0.625,0.0365,attack_speed,0.625,0.0365,1,as_base|as_lvl,页面3.65%按统一比例约定存为0.0365
 garen,attack_speed_ratio,0.625,0,none,0.625,0,1,as_ratio,LoL攻速倍率
+garen,missile_speed,0,0,none,0,0,0.01,missile_speed,近战英雄无基础攻击飞行物
 garen,critical_chance,0,0,none,0,0,1,,LoL英雄默认零暴击率
 garen,critical_damage,2.0,0,none,200,0,0.01,crit_base,模板当前为200百分比
+garen,critical_damage_base,2.0,0,none,200,0,0.01,crit_base,来源基础暴击倍率；暂与运行时critical_damage保持一致
+garen,critical_damage_modifier,0,0,none,0,0,1,crit_mod,来源基础暴击修正为零
 garen,ability_haste,0,0,none,0,0,1,,默认零属性
 garen,tenacity,0,0,none,0,0,1,,默认零属性
 garen,slow_resistance,0,0,none,0,0,1,,默认零属性
@@ -28,6 +31,10 @@ garen,omnivamp,0,0,none,0,0,1,,默认零属性
 garen,attack_windup,0.18,0,none,0.18000000268221,0,1,windup,LoL基础攻击前摇比例
 garen,attack_windup_modifier,0.5,0,none,0.5,0,1,windup_modifier,LoL攻速对前摇修正
 garen,attack_delay_offset,-0.12,0,none,-0.11999999731779,0,1,attack_delay_offset,LoL近似值
+garen,attack_cast_time,0,0,none,0,0,1,,来源模板未提供时以attack_delay_offset回退；尚未作为运行时攻击时序
+garen,attack_total_time,0,0,none,0,0,1,,来源模板未提供时以attack_delay_offset回退；尚未作为运行时攻击时序
+garen,attack_range_growth,0,0,none,0,0,0.01,range_lvl,来源成长为零并转换为Godot米
+garen,move_speed_growth,0,0,none,0,0,0.01,ms_lvl,来源成长为零并转换为Godot米
 garen,acquisition_radius,6.0,0,none,600,0,0.01,acquisition_radius,转换为Godot米
 garen,selection_radius,1.2,0,none,120,0,0.01,selection_radius,转换为Godot米
 garen,selection_height,1.888889,0,none,188.88890075684,0,0.01,selection_height,转换为Godot米

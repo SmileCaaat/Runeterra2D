@@ -1,6 +1,25 @@
 rule_id,category,value_type,value,description
-schema.version,system,int,3,战斗数据库结构版本
-progression.level_cap,progression,int,18,默认英雄等级上限
+schema.version,system,int,13,战斗数据库结构版本：英雄与怪物实例模板绑定
+garen.ocean_storm.base_spins,hero_skill,int,7,翻江倒海在零额外攻速时的三秒基础转数
+garen.ocean_storm.bonus_attack_speed_per_spin,hero_skill,float,0.25,每25%额外攻速增加一转
+garen.ocean_storm.armor_shred_hits,hero_skill,int,6,翻江倒海对同一目标施加破甲所需命中次数
+garen.ocean_storm.armor_shred_ratio,hero_skill,float,0.25,翻江倒海破甲比例
+garen.ocean_storm.armor_shred_duration,hero_skill,float,6.0,翻江倒海破甲持续时间
+garen.ocean_storm.nearest_damage_multiplier,hero_skill,float,1.25,翻江倒海对最近敌人的伤害倍率
+garen.breaker.lunge_duration,hero_skill,float,0.12,破舰强化普攻的横版动作冲刺时长
+garen.breaker.lunge_standoff,hero_skill,float,0.85,破舰冲刺结束时距目标的平面距离
+progression.level_cap,progression,int,30,默认英雄等级上限
+progression.skill_rank_cap,progression,int,5,技能最大等级上限；R等技能可在skills.max_rank声明更低上限
+garen.perseverance.lockout_duration,hero_passive,float,8.0,坚忍受到有效伤害后的恢复抑制时长
+garen.perseverance.period,hero_passive,float,5.0,坚忍回复比例的计量周期；运行时连续结算等价总回复
+garen.perseverance.base_regen_ratio_per_5,hero_passive,float,0.015,坚忍1级每5秒最大生命回复比例
+garen.perseverance.early_level_increment,hero_passive,float,0.002,坚忍2至6级每级回复比例增量
+garen.perseverance.mid_level_increment,hero_passive,float,0.008,坚忍7至13级每级回复比例增量
+garen.perseverance.late_level_increment,hero_passive,float,0.004,坚忍14级及以后每级回复比例增量
+presentation.perseverance_vfx_opacity,presentation,float,1.0,坚忍特效全局不透明度乘数；逐层不透明度由asset_manifest控制
+presentation.perseverance_vfx_frame_rate,presentation,float,6.0,坚忍序列帧的缓慢循环帧率
+presentation.perseverance_vfx_fade_in,presentation,float,0.30,坚忍恢复启动时的渐显时长
+presentation.perseverance_vfx_fade_out,presentation,float,0.50,坚忍失效时的渐隐时长
 progression.growth_linear_coefficient,progression,float,0.7025,LoL式非线性成长公式的一次系数
 progression.growth_quadratic_coefficient,progression,float,0.0175,LoL式非线性成长公式的二次系数
 damage.crit_multiplier,damage,float,1.75,默认暴击伤害倍率
@@ -51,6 +70,7 @@ presentation.breaker_afterimage_count,presentation,int,3,破舰残影池大小
 presentation.breaker_afterimage_lifetime,presentation,float,0.28,破舰单帧残影寿命
 presentation.breaker_afterimage_alpha,presentation,float,0.36,破舰残影初始透明度
 presentation.breaker_afterimage_color,presentation,enum,29b8ffff,破舰残影海洋蓝颜色
+presentation.super_armor_afterimage_color,presentation,enum,ff2424ff,霸体上一帧残影高明度鲜红色
 presentation.impact_shockwave_pool_size,presentation,int,2,重击空间震荡对象池大小
 presentation.impact_shockwave_lifetime,presentation,float,0.38,重击空间震荡寿命
 presentation.impact_shockwave_opacity,presentation,float,0.55,重击空间震荡初始透明度
@@ -72,3 +92,12 @@ presentation.judgment_camera_shake_strength,presentation,float,0.09,暴君审判
 presentation.ghostship_camera_shake_duration,presentation,float,0.36,七海霸权镜头震荡时长
 presentation.ghostship_camera_shake_strength,presentation,float,0.105,七海霸权镜头震荡强度
 presentation.seven_seas_buff_audio_delay,presentation,float,0.15,七海霸权R buff activate叠加音相对主音轨延迟秒数
+presentation.damage_number_pool_size,presentation,int,18,伤害数字对象池容量
+presentation.damage_number_pixel_size,presentation,float,0.004,伤害数字图集每像素对应的世界尺寸
+presentation.damage_number_height,presentation,float,1.75,伤害数字相对受击单位的起始高度
+presentation.damage_number_duration,presentation,float,0.42,普通伤害数字快速弹出后的总显示时长
+presentation.damage_number_rise_distance,presentation,float,0.48,伤害数字生命周期内向上浮动的距离
+presentation.damage_number_normal_scale,presentation,float,1.0,普通物理和魔法伤害数字基础缩放
+presentation.damage_number_critical_scale,presentation,float,1.42,物理和魔法暴击伤害数字基础缩放
+presentation.damage_number_critical_punch,presentation,float,0.24,暴击伤害数字额外Scale Punch幅度
+presentation.damage_number_lateral_jitter,presentation,float,0.16,伤害数字横向随机偏移速度

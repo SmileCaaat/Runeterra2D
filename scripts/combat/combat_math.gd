@@ -25,6 +25,9 @@ static func resolve_damage(raw_damage: float, damage_type: StringName, armor: fl
 			return resolve_resistance(raw_damage, armor, float(rules.get_rule(&"defense.armor_curve_constant", 100.0)))
 		&"magic":
 			return resolve_resistance(raw_damage, magic_resistance, float(rules.get_rule(&"defense.magic_resist_curve_constant", 100.0)))
+		&"true":
+			# Bypasses resistance and damage-reduction stages; normal shields are applied by the target afterwards.
+			return raw_damage
 		_:
 			return raw_damage
 

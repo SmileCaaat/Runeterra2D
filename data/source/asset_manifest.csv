@@ -1,4 +1,6 @@
-asset_id,asset_type,resource_path,node_path,animation_name,audio_path,volume_db,pitch_min,pitch_max,max_distance,scale_x,scale_y,scale_z,offset_x,offset_y,pixel_size,render_priority,no_depth_test,shader_material_path,lifecycle,duration,flip_with_facing
+asset_id,asset_type,resource_path,node_path,animation_name,audio_path,volume_db,pitch_min,pitch_max,max_distance,scale_x,scale_y,scale_z,offset_x,offset_y,pixel_size,render_priority,no_depth_test,shader_material_path,lifecycle,duration,flip_with_facing,local_x,local_y,local_z,opacity
+damage_numbers_brush_primary,combat_text_font,res://assets/ui/combat/brush_damage.png,CombatText/Miss,,,,1,1,20,1,1,1,0,0,0.004,120,true,,manual,0,false,0,0,0,1
+damage_numbers_brush_colored,combat_text_font,res://assets/ui/combat/brush_damage1.png,CombatText/Digits,,,,1,1,20,1,1,1,0,0,0.004,120,true,,manual,0,false,0,0,0,1
 garen_character,character_animation,res://assets/characters/rogue_admiral_garen/garen_sprite_frames.tres,CharacterFrames,,,0,1,1,20,1,1,1,245,861.5,0.004,0,false,,manual,0,true
 jolly_roger,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/JollyRoger,spell2_JollyRoger,,0,1,1,20,1,1,1,-102,429,0.004,-1,true,res://assets/vfx/garen_skills/jolly_roger_screen_material.tres,buff,4.0,false
 ocean_storm,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/OceanStorm,spell3_OceanStorm,,0,1,1,20,1.4,1.4,1.4,-102,429,0.0045,1,false,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,duration,3.0,false
@@ -25,5 +27,17 @@ garen_r_buff_activate,audio,,,,res://assets/audio/garen_original/r_buff_activate
 garen_r_cast,audio,,,,res://assets/audio/garen_original/r_cast.ogg,0,1,1,44,1,1,1,0,0,0,0,false,,manual,0,false
 garen_r_hit,audio,,,,res://assets/audio/garen_original/r_hit.ogg,1,1,1,46,1,1,1,0,0,0,0,false,,manual,0,false
 garen_passive_recovery_activate,audio,,,,res://assets/audio/garen_original/passive_recovery_activate.ogg,0,1,1,40,1,1,1,0,0,0,0,false,,manual,0,false
+garen_perseverance_icon,skill_icon,res://assets/icons/garen/perseverance.png,,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false
+garen_decisive_strike_icon,skill_icon,res://assets/icons/garen/decisive_strike.webp,,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false
+garen_judgment_icon,skill_icon,res://assets/icons/garen/judgment.png,,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false
+garen_demacian_justice_icon,skill_icon,res://assets/icons/garen/demacian_justice.png,,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false
+judgment_armor_shred_icon,status_icon,res://addons/at-icons/lorc/zebra-shield.svg,,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false
+judgment_armor_shred_burst,skill_vfx,res://assets/vfx/status/armor_shred/armor_shred_burst_frames.tres,StatusDebuffBurst,burst,,0,1,1,0,1,1,1,0,0,0.015,46,true,,manual,0,false
+judgment_armor_shred_audio,audio,,,,res://addons/Sound FX Starter Pack Vol. 1/Motions and Impacts/Impact Metal Hatch.wav,0,3,3,22,1,1,1,0,0,0,0,false,,manual,0,false
+overwhelm_debuff_icon,status_icon,res://assets/icons/status/overwhelm.png,,,,0,1,1,0,1,1,1,0,0,0,0,false,,ui_and_burst,0,false
+garen_perseverance_front,passive_vfx,res://assets/vfx/garen_perseverance/garen_perseverance_frames.tres,SkillController/PerseveranceFront,hip,,0,1,1,20,1.4105068,0.95627636,1,0,56,0.015,1,true,,passive,0,false,0.12230945,-0.09625608,0.08000004,0.3529412
+garen_perseverance_hip,passive_vfx,res://assets/vfx/garen_perseverance/garen_perseverance_frames.tres,SkillController/PerseveranceHip,slow1,,0,1,1,20,1.643449,1,1,0,0,0.015,2,true,,passive,0,false,0.07588625,0.45039487,0.120000005,0.27450982
+garen_perseverance_motes,particle_vfx,,SkillController/PerseveranceMotes,,,0,1,1,20,1,1,1,0,0,0.005,2,true,,passive,0,false,0.08,0.36,0.10,1
+super_armor_afterimage,hit_vfx,,SuperArmorAfterimage/PreviousFrame,,,0,1,1,20,1,1,1,0,0,0,4,false,,manual,0,true,0,0,0,0.62
 training_dummy_hit_audio,audio,,,,res://assets/audio/combat/training_dummy_hit.wav,-1,0.94,1.06,40,1,1,1,0,0,0,0,false,,manual,0,false
 ghostship_audio,audio,,,,res://assets/audio/skills/garen/spell_Ghost ship.mp3,5,1,1,44,1,1,1,0,0,0,0,false,,animation,1.70,false

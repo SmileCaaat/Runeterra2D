@@ -20,8 +20,8 @@ func _run() -> void:
 	passed = passed and not bool(effect.get("last_critical")) and int(effect.get("burst_count")) == 1
 	var pool := get_first_node_in_group(&"hit_impact_vfx_pool")
 	passed = passed and pool != null and (pool.get("slots") as Array).size() == 8
-	passed = passed and (pool.get("profiles_by_id") as Dictionary).size() == 6
-	passed = passed and int(pool.get("play_count")) == 1 and StringName(pool.get("last_profile_id")) == &"normal"
+	passed = passed and (pool.get("profiles_by_id") as Dictionary).size() == 8
+	passed = passed and int(pool.get("play_count")) == 1 and StringName(pool.get("last_profile_id")) == &"slash"
 	if pool != null:
 		var first_slot: Dictionary = (pool.get("slots") as Array)[0]
 		var procedural_effect := first_slot.effect as Node2D
@@ -42,11 +42,11 @@ func _run() -> void:
 	passed = passed and int(effect.get("burst_count")) == 2
 	passed = passed and int(pool.get("play_count")) == 2 and StringName(pool.get("last_profile_id")) == &"critical"
 	passed = passed and StringName(effect.call("_resolve_procedural_profile", &"breaker_hit", false)) == &"heavy"
-	passed = passed and StringName(effect.call("_resolve_procedural_profile", &"ocean_hit", false)) == &"elemental"
-	passed = passed and StringName(effect.call("_resolve_procedural_profile", &"judgment_hit", false)) == &"anchor"
+	passed = passed and StringName(effect.call("_resolve_procedural_profile", &"ocean_hit", false)) == &"slash"
+	passed = passed and StringName(effect.call("_resolve_procedural_profile", &"judgment_hit", false)) == &"true_damage"
 	passed = passed and StringName(effect.call("_resolve_procedural_profile", &"ghostship_hit", false)) == &"magic"
 
-	print("HIT_VFX sequence=normal/critical gpu_layers=4 flash=true shockwave=true pool=8 profiles=6")
+	print("HIT_VFX sequence=normal/critical/true gpu_layers=4 flash=true shockwave=true pool=8 profiles=8")
 	effect.queue_free()
 	if not passed:
 		push_error("Hit sequence VFX verification failed")
