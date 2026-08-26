@@ -22,11 +22,12 @@ const AnimationEventScript = preload("res://data/definitions/animation_event_def
 const AssetProfileScript = preload("res://data/definitions/asset_profile_definition.gd")
 const ParticleProfileScript = preload("res://data/definitions/particle_profile_definition.gd")
 const AIProfileScript = preload("res://data/definitions/ai_profile_definition.gd")
+const AwakeningCutInProfileScript = preload("res://data/definitions/awakening_cutin_profile_definition.gd")
 
 const TABLE_FILES := [
 	"combat_rules.csv", "stats.csv", "hero_classes.csv", "hero_subclasses.csv", "ai_archetypes.csv", "units.csv", "unit_stats.csv", "skills.csv", "skill_effects.csv", "skill_ranks.csv", "skill_effect_ranks.csv", "unit_mode_modifiers.csv",
 	"buffs.csv", "buff_modifiers.csv", "hit_profiles.csv", "animation_events.csv",
-	"asset_manifest.csv", "particle_profiles.csv", "ai_profiles.csv",
+	"asset_manifest.csv", "particle_profiles.csv", "ai_profiles.csv", "awakening_cutin_profiles.csv",
 ]
 
 # Asset-manifest fields are append-only. Older rows may omit a newly introduced
@@ -76,6 +77,7 @@ func build(source_dir := "res://data/source", output_path := "res://data/generat
 	_populate_asset_profiles(database)
 	_populate_particle_profiles(database)
 	_populate_ai_profiles(database)
+	_populate_awakening_cutin_profiles(database)
 	database.schema_version = int(database.get_rule(&"schema.version", 1))
 	database.generated_at_utc = Time.get_datetime_string_from_system(true, true)
 	database.source_digest = _source_digest()
@@ -154,6 +156,7 @@ func _validate_source() -> void:
 	_validate_unique("asset_manifest.csv", "asset_id")
 	_validate_unique("particle_profiles.csv", "profile_id")
 	_validate_unique("ai_profiles.csv", "profile_id")
+	_validate_unique("awakening_cutin_profiles.csv", "profile_id")
 
 	var unit_ids := _id_set("units.csv", "unit_id")
 	var class_ids := _id_set("hero_classes.csv", "class_id")
@@ -291,6 +294,20 @@ func _validate_source() -> void:
 			var path := _s(row, field)
 			if not path.is_empty() and not ResourceLoader.exists(path) and not FileAccess.file_exists(path):
 				_error(row, "%s does not exist: %s" % [field, path])
+
+	for row: Dictionary in _tables["awakening_cutin_profiles.csv"]:
+		_require_ref(row, "owner_id", unit_ids)
+		_require_ref(row, "skill_id", skill_ids)
+		_validate_enum(row, "faction", ["friendly", "enemy", "neutral"])
+		for field: String in ["portrait_path", "audio_path"]:
+			var path := _s(row, field)
+			if path.is_empty() or (not ResourceLoader.exists(path) and not FileAccess.file_exists(path)):
+				_error(row, "%s does not exist: %s" % [field, path])
+		for field: String in ["enter_duration", "hold_duration", "exit_duration", "portrait_scale"]:
+			_require_positive(row, field)
+		var skill_row: Dictionary = _rows_by_id("skills.csv", "skill_id").get(_s(row, "skill_id"), {})
+		if not skill_row.is_empty() and not _names(skill_row, "tags").has(&"awakening"):
+			_error(row, "skill_id must reference a skill tagged awakening")
 
 	_validate_animation_names()
 	_validate_bound_lifecycles()
@@ -650,6 +667,27 @@ func _populate_ai_profiles(database: CombatDatabase) -> void:
 		definition.skill_sequence = _names(row, "skill_sequence")
 		definition.deterministic_seed = _i(row, "deterministic_seed")
 		database.ai_profiles.append(definition)
+
+
+func _populate_awakening_cutin_profiles(database: CombatDatabase) -> void:
+	for row: Dictionary in _tables["awakening_cutin_profiles.csv"]:
+		var definition := AwakeningCutInProfileScript.new() as AwakeningCutInProfileDefinition
+		definition.id = _sn(row, "profile_id")
+		definition.owner_id = _sn(row, "owner_id")
+		definition.skill_id = _sn(row, "skill_id")
+		definition.display_name = _s(row, "display_name")
+		definition.subtitle = _s(row, "subtitle")
+		definition.portrait_path = _s(row, "portrait_path")
+		definition.audio_path = _s(row, "audio_path")
+		definition.faction = _s(row, "faction")
+		definition.priority = _i(row, "priority")
+		definition.primary = _b(row, "primary")
+		definition.theme_color = Color.html(_s(row, "theme_color"))
+		definition.accent_color = Color.html(_s(row, "accent_color"))
+		for field: String in ["enter_duration", "hold_duration", "exit_duration", "slant", "feather", "portrait_scale", "voice_volume_db"]:
+			definition.set(field, _f(row, field))
+		definition.portrait_offset = Vector2(_f(row, "portrait_offset_x"), _f(row, "portrait_offset_y"))
+		database.awakening_cutin_profiles.append(definition)
 
 
 func _validate_unique(table: String, id_field: String) -> void:

@@ -1310,6 +1310,7 @@ func _cast_tyrant_judgment() -> void:
 
 func _cast_seven_seas() -> void:
 	ghostship_last_impact_frame = -1
+	_request_awakening_cutin(SKILL_SEVEN_SEAS)
 	character_frames.play(_skill_animation(SKILL_SEVEN_SEAS, &"taunt"))
 	# This is a ground-targeted area skill. The AI chooses the target's position
 	# at cast time, but the area does not continue tracking that character.
@@ -1341,6 +1342,16 @@ func _cast_seven_seas() -> void:
 	await get_tree().create_timer(_skill_float(SKILL_SEVEN_SEAS, "recovery_time", 0.65)).timeout
 	ghostship.visible = false
 	ghostship.stop()
+
+
+func _request_awakening_cutin(skill_index: int) -> void:
+	var definition := _definition(skill_index)
+	if definition == null or not definition.tags.has(&"awakening"):
+		return
+	var manager := get_node_or_null("/root/AwakeningCutIn")
+	if manager == null or not manager.has_method("request_skill"):
+		return
+	manager.call("request_skill", definition.id, {"source": fighter})
 
 
 func resolve_ocean_storm_tick() -> int:

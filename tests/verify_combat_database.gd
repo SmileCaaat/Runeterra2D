@@ -25,6 +25,7 @@ func _initialize() -> void:
 	counts_ok = counts_ok and database.buff_modifiers.size() == 6 and database.ai_profiles.size() == 4
 	counts_ok = counts_ok and database.hit_profiles.size() == 5 and database.animation_events.size() == 17
 	counts_ok = counts_ok and database.asset_profiles.size() == 45 and database.particle_profiles.size() == 9
+	counts_ok = counts_ok and database.awakening_cutin_profiles.size() == 1
 
 	var armor_ok := is_equal_approx(CombatMath.resolve_resistance(100.0, 100.0, 100.0), 50.0)
 	armor_ok = armor_ok and is_equal_approx(CombatMath.resolve_resistance(100.0, -100.0, 100.0), 150.0)
@@ -173,6 +174,9 @@ func _initialize() -> void:
 	semantic_ok = semantic_ok and seven != null and seven.target_type == "ground_area" and seven.snapshot_target_position
 	semantic_ok = semantic_ok and is_equal_approx(seven.travel_duration, 1.35)
 	semantic_ok = semantic_ok and seven.identity_status == &"adapted"
+	var seven_cutin := database.get_awakening_cutin_profile_for_skill(&"garen_seven_seas")
+	semantic_ok = semantic_ok and seven_cutin != null and seven_cutin.id == &"garen_seven_seas_awaken"
+	semantic_ok = semantic_ok and FileAccess.file_exists(seven_cutin.portrait_path) and FileAccess.file_exists(seven_cutin.audio_path)
 	var seven_impact_effects := database.get_skill_effects(&"garen_seven_seas", "on_impact")
 	semantic_ok = semantic_ok and seven_impact_effects.size() == 2
 	for effect: SkillEffectDefinition in seven_impact_effects:

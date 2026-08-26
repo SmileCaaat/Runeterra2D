@@ -23,6 +23,7 @@ extends Resource
 @export var asset_profiles: Array[AssetProfileDefinition] = []
 @export var particle_profiles: Array[ParticleProfileDefinition] = []
 @export var ai_profiles: Array[AIProfileDefinition] = []
+@export var awakening_cutin_profiles: Array[AwakeningCutInProfileDefinition] = []
 
 var _rule_index: Dictionary = {}
 var _unit_index: Dictionary = {}
@@ -39,6 +40,8 @@ var _hit_profile_index: Dictionary = {}
 var _asset_profile_index: Dictionary = {}
 var _particle_profile_index: Dictionary = {}
 var _ai_profile_index: Dictionary = {}
+var _awakening_cutin_profile_index: Dictionary = {}
+var _awakening_cutin_skill_index: Dictionary = {}
 
 
 func rebuild_indexes() -> void:
@@ -68,6 +71,10 @@ func rebuild_indexes() -> void:
 	_asset_profile_index = _index_by_id(asset_profiles)
 	_particle_profile_index = _index_by_id(particle_profiles)
 	_ai_profile_index = _index_by_id(ai_profiles)
+	_awakening_cutin_profile_index = _index_by_id(awakening_cutin_profiles)
+	_awakening_cutin_skill_index.clear()
+	for definition: AwakeningCutInProfileDefinition in awakening_cutin_profiles:
+		_awakening_cutin_skill_index[definition.skill_id] = definition
 
 
 func get_rule(rule_id: StringName, fallback: Variant = null) -> Variant:
@@ -210,6 +217,16 @@ func get_particle_profile(profile_id: StringName) -> ParticleProfileDefinition:
 func get_ai_profile(profile_id: StringName) -> AIProfileDefinition:
 	_ensure_indexes()
 	return _ai_profile_index.get(profile_id) as AIProfileDefinition
+
+
+func get_awakening_cutin_profile(profile_id: StringName) -> AwakeningCutInProfileDefinition:
+	_ensure_indexes()
+	return _awakening_cutin_profile_index.get(profile_id) as AwakeningCutInProfileDefinition
+
+
+func get_awakening_cutin_profile_for_skill(skill_id: StringName) -> AwakeningCutInProfileDefinition:
+	_ensure_indexes()
+	return _awakening_cutin_skill_index.get(skill_id) as AwakeningCutInProfileDefinition
 
 
 func _ensure_indexes() -> void:

@@ -46,6 +46,7 @@ Never edit `data/generated/combat_database.tres` by hand. Runtime timers, cooldo
 - `hero_subclasses.csv`: branch identity and its reusable AI archetype binding.
 - `ai_archetypes.csv`: reusable distance, pressure, defense, execute and AOE decision thresholds.
 - `ai_profiles.csv`: per-unit AI binding/overrides, arena bounds, optional legacy sequence and deterministic test seed.
+- `awakening_cutin_profiles.csv`: skill-bound awakening portrait, voice, faction, priority, timing, color and mask parameters for the global Cut-In presentation layer.
 
 ## ID and cell conventions
 
