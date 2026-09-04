@@ -54,8 +54,13 @@ shader_parameter/saturation = 0.72
 shader_parameter/contrast = 0.84
 shader_parameter/brightness = 0.9
 shader_parameter/environment_tint = Color(1, 1, 1, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/uv_offset = Vector2(0, 0)
+shader_parameter/uv_scale = Vector2(1, -1)
+shader_parameter/uv_offset = Vector2(0, 1)
+shader_parameter/use_trapezoid_projection = true
+shader_parameter/trapezoid_near_scale = 0.82
+shader_parameter/trapezoid_far_scale = 1.0
+shader_parameter/trapezoid_center_offset = 0.0
+shader_parameter/trapezoid_half_width = 16.0
 
 [sub_resource type="QuadMesh" id="QuadMesh_training_ground_top"]
 uv2_padding = 1.0
@@ -77,22 +82,6 @@ shader_parameter/environment_tint = Color(1, 1, 1, 1)
 material = SubResource("ShaderMaterial_training_ground_edge_wide")
 size = Vector2(32, 0.5)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_training_ground_edge_narrow"]
-render_priority = 0
-shader = ExtResource("31_stage_edge_tile")
-shader_parameter/albedo_texture = ExtResource("22_training_ground")
-shader_parameter/edge_origin = Vector2(0, 0.88)
-shader_parameter/edge_size = Vector2(1, 0.12)
-shader_parameter/tile_count = Vector2(2, 1)
-shader_parameter/saturation = 0.72
-shader_parameter/contrast = 0.84
-shader_parameter/brightness = 0.9
-shader_parameter/environment_tint = Color(1, 1, 1, 1)
-
-[sub_resource type="QuadMesh" id="QuadMesh_training_ground_edge_narrow"]
-material = SubResource("ShaderMaterial_training_ground_edge_narrow")
-size = Vector2(8, 0.5)
-
 [sub_resource type="BoxShape3D" id="BoxShape3D_08h5l"]
 size = Vector3(32, 0.5, 8)
 
@@ -106,6 +95,11 @@ shader_parameter/brightness = 0.88
 shader_parameter/environment_tint = Color(1, 1, 1, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
 shader_parameter/uv_offset = Vector2(0, 0)
+shader_parameter/use_trapezoid_projection = false
+shader_parameter/trapezoid_near_scale = 1.0
+shader_parameter/trapezoid_far_scale = 1.0
+shader_parameter/trapezoid_center_offset = 0.0
+shader_parameter/trapezoid_half_width = 1.0
 
 [sub_resource type="QuadMesh" id="QuadMesh_training_background_far"]
 material = SubResource("ShaderMaterial_training_background_far")
@@ -271,7 +265,7 @@ far = 100.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 0)
 
 [node name="GroundMesh" type="MeshInstance3D" parent="World/Ground" unique_id=902324901]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.25, 0)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0.25, 0)
 material_override = SubResource("ShaderMaterial_training_ground")
 cast_shadow = 0
 mesh = SubResource("QuadMesh_training_ground_top")
@@ -280,21 +274,6 @@ mesh = SubResource("QuadMesh_training_ground_top")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
 cast_shadow = 0
 mesh = SubResource("QuadMesh_training_ground_edge_wide")
-
-[node name="GroundEdgeBack" type="MeshInstance3D" parent="World/Ground" unique_id=1354981862]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, -4)
-cast_shadow = 0
-mesh = SubResource("QuadMesh_training_ground_edge_wide")
-
-[node name="GroundEdgeLeft" type="MeshInstance3D" parent="World/Ground" unique_id=1652290947]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -16, 0, 0)
-cast_shadow = 0
-mesh = SubResource("QuadMesh_training_ground_edge_narrow")
-
-[node name="GroundEdgeRight" type="MeshInstance3D" parent="World/Ground" unique_id=954044276]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 16, 0, 0)
-cast_shadow = 0
-mesh = SubResource("QuadMesh_training_ground_edge_narrow")
 
 [node name="GroundCollision" type="CollisionShape3D" parent="World/Ground" unique_id=1406786955]
 shape = SubResource("BoxShape3D_08h5l")
@@ -435,9 +414,6 @@ autoplay = "idle1"
 [node name="UnitReadability" type="Node3D" parent="Characters/Player" unique_id=1487209063]
 script = ExtResource("28_unit_readability")
 source_sprite_path = NodePath("../CharacterFrames")
-outline_scale = 1.045
-glow_scale = 1.085
-outline_alpha = 0.76
 
 [node name="EditorPlaceholder" type="MeshInstance3D" parent="Characters/Player" unique_id=498754722]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)

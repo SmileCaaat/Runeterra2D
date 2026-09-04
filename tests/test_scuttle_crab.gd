@@ -42,12 +42,9 @@ func _run() -> void:
 	crab.return_completed.connect(
 		func(_team: StringName) -> void: death_arrival_positions.append(crab.global_position)
 	)
-	var outline := crab.get_node("NeutralOutline") as AnimatedSprite3D
-	var glow := crab.get_node("UnitReadability/BacklightGlow") as AnimatedSprite3D
+	var readability := crab.get_node("UnitReadability")
 	_assert(not (crab.get_node("Frames") as AnimatedSprite3D).no_depth_test, "unit body respects ground depth")
-	_assert(not outline.no_depth_test and outline.render_priority == -1, "neutral outline contract")
-	_assert(outline.modulate.r > 0.9 and outline.modulate.g > 0.6, "yellow outline")
-	_assert(glow.modulate.r > 0.9 and glow.modulate.g > 0.6 and glow.modulate.a <= 0.10, "neutral backlight glow")
+	_assert(not readability.has_node("MaskOutline") and not readability.has_node("OutlineGlow"), "neutral unit has no faction outline")
 	crab.call("register_damage_source", Vector3(-3, 0, 0), &"friendly")
 	crab.call("receive_skill_damage", 999999.0, "TEST", false, Vector3(-3, 0, 0), &"physical", &"basic_melee")
 	_assert(not crab.is_in_group(&"combat_target"), "dead crab exits targeting immediately")

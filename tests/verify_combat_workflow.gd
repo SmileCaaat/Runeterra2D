@@ -78,7 +78,7 @@ func _process(delta: float) -> bool:
 		anchor_setup_ok, left_flip_ok, right_flip_ok,
 	])
 
-	var passed := library.get_animation_names().size() == 22 and total_frames == 289
+	var passed := library.get_animation_names().size() == 22 and total_frames == 278
 	passed = passed and observed.has("run") and observed.has("attack1")
 	passed = passed and observed.has("attack2") and observed.has("attack3")
 	# The static training dummy may still travel briefly under configured hit

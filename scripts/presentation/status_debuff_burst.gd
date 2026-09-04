@@ -4,10 +4,14 @@ extends Node3D
 const FRAMES := preload("res://assets/vfx/status/armor_shred/armor_shred_burst_frames.tres")
 const METAL_HATCH := preload("res://addons/Sound FX Starter Pack Vol. 1/Motions and Impacts/Impact Metal Hatch.wav")
 const OVERWHELM_ICON := preload("res://assets/icons/status/overwhelm.png")
+const LIBRARY_SPARKS := preload("res://addons/vfx_library/effects/sparks.tscn")
 
 var burst_frames: AnimatedSprite3D
 var icon: Sprite3D
 var audio: AudioStreamPlayer3D
+var sparks_viewport: SubViewport
+var sparks: CPUParticles2D
+var sparks_sprite: Sprite3D
 var active_tween: Tween
 
 
@@ -45,6 +49,33 @@ func _ready() -> void:
 	audio.stream = METAL_HATCH
 	audio.max_distance = 22.0
 	add_child(audio)
+	_build_library_sparks()
+
+
+func _build_library_sparks() -> void:
+	sparks_viewport = SubViewport.new()
+	sparks_viewport.name = "LibrarySparksViewport"
+	sparks_viewport.size = Vector2i(220, 220)
+	sparks_viewport.transparent_bg = true
+	sparks_viewport.disable_3d = true
+	sparks_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	add_child(sparks_viewport)
+	sparks = LIBRARY_SPARKS.instantiate() as CPUParticles2D
+	sparks.name = "LibraryArmorShredSparks"
+	sparks.position = Vector2(110.0, 110.0)
+	sparks.emitting = false
+	sparks_viewport.add_child(sparks)
+	sparks_sprite = Sprite3D.new()
+	sparks_sprite.name = "LibraryArmorShredSparksSprite"
+	sparks_sprite.texture = sparks_viewport.get_texture()
+	sparks_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sparks_sprite.pixel_size = 0.005
+	sparks_sprite.shaded = false
+	sparks_sprite.no_depth_test = true
+	sparks_sprite.render_priority = 48
+	sparks_sprite.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	sparks_sprite.visible = false
+	add_child(sparks_sprite)
 
 
 func play_burst() -> void:
@@ -57,6 +88,7 @@ func play_burst() -> void:
 	burst_frames.position = Vector3(0.0, 1.10, 0.06)
 	burst_frames.scale = Vector3.ONE
 	burst_frames.modulate = Color.WHITE
+	_play_library_sparks()
 	icon.visible = true
 	icon.position = Vector3(0.0, 1.10, 0.04)
 	icon.scale = Vector3.ONE * 0.396
@@ -74,4 +106,19 @@ func play_burst() -> void:
 	active_tween.chain().tween_callback(func() -> void:
 		burst_frames.visible = false
 		icon.visible = false
+		sparks_sprite.visible = false
+		sparks_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	)
+
+
+func _play_library_sparks() -> void:
+	var database := CombatData.database()
+	var scale := float(database.get_rule(&"presentation.library_armor_shred_sparks_scale", 1.0)) if database != null else 1.0
+	sparks.amount = int(database.get_rule(&"presentation.library_armor_shred_sparks_amount", 30)) if database != null else 30
+	sparks.lifetime = float(database.get_rule(&"presentation.library_armor_shred_sparks_lifetime", 0.5)) if database != null else 0.5
+	sparks.scale = Vector2.ONE * scale
+	sparks.restart()
+	sparks.emitting = true
+	sparks_sprite.position = Vector3(0.0, 1.10, 0.08)
+	sparks_sprite.visible = true
+	sparks_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS

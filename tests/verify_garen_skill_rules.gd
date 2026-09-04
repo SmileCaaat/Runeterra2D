@@ -53,6 +53,11 @@ func _initialize() -> void:
 	breaker_ok = breaker_ok and is_equal_approx(1000.0 - float(dummy.get("current_health")), q_expected_damage)
 	breaker_ok = breaker_ok and int(dummy.get("skill_damage_count")) == 1
 	breaker_ok = breaker_ok and float(dummy.get("silence_timer")) >= 1.5
+	player.set("current_attack_is_breaker", true)
+	breaker_ok = breaker_ok and is_equal_approx(float(player.call("get_current_attack_hit_range")), 2.5)
+	breaker_ok = breaker_ok and is_equal_approx(float(player.call("_breaker_lunge_range")), 2.4)
+	player.set("current_attack_is_breaker", false)
+	breaker_ok = breaker_ok and is_equal_approx(float(player.call("get_current_attack_hit_range")), 1.95)
 	var character_frames := player.get_node("CharacterFrames") as AnimatedSprite3D
 	var breaker_afterimages: Array = skills.get("breaker_afterimages")
 	var afterimage_ok := breaker_afterimages.size() == 3
@@ -359,24 +364,45 @@ func _initialize() -> void:
 	skills.set("current_skill", 3)
 	var moving_storm_ok := bool(skills.call("allows_movement_while_casting"))
 	moving_storm_ok = moving_storm_ok and bool(skills.call("has_super_armor"))
+	moving_storm_ok = moving_storm_ok and bool(skills.call("preserves_character_animation"))
+	moving_storm_ok = moving_storm_ok and is_equal_approx(float(skills.get("ocean_storm_radius")), 3.8)
 	moving_storm_ok = moving_storm_ok and not bool(player.call("try_interrupt"))
 	moving_storm_ok = moving_storm_ok and not bool(player.call("receive_knockback", Vector3.RIGHT, 4.0))
-	var super_armor_afterimage := skills.get_node("SuperArmorAfterimage") as Node3D
-	var super_armor_ghost := super_armor_afterimage.get_node("PreviousFrame") as Sprite3D
+	var super_armor_outline := skills.get_node("SuperArmorOutline") as Node3D
+	var super_armor_sprite := super_armor_outline.get_node("OutlineGlow") as Sprite3D
 	character_frames.animation = &"spell3"
 	character_frames.frame = mini(1, character_frames.sprite_frames.get_frame_count(&"spell3") - 1)
-	super_armor_afterimage.call("set_active", true)
-	super_armor_afterimage.call("_process", 0.0)
-	var super_armor_visual_ok := super_armor_ghost.visible
-	super_armor_visual_ok = super_armor_visual_ok and super_armor_ghost.texture == character_frames.sprite_frames.get_frame_texture(&"spell3", 0)
-	var super_armor_material := super_armor_ghost.material_override as ShaderMaterial
-	var super_armor_tint: Variant = super_armor_material.get_shader_parameter(&"ocean_tint") if super_armor_material != null else null
-	super_armor_visual_ok = super_armor_visual_ok and super_armor_tint is Color and (super_armor_tint as Color).r > 0.95 and (super_armor_tint as Color).g < 0.2
+	# Losing the current victim may switch the logical state to CHASE, but E
+	# retains the spell3 animation and repairs any external locomotion override.
+	dummy.set("is_dead", true)
+	player.set("target", dummy)
+	skills.call("set_target", dummy)
+	player.call("_refresh_target")
+	moving_storm_ok = moving_storm_ok and player.get("target") != dummy
+	moving_storm_ok = moving_storm_ok and character_frames.animation == &"spell3"
+	character_frames.play(&"run")
+	skills.set("ocean_storm_loop_active", true)
+	skills.call("_update_ocean_storm_animation_loop", 0.05)
+	moving_storm_ok = moving_storm_ok and character_frames.animation == &"spell3"
+	dummy.set("is_dead", false)
+	player.set("target", dummy)
+	skills.call("set_target", dummy)
+	super_armor_outline.call("set_active", true)
+	super_armor_outline.call("_process", 0.0)
+	var super_armor_visual_ok := super_armor_sprite.visible
+	super_armor_visual_ok = super_armor_visual_ok and super_armor_sprite.texture == character_frames.sprite_frames.get_frame_texture(&"spell3", character_frames.frame)
+	var super_armor_material := super_armor_sprite.material_override as ShaderMaterial
+	var super_armor_red: Variant = super_armor_material.get_shader_parameter(&"outline_red") if super_armor_material != null else null
+	var super_armor_gold: Variant = super_armor_material.get_shader_parameter(&"outline_gold") if super_armor_material != null else null
+	super_armor_visual_ok = super_armor_visual_ok and super_armor_red is Color and super_armor_gold is Color
+	super_armor_visual_ok = super_armor_visual_ok and (super_armor_red as Color).r > 0.95 and (super_armor_gold as Color).g > 0.65
 	skills.set("current_skill", 4)
+	skills.set("ocean_storm_loop_active", false)
 	moving_storm_ok = moving_storm_ok and not bool(skills.call("allows_movement_while_casting"))
 	moving_storm_ok = moving_storm_ok and not bool(skills.call("has_super_armor"))
-	super_armor_afterimage.call("set_active", false)
-	super_armor_visual_ok = super_armor_visual_ok and not super_armor_ghost.visible
+	moving_storm_ok = moving_storm_ok and not bool(skills.call("preserves_character_animation"))
+	super_armor_outline.call("set_active", false)
+	super_armor_visual_ok = super_armor_visual_ok and not super_armor_sprite.visible
 	skills.set("is_casting", false)
 	var layering_ok := ocean.scale.is_equal_approx(Vector3.ONE * 1.4)
 	layering_ok = layering_ok and ocean.render_priority > 0 and anchor.render_priority > 0

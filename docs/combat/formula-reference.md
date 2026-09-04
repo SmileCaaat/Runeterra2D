@@ -144,7 +144,7 @@ healing_per_second = Hmax × regen_ratio_per_5 / 5
 
 | 项目技能 | 当前公式 | 来源类型 | 说明 |
 | --- | --- | --- | --- |
-| 破舰 | `base_raw = AD × (crit_damage if base_attack_crit else 1)`；`bonus_raw(rank) = [30,60,90,120,150] + 0.50×AD`；`raw = base_raw + bonus_raw` | `adapted/reference` | Q 等级为技能等级（开局 1 级），普攻本体可暴击、Q 额外伤害不可暴击；35% 加速持续 `[1.4,1.95,2.5,3.05,3.6]s` |
+| 破舰 | `base_raw = AD × (crit_damage if base_attack_crit else 1)`；`bonus_raw(rank) = [30,60,90,120,150] + 0.50×AD`；`raw = base_raw + bonus_raw` | `adapted/reference` | Q 等级为技能等级（开局 1 级），普攻本体可暴击、Q 额外伤害不可暴击；35% 加速持续 `[1.4,1.95,2.5,3.05,3.6]s`；项目强化攻击命中确认范围为 `breaker_hit.size_x=2.5m` |
 | 黑帆 | 承伤 `incoming × 0.70`；控制时长 `duration × 0.70`；被动抗性乘数 `1.20` | `adapted/reference` | 机制参考 W，项目采用固定比例 |
 | 翻江倒海 | `per_spin(rank) = [4,7,10,13,16] + [0.40,0.43,0.46,0.49,0.52]×AD`；`spins = 7 + floor(bonus_AS / 0.25)` | `adapted/reference` | 每转物理伤害可暴击；最近目标乘 `1.25`；同一目标第 6 次及后续每第 6 次命中施加 25% 破甲 6 秒 |
 | 暴君审判 | `base(rank) + Hmax × missing_ratio × coefficient(rank)`；`base=[125,200,275]`，`coefficient=[0.25,0.30,0.35]`，真实伤害 | `adapted/reference` | 项目冷却 `[45,40,35]s`；施法 `0.435s`，400 来源距离换算为 `4.0m`；真伤绕过抗性，普通护盾在扣生命前吸收它。120 秒级超长冷却预留给 T 觉醒技能 |
@@ -170,7 +170,7 @@ Garen 技能入口：
 - hitstop、hitstun、poise damage、launch velocity 和取消窗口均来自命中/动画事件配表，不从 LoL 数值推导。
 - 迅捷蟹刷新、逃跑、归航和加速法阵表现参数来自 `combat_rules`；法阵持续时间与 30% 移速来自 `buffs` 和 `buff_modifiers`，移动形态速度来自 `unit_stats`。
 - 七海霸权视觉横向覆盖约为 `1166 px × 0.006 m/px × 1.5 = 10.494 m`；项目将圆形伤害直径取为 `10.4 m`，即 `skills.radius=5.2 m`，并同步 `ghostship_hit` 的 X/Z 尺寸与纵深容差。
-- 破舰的横版追击是项目动作化规则：强化普攻开始时，目标距离在普通攻击贴身范围外且不超过 `2.4m`，角色在 `0.12s` 内移动至目标前 `0.85m`；规则分别位于 `garen.breaker.lunge_duration` 与 `garen.breaker.lunge_standoff`。这不是 LoL 距离数值的直接换算。
+- 破舰的横版追击是项目动作化规则：强化普攻开始时，目标距离在普通攻击贴身范围外且不超过 `2.4m`，角色在 `0.12s` 内移动至目标前 `0.85m`；规则分别位于 `garen.breaker.lunge_duration` 与 `garen.breaker.lunge_standoff`。命中有效帧另读 `hit_profiles.breaker_hit.size_x=2.5m`，不改变普通攻击的 `basic_melee.size_x=1.95m`、索敌范围或冲刺起手条件。这不是 LoL 距离数值的直接换算。
 
 ## 尚未完成的公式语义
 

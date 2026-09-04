@@ -41,6 +41,9 @@ overwhelm_debuff_icon,status_icon,res://assets/icons/status/overwhelm.png,,,,0,1
 garen_perseverance_front,passive_vfx,res://assets/vfx/garen_perseverance/garen_perseverance_frames.tres,SkillController/PerseveranceFront,hip,,0,1,1,20,1.4105068,0.95627636,1,0,56,0.015,1,true,,passive,0,false,0.12230945,-0.09625608,0.08000004,0.3529412
 garen_perseverance_hip,passive_vfx,res://assets/vfx/garen_perseverance/garen_perseverance_frames.tres,SkillController/PerseveranceHip,slow1,,0,1,1,20,1.643449,1,1,0,0,0.015,2,true,,passive,0,false,0.07588625,0.45039487,0.120000005,0.27450982
 garen_perseverance_motes,particle_vfx,,SkillController/PerseveranceMotes,,,0,1,1,20,1,1,1,0,0,0.005,2,true,,passive,0,false,0.08,0.36,0.10,1
-super_armor_afterimage,hit_vfx,,SuperArmorAfterimage/PreviousFrame,,,0,1,1,20,1,1,1,0,0,0,4,false,,manual,0,true,0,0,0,0.62
+super_armor_outline_glow,hit_vfx,res://assets/shaders/super_armor_outline_glow.gdshader,SuperArmorOutline/OutlineGlow,,,0,1,1,20,1,1,1,0,0,0,12,true,,while_active,0,false,0,0,0,0.78
+vfx_library_combo_ring,particle_vfx,res://addons/vfx_library/effects/combo_ring.tscn,HitImpactVFXPool/ProceduralHitEffect/LibraryComboRing,,,0,1,1,20,1,1,1,0,0,0,39,true,,one_shot,0.5,false,0,0,0,1
+vfx_library_armor_shred_sparks,particle_vfx,res://addons/vfx_library/effects/sparks.tscn,ArmorShredBurst/LibraryArmorShredSparksSprite,,,0,1,1,20,1,1,1,0,0,0.005,48,true,,one_shot,0.5,false,0,1.1,0.08,1
+vfx_library_water_splash,particle_vfx,res://addons/vfx_library/effects/water_splash.tscn,HitImpactVFXPool/ProceduralHitEffect/LibraryWaterSplash,,,0,1,1,20,1,1,1,0,0,0,39,true,,one_shot,0.8,false,0,0,0,1
 training_dummy_hit_audio,audio,,,,res://assets/audio/combat/training_dummy_hit.wav,-1,0.94,1.06,40,1,1,1,0,0,0,0,false,,manual,0,false
 ghostship_audio,audio,,,,res://assets/audio/skills/garen/spell_Ghost ship.mp3,5,1,1,44,1,1,1,0,0,0,0,false,,animation,1.70,false

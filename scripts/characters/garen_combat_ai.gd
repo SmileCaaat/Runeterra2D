@@ -39,6 +39,7 @@ var garen_definition: UnitDefinition
 var fighter_ai: AIProfileDefinition
 var ai_archetype: Resource
 var attack_hit_range := 1.95
+var breaker_hit_range := 2.5
 var arena_min := Vector2(-14.5, -4.3)
 var arena_max := Vector2(14.5, 4.3)
 var external_move_speed_modifiers: Dictionary = {}
@@ -161,7 +162,7 @@ func _check_attack_hit(distance: float) -> void:
 	attack_hit_sent = true
 	if not _is_target_available(target):
 		return
-	if distance <= attack_hit_range:
+	if distance <= get_current_attack_hit_range():
 		if target.has_method("register_damage_source"):
 			target.call("register_damage_source", global_position, get_team())
 		if current_attack_is_breaker:
@@ -330,6 +331,16 @@ func _count_nearby_enemies(radius: float) -> int:
 
 
 func _set_state(next_state: CombatState) -> void:
+	# E is a moving channel and retains ownership of spell3 even when retargeting
+	# changes the logical AI state to CHASE or IDLE.
+	if skill_controller != null and bool(skill_controller.call("preserves_character_animation")):
+		state = next_state
+		match state:
+			CombatState.IDLE:
+				state_label.text = "AI · IDLE"
+			CombatState.CHASE:
+				state_label.text = "AI · CHASE"
+		return
 	var expected_animation := &"idle1"
 	if next_state == CombatState.CHASE:
 		expected_animation = skill_controller.call("get_run_animation") as StringName
@@ -488,6 +499,10 @@ func _breaker_lunge_range() -> float:
 	return breaker.cast_range if breaker != null else 2.4
 
 
+func get_current_attack_hit_range() -> float:
+	return breaker_hit_range if current_attack_is_breaker else attack_hit_range
+
+
 func _should_lunge_to_target() -> bool:
 	if not _is_target_available(target):
 		return false
@@ -544,6 +559,9 @@ func _apply_combat_data() -> void:
 	var hit_profile := combat_database.get_hit_profile(&"basic_melee")
 	if hit_profile != null:
 		attack_hit_range = hit_profile.size.x
+	var breaker_profile := combat_database.get_hit_profile(&"breaker_hit")
+	if breaker_profile != null:
+		breaker_hit_range = breaker_profile.size.x
 	var attack_profile := combat_database.get_asset_profile(&"garen_attack_audio")
 	if attack_profile != null:
 		var stream := load(attack_profile.audio_path) as AudioStream

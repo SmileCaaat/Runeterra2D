@@ -13,10 +13,12 @@ extends Area3D
 @export var intro_duration := 0.72
 @export var particle_intro_speed := 2.4
 @export var particle_active_speed := 0.65
+@export var loot_environment_horizontal_scale := 9.3
 @onready var shrine: MeshInstance3D = $TintedDisc
 @onready var intro: AnimatedSprite3D = $ActivationSequence
 @onready var intro_audio: AudioStreamPlayer3D = $ActivationAudio
 @onready var orbit_motes: GPUParticles3D = $GreenOrbitMotes
+@onready var loot_environment_overlay: Node3D = $LootEnvironmentOverlay
 @onready var collision: CollisionShape3D = $Collision
 var owner_team: StringName = &"friendly"
 var remaining := 10.0
@@ -43,6 +45,7 @@ func _ready() -> void:
 	intro.speed_scale = 0.72 / maxf(intro_duration, 0.01)
 	intro.play(&"activate")
 	intro_audio.play()
+	loot_environment_overlay.visible = false
 	orbit_motes.speed_scale = particle_intro_speed
 	orbit_motes.emitting = true
 	orbit_motes.restart()
@@ -74,6 +77,8 @@ func _apply_combat_data() -> void:
 	intro_duration = _rule_float(&"scuttle.speed_zone_intro_duration", intro_duration)
 	particle_intro_speed = _rule_float(&"scuttle.speed_zone_particle_intro_speed", particle_intro_speed)
 	particle_active_speed = _rule_float(&"scuttle.speed_zone_particle_active_speed", particle_active_speed)
+	loot_environment_horizontal_scale = _rule_float(&"scuttle.speed_zone_overlay_horizontal_scale", loot_environment_horizontal_scale)
+	loot_environment_overlay.scale = Vector3(loot_environment_horizontal_scale, 1.0, loot_environment_horizontal_scale)
 
 func _configure_particles() -> void:
 	var material := orbit_motes.process_material as ParticleProcessMaterial
@@ -106,6 +111,9 @@ func _activate_zone() -> void:
 		return
 	zone_active = true
 	intro.visible = false
+	loot_environment_overlay.visible = true
+	if loot_environment_overlay.has_method(&"restart_vfx"):
+		loot_environment_overlay.call(&"restart_vfx")
 	remaining = duration
 	fade_elapsed = 0.0
 	collision.set_deferred(&"disabled", false)

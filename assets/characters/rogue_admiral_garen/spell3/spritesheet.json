@@ -4,7 +4,7 @@
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 1732,
+        "w": 1746,
         "h": 2047
       },
       "duration": 53,
@@ -15,9 +15,9 @@
     },
     "frame_0002.png": {
       "frame": {
-        "x": 1732,
+        "x": 1746,
         "y": 0,
-        "w": 1732,
+        "w": 1746,
         "h": 2047
       },
       "duration": 52,
@@ -28,9 +28,9 @@
     },
     "frame_0003.png": {
       "frame": {
-        "x": 3464,
+        "x": 3492,
         "y": 0,
-        "w": 1732,
+        "w": 1746,
         "h": 2047
       },
       "duration": 53,
@@ -41,9 +41,9 @@
     },
     "frame_0004.png": {
       "frame": {
-        "x": 5196,
+        "x": 5238,
         "y": 0,
-        "w": 1732,
+        "w": 1746,
         "h": 2047
       },
       "duration": 53,
@@ -54,9 +54,9 @@
     },
     "frame_0005.png": {
       "frame": {
-        "x": 6928,
+        "x": 6984,
         "y": 0,
-        "w": 1732,
+        "w": 1746,
         "h": 2047
       },
       "duration": 52,
@@ -67,9 +67,9 @@
     },
     "frame_0006.png": {
       "frame": {
-        "x": 8660,
+        "x": 8730,
         "y": 0,
-        "w": 1732,
+        "w": 1746,
         "h": 2047
       },
       "duration": 53,
@@ -80,9 +80,9 @@
     },
     "frame_0007.png": {
       "frame": {
-        "x": 10392,
+        "x": 10476,
         "y": 0,
-        "w": 1732,
+        "w": 1746,
         "h": 2047
       },
       "duration": 52,
@@ -93,157 +93,14 @@
     },
     "frame_0008.png": {
       "frame": {
-        "x": 12124,
+        "x": 12222,
         "y": 0,
-        "w": 1732,
+        "w": 1746,
         "h": 2047
       },
       "duration": 53,
       "timeMs": 395,
-      "sourceFrameIndex": 8,
-      "rotated": false,
-      "trimmed": false
-    },
-    "frame_0009.png": {
-      "frame": {
-        "x": 0,
-        "y": 2047,
-        "w": 1732,
-        "h": 2047
-      },
-      "duration": 53,
-      "timeMs": 447,
-      "sourceFrameIndex": 9,
-      "rotated": false,
-      "trimmed": false
-    },
-    "frame_0010.png": {
-      "frame": {
-        "x": 1732,
-        "y": 2047,
-        "w": 1732,
-        "h": 2047
-      },
-      "duration": 52,
-      "timeMs": 500,
-      "sourceFrameIndex": 10,
-      "rotated": false,
-      "trimmed": false
-    },
-    "frame_0011.png": {
-      "frame": {
-        "x": 3464,
-        "y": 2047,
-        "w": 1732,
-        "h": 2047
-      },
-      "duration": 53,
-      "timeMs": 553,
-      "sourceFrameIndex": 11,
-      "rotated": false,
-      "trimmed": false
-    },
-    "frame_0012.png": {
-      "frame": {
-        "x": 5196,
-        "y": 2047,
-        "w": 1732,
-        "h": 2047
-      },
-      "duration": 53,
-      "timeMs": 605,
-      "sourceFrameIndex": 12,
-      "rotated": false,
-      "trimmed": false
-    },
-    "frame_0013.png": {
-      "frame": {
-        "x": 6928,
-        "y": 2047,
-        "w": 1732,
-        "h": 2047
-      },
-      "duration": 52,
-      "timeMs": 658,
-      "sourceFrameIndex": 13,
-      "rotated": false,
-      "trimmed": false
-    },
-    "frame_0014.png": {
-      "frame": {
-        "x": 8660,
-        "y": 2047,
-        "w": 1732,
-        "h": 2047
-      },
-      "duration": 53,
-      "timeMs": 711,
-      "sourceFrameIndex": 14,
-      "rotated": false,
-      "trimmed": false
-    },
-    "frame_0015.png": {
-      "frame": {
-        "x": 10392,
-        "y": 2047,
-        "w": 1732,
-        "h": 2047
-      },
-      "duration": 52,
-      "timeMs": 763,
-      "sourceFrameIndex": 15,
-      "rotated": false,
-      "trimmed": false
-    },
-    "frame_0016.png": {
-      "frame": {
-        "x": 12124,
-        "y": 2047,
-        "w": 1732,
-        "h": 2047
-      },
-      "duration": 53,
-      "timeMs": 816,
-      "sourceFrameIndex": 16,
-      "rotated": false,
-      "trimmed": false
-    },
-    "frame_0017.png": {
-      "frame": {
-        "x": 0,
-        "y": 4094,
-        "w": 1732,
-        "h": 2047
-      },
-      "duration": 53,
-      "timeMs": 868,
-      "sourceFrameIndex": 17,
-      "rotated": false,
-      "trimmed": false
-    },
-    "frame_0018.png": {
-      "frame": {
-        "x": 1732,
-        "y": 4094,
-        "w": 1732,
-        "h": 2047
-      },
-      "duration": 52,
-      "timeMs": 921,
-      "sourceFrameIndex": 18,
-      "rotated": false,
-      "trimmed": false
-    },
-    "frame_0019.png": {
-      "frame": {
-        "x": 3464,
-        "y": 4094,
-        "w": 1732,
-        "h": 2047
-      },
-      "duration": 53,
-      "timeMs": 974,
-      "sourceFrameIndex": 19,
+      "sourceFrameIndex": 7,
       "rotated": false,
       "trimmed": false
     }
@@ -254,16 +111,21 @@
     "image": "spritesheet.png",
     "format": "RGBA8888",
     "size": {
-      "w": 13856,
-      "h": 6141
+      "w": 13968,
+      "h": 2047
     },
     "canvas": {
-      "width": 1732,
+      "width": 1746,
       "height": 2047,
-      "originPixelX": 621,
+      "originPixelX": 635,
       "originPixelY": 1885,
       "padding": 8
-    }
+    },
+    "baked": true,
+    "profileId": "rogue_admiral_garen",
+    "profileLabel": "Rogue Admiral Garen",
+    "animationId": "spell3",
+    "frameRate": 10
   },
   "audio": {
     "schemaVersion": 1,

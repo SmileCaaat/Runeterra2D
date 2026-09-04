@@ -1,5 +1,7 @@
 extends Node3D
 
+const LOOT_ENVIRONMENT_VFX_SCENE := preload("res://assets/Starter_Vfx/scenes/loot/vfx_loot_environment_02.tscn")
+
 @export_enum("training", "pvp", "pve", "disabled") var scene_mode := "training"
 @export var enabled_modes := PackedStringArray(["training", "pvp"])
 @export var first_spawn_delay := 25.0
@@ -7,6 +9,9 @@ extends Node3D
 @export var path_local_points := PackedVector3Array([Vector3(-4.5, 0, 0), Vector3(0, 0, -1.8), Vector3(4.5, 0, 0), Vector3(0, 0, 1.8)])
 @export var crab_scene: PackedScene
 @export var speed_zone_scene: PackedScene
+@export var speed_zone_overlay_horizontal_scale := 9.3
+@export var speed_zone_vfx_warmup_seconds := 0.35
+@export var speed_zone_vfx_warmup_depth := -2.0
 
 var spawn_timer := 25.0
 var active_crab: CharacterBody3D
@@ -19,7 +24,26 @@ func _ready() -> void:
 	if combat_database != null:
 		first_spawn_delay = float(combat_database.get_rule(&"scuttle.first_spawn_delay", first_spawn_delay))
 		respawn_delay = float(combat_database.get_rule(&"scuttle.respawn_delay", respawn_delay))
+		speed_zone_overlay_horizontal_scale = float(combat_database.get_rule(&"scuttle.speed_zone_overlay_horizontal_scale", speed_zone_overlay_horizontal_scale))
+		speed_zone_vfx_warmup_seconds = float(combat_database.get_rule(&"scuttle.speed_zone_vfx_warmup_seconds", speed_zone_vfx_warmup_seconds))
+		speed_zone_vfx_warmup_depth = float(combat_database.get_rule(&"scuttle.speed_zone_vfx_warmup_depth", speed_zone_vfx_warmup_depth))
 	spawn_timer = first_spawn_delay
+	call_deferred(&"_warm_up_speed_zone_vfx")
+
+
+func _warm_up_speed_zone_vfx() -> void:
+	# The zone is created only after the first Scuttle death. Render this hidden,
+	# ground-occluded instance at stage start so its textures and GPUParticle3D
+	# materials are initialized before the combat event needs them.
+	var warmup := LOOT_ENVIRONMENT_VFX_SCENE.instantiate() as Node3D
+	if warmup == null:
+		return
+	add_child(warmup)
+	warmup.position = Vector3(0.0, speed_zone_vfx_warmup_depth, 0.0)
+	warmup.scale = Vector3(speed_zone_overlay_horizontal_scale, 1.0, speed_zone_overlay_horizontal_scale)
+	await get_tree().create_timer(speed_zone_vfx_warmup_seconds).timeout
+	if is_instance_valid(warmup):
+		warmup.queue_free()
 
 func _process(delta: float) -> void:
 	if not enabled_modes.has(scene_mode): return

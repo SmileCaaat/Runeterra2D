@@ -16,7 +16,7 @@ func _initialize() -> void:
 	var generated_ok := generated_database != null and generated_database.source_digest == database.source_digest
 	var editor_plugin_ok := load("res://addons/combat_data/editor_plugin.gd") != null
 
-	var counts_ok := database.rules.size() == 106 and database.stats.size() == 62
+	var counts_ok := database.rules.size() == 122 and database.stats.size() == 62
 	counts_ok = counts_ok and database.hero_classes.size() == 7 and database.hero_subclasses.size() == 13 and database.ai_archetypes.size() == 13
 	counts_ok = counts_ok and database.units.size() == 3 and database.unit_stats.size() == 117
 	counts_ok = counts_ok and database.skills.size() == 6
@@ -24,7 +24,7 @@ func _initialize() -> void:
 	counts_ok = counts_ok and database.skill_effect_ranks.size() == 34 and database.unit_mode_modifiers.is_empty() and database.buffs.size() == 7
 	counts_ok = counts_ok and database.buff_modifiers.size() == 6 and database.ai_profiles.size() == 4
 	counts_ok = counts_ok and database.hit_profiles.size() == 5 and database.animation_events.size() == 17
-	counts_ok = counts_ok and database.asset_profiles.size() == 45 and database.particle_profiles.size() == 9
+	counts_ok = counts_ok and database.asset_profiles.size() == 48 and database.particle_profiles.size() == 9
 	counts_ok = counts_ok and database.awakening_cutin_profiles.size() == 1
 
 	var armor_ok := is_equal_approx(CombatMath.resolve_resistance(100.0, 100.0, 100.0), 50.0)
@@ -151,9 +151,14 @@ func _initialize() -> void:
 	rank_schema_ok = rank_schema_ok and perseverance_motes != null and perseverance_motes.amount == 14 and is_equal_approx(perseverance_motes.lifetime, 2.6)
 	rank_schema_ok = rank_schema_ok and is_equal_approx(float(database.get_rule(&"presentation.perseverance_vfx_frame_rate", 0.0)), 6.0)
 	rank_schema_ok = rank_schema_ok and database.get_unit_mode_modifiers(&"garen", &"training").is_empty()
-	var super_armor_profile := database.get_asset_profile(&"super_armor_afterimage")
-	rank_schema_ok = rank_schema_ok and super_armor_profile != null and is_equal_approx(super_armor_profile.opacity, 0.62)
-	rank_schema_ok = rank_schema_ok and String(database.get_rule(&"presentation.super_armor_afterimage_color", "")) == "ff2424ff"
+	var super_armor_profile := database.get_asset_profile(&"super_armor_outline_glow")
+	rank_schema_ok = rank_schema_ok and super_armor_profile != null and is_equal_approx(super_armor_profile.opacity, 0.78)
+	rank_schema_ok = rank_schema_ok and String(database.get_rule(&"presentation.super_armor_outline_red", "")) == "ff3020ff"
+	rank_schema_ok = rank_schema_ok and String(database.get_rule(&"presentation.super_armor_outline_gold", "")) == "ffd45cff"
+	rank_schema_ok = rank_schema_ok and is_equal_approx(float(database.get_rule(&"presentation.outline_alpha_threshold", 0.0)), 0.35)
+	rank_schema_ok = rank_schema_ok and database.get_asset_profile(&"vfx_library_combo_ring") != null
+	rank_schema_ok = rank_schema_ok and database.get_asset_profile(&"vfx_library_armor_shred_sparks") != null
+	rank_schema_ok = rank_schema_ok and database.get_asset_profile(&"vfx_library_water_splash") != null
 	var damage_digits := database.get_asset_profile(&"damage_numbers_brush_colored")
 	var damage_miss := database.get_asset_profile(&"damage_numbers_brush_primary")
 	rank_schema_ok = rank_schema_ok and damage_digits != null and damage_miss != null
@@ -165,6 +170,9 @@ func _initialize() -> void:
 	var semantic_ok := garen != null and garen.skill_ids.size() == 6
 	semantic_ok = semantic_ok and ocean != null and ocean.target_type == "self_area"
 	semantic_ok = semantic_ok and ocean.movement_policy == "allowed" and ocean.icon_profile_id == &"garen_judgment_icon"
+	semantic_ok = semantic_ok and is_equal_approx(ocean.radius, 3.8)
+	semantic_ok = semantic_ok and is_equal_approx(database.get_skill_rank(&"garen_ocean_storm", 1).radius, 3.8)
+	semantic_ok = semantic_ok and is_equal_approx(database.get_skill_rank(&"garen_ocean_storm", 5).radius, 3.8)
 	semantic_ok = semantic_ok and is_equal_approx(database.get_skill_rank(&"garen_ocean_storm", 1).cooldown, 9.0)
 	semantic_ok = semantic_ok and is_equal_approx(database.get_skill_rank(&"garen_ocean_storm", 5).cooldown, 6.0)
 	var ocean_rank_five := database.get_skill_effect_rank(&"ocean_damage", 5)
@@ -202,11 +210,13 @@ func _initialize() -> void:
 	lifecycle_ok = lifecycle_ok and is_equal_approx(database.get_skill_effect_rank(&"black_sail_shield", 1).base_value, 65.0)
 
 	var basic_hit := database.get_hit_profile(&"basic_melee")
+	var breaker_hit := database.get_hit_profile(&"breaker_hit")
 	var attack_event := database.get_animation_event(&"garen", &"attack1", "hit")
-	var action_ok := basic_hit != null and attack_event != null
+	var action_ok := basic_hit != null and breaker_hit != null and attack_event != null
 	action_ok = action_ok and attack_event.payload_id == basic_hit.id
 	action_ok = action_ok and is_equal_approx(basic_hit.hitstun, 0.24)
 	action_ok = action_ok and basic_hit.depth_tolerance > 0.0 and basic_hit.knockback_speed > 0.0
+	action_ok = action_ok and is_equal_approx(breaker_hit.size.x, 2.5)
 	var q_skill := database.get_skill(&"garen_breaker")
 	var q_audio_layers := database.get_animation_events(&"garen", &"spell1", "audio")
 	var audio_ok := q_skill != null and q_skill.audio_profile_id == &"garen_q_cast"

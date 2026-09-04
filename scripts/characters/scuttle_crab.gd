@@ -25,7 +25,6 @@ signal defeated(killer_team: StringName)
 
 @onready var collision_shape: CollisionShape3D = $Collision
 @onready var frames: AnimatedSprite3D = $Frames
-@onready var outline: AnimatedSprite3D = $NeutralOutline
 @onready var shadow: Sprite3D = $GroundShadow
 @onready var label: Label3D = $StateLabel
 @onready var hit_particles: CPUParticles3D = $HitSparkParticles
@@ -73,7 +72,6 @@ func _ready() -> void:
 	add_to_group(&"neutral_actor")
 	add_to_group(&"monster_actor")
 	add_to_group(&"combat_target")
-	_configure_outline()
 	frames.play(&"spawn")
 	_update_label()
 
@@ -86,7 +84,7 @@ func configure_route(points: PackedVector3Array, arena_center: Vector3) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_armor_shred(delta)
-	_sync_outline()
+	_sync_frame_material()
 	if dissolving:
 		velocity = Vector3.ZERO
 		return
@@ -283,7 +281,6 @@ func _start_dissolve() -> void:
 			func(value: float) -> void: material.set_shader_parameter(&"tint", Color(1.0, 1.0, 1.0, value)),
 			1.0, 0.0, death_fade_duration
 		)
-		tween.parallel().tween_property(outline, "modulate:a", 0.0, death_fade_duration)
 		tween.parallel().tween_property(shadow, "modulate:a", 0.0, death_fade_duration)
 		tween.finished.connect(_finish_death)
 	else:
@@ -320,7 +317,6 @@ func _face_direction(direction: Vector3) -> void:
 	if absf(direction.x) < 0.02: return
 	var flip := direction.x < 0.0 if source_faces_right else direction.x > 0.0
 	frames.flip_h = flip
-	outline.flip_h = flip
 
 func _nearest_path_point() -> Vector3:
 	if path_points.is_empty(): return center_position
@@ -397,17 +393,7 @@ func _apply_combat_data() -> void:
 func _rule_float(rule_id: StringName, fallback: float) -> float:
 	return float(combat_database.get_rule(rule_id, fallback)) if combat_database != null else fallback
 
-func _configure_outline() -> void:
-	outline.sprite_frames = frames.sprite_frames
-	outline.pixel_size = frames.pixel_size * 1.075
-	outline.offset = frames.offset + Vector2(0.0, -10.0)
-	outline.modulate = Color(1.0, 0.77, 0.05, 0.96)
-
-func _sync_outline() -> void:
-	outline.animation = frames.animation
-	outline.frame = frames.frame
-	outline.frame_progress = frames.frame_progress
-	outline.visible = frames.visible
+func _sync_frame_material() -> void:
 	var material := frames.material_override as ShaderMaterial
 	if material != null and frames.sprite_frames != null:
 		var frame_texture := frames.sprite_frames.get_frame_texture(frames.animation, frames.frame)

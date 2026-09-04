@@ -3,6 +3,8 @@ extends Node2D
 
 const HIT_TEXTURES := preload("res://scripts/vfx/procedural_hit_textures.gd")
 const SHOCKWAVE_SCRIPT := preload("res://scripts/vfx/procedural_shockwave_2d.gd")
+const COMBO_RING_SCENE := preload("res://addons/vfx_library/effects/combo_ring.tscn")
+const WATER_SPLASH_SCENE := preload("res://addons/vfx_library/effects/water_splash.tscn")
 
 var profile: Variant
 var flash: Sprite2D
@@ -11,6 +13,8 @@ var burst_particles: GPUParticles2D
 var spark_particles: GPUParticles2D
 var dust_particles: GPUParticles2D
 var debris_particles: GPUParticles2D
+var combo_ring: CPUParticles2D
+var water_splash: CPUParticles2D
 var flash_elapsed := 0.0
 var flash_active := false
 
@@ -29,6 +33,16 @@ func _ready() -> void:
 	spark_particles = _make_emitter(HIT_TEXTURES.spark_strip(), additive)
 	dust_particles = _make_emitter(HIT_TEXTURES.soft_circle(), additive)
 	debris_particles = _make_emitter(HIT_TEXTURES.debris_square(), additive)
+	combo_ring = COMBO_RING_SCENE.instantiate() as CPUParticles2D
+	combo_ring.name = "LibraryComboRing"
+	combo_ring.position = Vector2.ZERO
+	combo_ring.emitting = false
+	add_child(combo_ring)
+	water_splash = WATER_SPLASH_SCENE.instantiate() as CPUParticles2D
+	water_splash.name = "LibraryWaterSplash"
+	water_splash.position = Vector2.ZERO
+	water_splash.emitting = false
+	add_child(water_splash)
 
 	shockwave = SHOCKWAVE_SCRIPT.new() as Node2D
 	shockwave.material = additive
@@ -62,6 +76,7 @@ func play(effect_profile: Variant, attack_direction: Vector2) -> void:
 	flash_elapsed = 0.0
 	flash_active = true
 	shockwave.play(profile)
+	_play_library_overlay(StringName(profile.id))
 
 
 func _process(delta: float) -> void:
@@ -87,6 +102,26 @@ func _make_emitter(texture: Texture2D, canvas_material: CanvasItemMaterial) -> G
 	emitter.emitting = false
 	add_child(emitter)
 	return emitter
+
+
+func _play_library_overlay(profile_id: StringName) -> void:
+	if profile_id in [&"slash", &"heavy", &"critical"]:
+		combo_ring.amount = int(_library_rule(&"presentation.library_combo_ring_amount", combo_ring.amount))
+		combo_ring.lifetime = _library_rule(&"presentation.library_combo_ring_lifetime", combo_ring.lifetime)
+		combo_ring.scale = Vector2.ONE * _library_rule(&"presentation.library_combo_ring_scale", 1.0)
+		combo_ring.restart()
+		combo_ring.emitting = true
+	if profile_id in [&"true_damage", &"magic"]:
+		water_splash.amount = int(_library_rule(&"presentation.library_water_splash_amount", water_splash.amount))
+		water_splash.lifetime = _library_rule(&"presentation.library_water_splash_lifetime", water_splash.lifetime)
+		water_splash.scale = Vector2.ONE * _library_rule(&"presentation.library_water_splash_scale", 1.0)
+		water_splash.restart()
+		water_splash.emitting = true
+
+
+func _library_rule(rule_id: StringName, fallback: float) -> float:
+	var database := CombatData.database()
+	return float(database.get_rule(rule_id, fallback)) if database != null else fallback
 
 
 func _configure_emitter(

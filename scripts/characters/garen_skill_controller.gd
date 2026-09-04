@@ -2,6 +2,7 @@ extends Node3D
 
 const BREAKER_AFTERIMAGE_SHADER := preload("res://assets/vfx/garen_skills/garen_breaker_afterimage.gdshader")
 const SUPER_ARMOR_AFTERIMAGE := preload("res://scripts/presentation/super_armor_afterimage.gd")
+const SUPER_ARMOR_OUTLINE := preload("res://scripts/presentation/super_armor_outline.gd")
 const IMPACT_SHOCKWAVE_SHADER := preload("res://assets/vfx/garen_skills/garen_impact_shockwave.gdshader")
 const WATER_VAPOR_BURST_SHADER := preload("res://assets/vfx/garen_skills/garen_water_vapor_burst.gdshader")
 const SKILL_BREAKER := 1
@@ -44,7 +45,7 @@ const SKILL_SEVEN_SEAS := 5
 @export_group("Skill 3 - 翻江倒海")
 @export var ocean_storm_duration := 3.0
 @export var ocean_storm_tick := 0.5
-@export var ocean_storm_radius := 2.6
+@export var ocean_storm_radius := 3.8
 @export var ocean_storm_damage := 48.0
 @export var ocean_storm_damage_coefficient := 0.40
 @export var ocean_storm_cooldown := 8.0
@@ -114,7 +115,7 @@ var breaker_afterimages: Array[Sprite3D] = []
 var breaker_afterimage_ages: Array[float] = []
 var breaker_afterimage_cursor := 0
 var breaker_afterimage_capture_count := 0
-var super_armor_afterimage: Node3D
+var super_armor_outline: Node3D
 var impact_shockwaves: Array[MeshInstance3D] = []
 var impact_shockwave_ages: Array[float] = []
 var impact_shockwave_lifetimes: Array[float] = []
@@ -193,7 +194,7 @@ var audio_cue_play_counts: Dictionary[StringName, int] = {}
 func _ready() -> void:
 	_apply_combat_data()
 	_build_breaker_afterimage_pool()
-	_build_super_armor_afterimage()
+	_build_super_armor_outline()
 	_build_impact_shockwave_pool()
 	_build_impact_debris()
 	_build_ghostship_impact_bursts()
@@ -229,8 +230,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_update_breaker_afterimages(delta)
 	_update_ocean_storm_animation_loop(delta)
-	if super_armor_afterimage != null:
-		super_armor_afterimage.set_active(has_super_armor())
+	if super_armor_outline != null:
+		super_armor_outline.set_active(has_super_armor())
 	_update_impact_shockwaves(delta)
 	_update_impact_camera_shake(delta)
 	_update_anchor_tail_dissolve(delta)
@@ -339,6 +340,12 @@ func has_super_armor() -> bool:
 	return is_casting and current_skill == SKILL_OCEAN_STORM
 
 
+func preserves_character_animation() -> bool:
+	# E owns the character animation for its full channel. Movement and retargeting
+	# remain available, but AI locomotion states must not replace spell3 with run.
+	return is_casting and current_skill == SKILL_OCEAN_STORM
+
+
 func get_normal_shield() -> float:
 	return normal_shield
 
@@ -426,16 +433,30 @@ func _build_breaker_afterimage_pool() -> void:
 		breaker_afterimage_ages.append(breaker_afterimage_lifetime)
 
 
-func _build_super_armor_afterimage() -> void:
-	super_armor_afterimage = SUPER_ARMOR_AFTERIMAGE.new()
-	super_armor_afterimage.name = "SuperArmorAfterimage"
-	add_child(super_armor_afterimage)
-	var profile := combat_database.get_asset_profile(&"super_armor_afterimage") if combat_database != null else null
-	var color := Color.from_string(
-		String(combat_database.get_rule(&"presentation.super_armor_afterimage_color", "ff2424ff")) if combat_database != null else "ff2424ff",
-		Color(1.0, 0.12, 0.10, 1.0)
+func _build_super_armor_outline() -> void:
+	super_armor_outline = SUPER_ARMOR_OUTLINE.new()
+	super_armor_outline.name = "SuperArmorOutline"
+	add_child(super_armor_outline)
+	var profile := combat_database.get_asset_profile(&"super_armor_outline_glow") if combat_database != null else null
+	var red := Color.from_string(
+		String(combat_database.get_rule(&"presentation.super_armor_outline_red", "ff3020ff")) if combat_database != null else "ff3020ff",
+		Color(1.0, 0.19, 0.13, 1.0)
 	)
-	super_armor_afterimage.configure(character_frames, profile, color)
+	var gold := Color.from_string(
+		String(combat_database.get_rule(&"presentation.super_armor_outline_gold", "ffd45cff")) if combat_database != null else "ffd45cff",
+		Color(1.0, 0.83, 0.36, 1.0)
+	)
+	super_armor_outline.configure(
+		character_frames,
+		profile,
+		red,
+		gold,
+		_rule_float(&"presentation.super_armor_outline_width", 2.5),
+		_rule_float(&"presentation.super_armor_outline_glow", 1.4),
+		-1.0,
+		Vector2.ZERO,
+		_rule_float(&"presentation.outline_alpha_threshold", 0.35)
+	)
 
 
 func _capture_breaker_afterimage() -> void:
@@ -1272,6 +1293,9 @@ func _update_ocean_storm_animation_loop(delta: float) -> void:
 	var available_frames := character_frames.sprite_frames.get_frame_count(animation)
 	if available_frames <= 0:
 		return
+	if character_frames.animation != animation:
+		character_frames.play(animation)
+		character_frames.pause()
 	ocean_storm_loop_elapsed += delta
 	var frame_count := mini(ocean_storm_loop_frame_count, available_frames)
 	var frame_rate := maxf(character_frames.sprite_frames.get_animation_speed(animation), 0.01)

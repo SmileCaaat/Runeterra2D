@@ -19,13 +19,11 @@ const ARMOR_SHRED_BURST := preload("res://scripts/presentation/status_debuff_bur
 @export var return_home_tolerance := 0.08
 @export var face_attacker_duration := 3.0
 @export var source_faces_left := false
-@export var team_outline_vertical_offset_px := -52.0
 @export_range(0.0, 1.0, 0.01) var critical_chance := 0.25
 @export var critical_multiplier := 1.75
 
 @onready var collision_shape: CollisionShape3D = $EnemyCollision
 @onready var character_frames: AnimatedSprite3D = $EnemyFrames
-@onready var team_outline: AnimatedSprite3D = $TeamGlowOutline
 @onready var editor_placeholder: MeshInstance3D = $EnemyEditorPlaceholder
 @onready var ground_shadow: Sprite3D = $GroundShadow
 @onready var state_label: Label3D = $DummyStateLabel
@@ -300,7 +298,6 @@ func _die() -> void:
 	remove_from_group(&"combat_target")
 	state_label.visible = false
 	ground_shadow.visible = false
-	team_outline.visible = false
 	character_frames.modulate = Color.WHITE
 	character_frames.play(&"death")
 	_update_label("DEAD · %.1fs" % death_timer)
@@ -318,7 +315,6 @@ func _respawn() -> void:
 	_configure_team_groups()
 	state_label.visible = true
 	ground_shadow.visible = true
-	team_outline.visible = true
 	_reset_training_session(false)
 	respawn_count += 1
 	character_frames.modulate = Color.WHITE
@@ -371,21 +367,11 @@ func _configure_team_groups() -> void:
 		add_to_group(&"enemy_actor")
 		remove_from_group(&"friendly_actor")
 		state_label.modulate = Color(1.0, 0.56, 0.56, 1.0)
-	_update_team_outline_color()
 
 
 func _configure_visual_feedback() -> void:
-	team_outline.sprite_frames = character_frames.sprite_frames
-	team_outline.offset = character_frames.offset + Vector2(0.0, team_outline_vertical_offset_px)
-	team_outline.pixel_size = character_frames.pixel_size * 1.07
-	team_outline.frame = character_frames.frame
-	_update_team_outline_color()
-
-
-func _update_team_outline_color() -> void:
-	if not is_node_ready():
-		return
-	team_outline.modulate = Color(0.03, 0.68, 1.0, 0.9) if team == "friendly" else Color(1.0, 0.03, 0.015, 0.9)
+	# Team outline is supplied by UnitReadability's shared Outline Glow shader.
+	pass
 
 
 func _face_attacker(attacker_position: Vector3) -> void:
@@ -401,10 +387,8 @@ func _apply_facing() -> void:
 	var attacker_is_right := horizontal_offset > 0.0
 	var flip := attacker_is_right if source_faces_left else not attacker_is_right
 	character_frames.flip_h = flip
-	team_outline.flip_h = flip
 	var anchored_x := -unflipped_offset.x if flip else unflipped_offset.x
 	character_frames.offset.x = anchored_x
-	team_outline.offset.x = anchored_x
 
 
 func _start_hit_reaction() -> void:
@@ -415,10 +399,6 @@ func _start_hit_reaction() -> void:
 
 
 func _update_visual_feedback(delta: float) -> void:
-	team_outline.animation = character_frames.animation
-	team_outline.frame = character_frames.frame
-	team_outline.frame_progress = character_frames.frame_progress
-	team_outline.visible = character_frames.visible and not is_dead
 	if facing_timer > 0.0:
 		facing_timer = maxf(0.0, facing_timer - delta)
 		_apply_facing()
@@ -431,7 +411,6 @@ func _update_visual_feedback(delta: float) -> void:
 		reaction_scale = Vector2.ONE
 		reaction_velocity = Vector2.ZERO
 	character_frames.scale = Vector3(reaction_scale.x, reaction_scale.y, 1.0)
-	team_outline.scale = Vector3(reaction_scale.x, reaction_scale.y, 1.0)
 
 	if reaction_flash_timer > 0.0:
 		reaction_flash_timer = maxf(0.0, reaction_flash_timer - delta)

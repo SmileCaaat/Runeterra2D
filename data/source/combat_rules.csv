@@ -70,11 +70,27 @@ scuttle.speed_zone_particle_ring_inner_radius,monster_presentation,float,1.55,�
 scuttle.speed_zone_particle_orbit_speed,monster_presentation,float,0.32,加速法阵绿色漂浮粒子绕中心旋转速度
 scuttle.speed_zone_particle_intro_speed,monster_presentation,float,2.4,法阵启动序列期间的粒子播放倍率
 scuttle.speed_zone_particle_active_speed,monster_presentation,float,0.65,法阵开启后的粒子播放倍率
+scuttle.speed_zone_overlay_horizontal_scale,monster_presentation,float,9.3,迅捷蟹加速法阵叠加环境特效的水平缩放比例
+scuttle.speed_zone_vfx_warmup_seconds,monster_presentation,float,0.35,迅捷蟹加速法阵环境特效的启动预热时长
+scuttle.speed_zone_vfx_warmup_depth,monster_presentation,float,-2.0,迅捷蟹加速法阵环境特效预热时的地面下隐藏深度
 presentation.breaker_afterimage_count,presentation,int,3,破舰残影池大小
 presentation.breaker_afterimage_lifetime,presentation,float,0.28,破舰单帧残影寿命
 presentation.breaker_afterimage_alpha,presentation,float,0.36,破舰残影初始透明度
 presentation.breaker_afterimage_color,presentation,enum,29b8ffff,破舰残影海洋蓝颜色
-presentation.super_armor_afterimage_color,presentation,enum,ff2424ff,霸体上一帧残影高明度鲜红色
+presentation.super_armor_outline_red,presentation,enum,ff3020ff,霸体轮廓光黄红黄渐变中心鲜红色
+presentation.super_armor_outline_gold,presentation,enum,ffd45cff,霸体轮廓光黄红黄渐变两端金色
+presentation.super_armor_outline_width,presentation,float,2.5,霸体轮廓光描边宽度像素
+presentation.super_armor_outline_glow,presentation,float,1.4,霸体轮廓光发光强度
+presentation.outline_alpha_threshold,presentation,float,0.35,霸体Outline Glow有效像素透明度阈值
+presentation.library_combo_ring_amount,presentation,int,20,VFX Library物理命中Combo Ring粒子数
+presentation.library_combo_ring_lifetime,presentation,float,0.5,VFX Library物理命中Combo Ring生命周期
+presentation.library_combo_ring_scale,presentation,float,5.0,VFX Library物理命中Combo Ring缩放
+presentation.library_armor_shred_sparks_amount,presentation,int,30,VFX Library破甲Electric Fire Sparks粒子数
+presentation.library_armor_shred_sparks_lifetime,presentation,float,0.5,VFX Library破甲Electric Fire Sparks生命周期
+presentation.library_armor_shred_sparks_scale,presentation,float,5.0,VFX Library破甲Electric Fire Sparks缩放
+presentation.library_water_splash_amount,presentation,int,25,VFX Library R和T命中Water Splash粒子数
+presentation.library_water_splash_lifetime,presentation,float,0.8,VFX Library R和T命中Water Splash生命周期
+presentation.library_water_splash_scale,presentation,float,5.0,VFX Library R和T命中Water Splash缩放
 presentation.impact_shockwave_pool_size,presentation,int,2,重击空间震荡对象池大小
 presentation.impact_shockwave_lifetime,presentation,float,0.38,重击空间震荡寿命
 presentation.impact_shockwave_opacity,presentation,float,0.55,重击空间震荡初始透明度

@@ -41,20 +41,13 @@ func _initialize() -> void:
 	if idle_frame != null:
 		animation_ok = animation_ok and idle_frame.get_size().is_equal_approx(Vector2(822.0, 4525.0))
 		animation_ok = animation_ok and idle_frame.atlas.resource_path.ends_with("/runtime_atlas.png")
-	var enemy_outline := enemy_one.get_node("TeamGlowOutline") as AnimatedSprite3D
-	var friendly_outline := friendly_one.get_node("TeamGlowOutline") as AnimatedSprite3D
-	var enemy_glow := enemy_one.get_node("UnitReadability/BacklightGlow") as AnimatedSprite3D
-	var friendly_glow := friendly_one.get_node("UnitReadability/BacklightGlow") as AnimatedSprite3D
+	var enemy_readability := enemy_one.get_node("UnitReadability")
+	var friendly_readability := friendly_one.get_node("UnitReadability")
 	var shadow := enemy_one.get_node("GroundShadow") as Sprite3D
-	var visual_ok := shadow.visible and enemy_outline.visible and friendly_outline.visible and not frames.no_depth_test
-	visual_ok = visual_ok and shadow.no_depth_test and not enemy_outline.no_depth_test
-	visual_ok = visual_ok and enemy_outline.modulate.r > enemy_outline.modulate.b and enemy_outline.modulate.a >= 0.89
-	visual_ok = visual_ok and friendly_outline.modulate.b > friendly_outline.modulate.r and friendly_outline.modulate.a >= 0.89
-	visual_ok = visual_ok and enemy_outline.pixel_size > frames.pixel_size * 1.069
-	visual_ok = visual_ok and is_equal_approx(enemy_outline.offset.y - frames.offset.y, -52.0)
-	visual_ok = visual_ok and enemy_outline.render_priority < frames.render_priority
-	visual_ok = visual_ok and enemy_glow.modulate.r > enemy_glow.modulate.b and enemy_glow.modulate.a <= 0.10
-	visual_ok = visual_ok and friendly_glow.modulate.b > friendly_glow.modulate.r and friendly_glow.modulate.a <= 0.10
+	var visual_ok := shadow.visible and not frames.no_depth_test
+	visual_ok = visual_ok and shadow.no_depth_test
+	visual_ok = visual_ok and not enemy_readability.has_node("MaskOutline") and not enemy_readability.has_node("OutlineGlow")
+	visual_ok = visual_ok and not friendly_readability.has_node("MaskOutline") and not friendly_readability.has_node("OutlineGlow")
 
 	var stats_ok := is_equal_approx(float(enemy_one.get("max_health")), 1000.0)
 	stats_ok = stats_ok and is_equal_approx(float(enemy_one.get("attack_speed")), 0.66)
@@ -95,24 +88,22 @@ func _initialize() -> void:
 	var return_ok := Vector2(return_offset.x, return_offset.z).length() <= 0.12
 
 	enemy_one.call("receive_skill_damage", 2000.0, "LETHAL", false, home - Vector3.RIGHT, &"magic", &"basic_melee")
-	enemy_one.get_node("UnitReadability").call("_process", 0.0)
 	var death_ok := bool(enemy_one.get("is_dead")) and is_zero_approx(float(enemy_one.get("current_health")))
 	death_ok = death_ok and frames.animation == &"death"
 	death_ok = death_ok and not enemy_one.get_node("DummyStateLabel").visible
-	death_ok = death_ok and not shadow.visible and not enemy_outline.visible and not enemy_glow.visible
+	death_ok = death_ok and not shadow.visible
 	death_ok = death_ok and not enemy_one.is_in_group(&"enemy_actor")
 	death_ok = death_ok and not bool(enemy_one.call("is_targetable"))
 	fighter.call("_physics_process", 1.0 / 60.0)
 	death_ok = death_ok and fighter.get("target") == enemy_two
 	enemy_one.call("_physics_process", 3.1)
-	enemy_one.get_node("UnitReadability").call("_process", 0.0)
 	death_ok = death_ok and not bool(enemy_one.get("is_dead"))
 	death_ok = death_ok and is_equal_approx(float(enemy_one.get("current_health")), 1000.0)
 	death_ok = death_ok and int(enemy_one.get("respawn_count")) == 1
 	death_ok = death_ok and enemy_one.global_position.is_equal_approx(home)
 	death_ok = death_ok and frames.animation == &"spawn"
 	death_ok = death_ok and enemy_one.get_node("DummyStateLabel").visible
-	death_ok = death_ok and shadow.visible and enemy_outline.visible and enemy_glow.visible
+	death_ok = death_ok and shadow.visible
 	death_ok = death_ok and enemy_one.is_in_group(&"enemy_actor")
 
 	print("TARGET_DUMMY roster=%s animation=%s depth_sort=%s visual=%s stats=%s template=%s static=%s metrics=%s return=%s death=%s" % [

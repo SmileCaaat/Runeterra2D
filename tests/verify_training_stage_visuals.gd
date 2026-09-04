@@ -37,18 +37,18 @@ func _run() -> void:
 	passed = passed and is_equal_approx(camera.size, authored_camera_size)
 
 	var ground := stage.get_node("World/Ground/GroundMesh") as MeshInstance3D
-	var ground_mesh := ground.mesh as BoxMesh
+	var ground_mesh := ground.mesh as QuadMesh
 	var ground_material := ground.material_override as ShaderMaterial
 	var ground_texture := ground_material.get_shader_parameter(&"albedo_texture") as Texture2D
 	var ground_uv_scale := ground_material.get_shader_parameter(&"uv_scale") as Vector2
-	passed = passed and ground_mesh.size.is_equal_approx(Vector3(32.0, 0.5, 8.0))
+	passed = passed and ground_mesh.size.is_equal_approx(Vector2(32.0, 8.0))
 	passed = passed and ground_material.shader.resource_path.ends_with("stage_readability.gdshader")
 	passed = passed and ground_texture.resource_path.ends_with("training_ground/ground.png")
 	var ground_source_aspect := (
 		float(ground_texture.get_width())
 		/ float(ground_texture.get_height())
 	)
-	var ground_effective_aspect := ground_source_aspect / ground_uv_scale.y
+	var ground_effective_aspect := ground_source_aspect / absf(ground_uv_scale.y)
 	passed = passed and is_equal_approx(ground_effective_aspect, 4.0)
 
 	var background := stage.get_node("World/Backdrop/BackgroundFar") as MeshInstance3D
@@ -73,13 +73,10 @@ func _run() -> void:
 		passed = passed and layer.position.is_equal_approx(authored_layer_positions[layer_name])
 	passed = passed and float(background_material.get_shader_parameter(&"saturation")) < float(ground_material.get_shader_parameter(&"saturation"))
 	var player_readability := stage.get_node("Characters/Player/UnitReadability")
-	var player_outline := player_readability.get_node("Outline") as AnimatedSprite3D
-	var player_glow := player_readability.get_node("BacklightGlow") as AnimatedSprite3D
 	var player_frames := stage.get_node("Characters/Player/CharacterFrames") as AnimatedSprite3D
 	passed = passed and not player_frames.no_depth_test
-	passed = passed and player_outline.modulate.b > player_outline.modulate.r
-	passed = passed and not player_outline.no_depth_test
-	passed = passed and player_glow.modulate.a >= 0.05 and player_glow.modulate.a <= 0.10
+	passed = passed and not player_readability.has_node("MaskOutline")
+	passed = passed and not player_readability.has_node("OutlineGlow")
 
 	var environment := (stage.get_node("Environment") as WorldEnvironment).environment
 	var sun := stage.get_node("Sun") as DirectionalLight3D
@@ -106,7 +103,7 @@ func _run() -> void:
 	passed = passed and (stage.get_node("World/Props/Crate01/CrateCollision") as CollisionShape3D).disabled
 	passed = passed and (stage.get_node("World/Props/Pillar01/PillarCollision") as CollisionShape3D).disabled
 
-	print("TRAINING_STAGE profile=small authored_camera=true authored_layers=true readability=stage-grade/unit-outline/glow ground_uv=4:1 placeholders=disabled")
+	print("TRAINING_STAGE profile=small authored_camera=true authored_layers=true readability=stage-grade/no-team-outline ground_uv=4:1 placeholders=disabled")
 	stage.queue_free()
 	if not passed:
 		push_error("Training stage visual verification failed")

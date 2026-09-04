@@ -41,16 +41,6 @@ pixel_size = 0.005
 texture_filter = 1
 texture = ExtResource("5_shadow")
 
-[node name="TeamGlowOutline" type="AnimatedSprite3D" parent="."]
-cast_shadow = 0
-modulate = Color(1, 0.03, 0.015, 0.9)
-offset = Vector2(29, 748.5)
-pixel_size = 0.0014445
-billboard = 1
-render_priority = -1
-sprite_frames = ExtResource("2_frames")
-animation = &"idle"
-
 [node name="EnemyFrames" type="AnimatedSprite3D" parent="." groups=["depth_sort_body"]]
 cast_shadow = 0
 sorting_use_aabb_center = false
@@ -64,10 +54,6 @@ animation = &"idle"
 [node name="UnitReadability" type="Node3D" parent="."]
 script = ExtResource("6_readability")
 source_sprite_path = NodePath("../EnemyFrames")
-create_outline = false
-glow_scale = 1.11
-vertical_offset_px = -52.0
-glow_alpha = 0.08
 
 [node name="EnemyEditorPlaceholder" type="MeshInstance3D" parent="."]
 visible = false
