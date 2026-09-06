@@ -37,7 +37,7 @@
 | 项目技能/动作 | 目标与距离 | 动作、命中与取消 | 表现生命周期 |
 | --- | --- | --- | --- |
 | 普攻 | 来源距离 `550 → 5.5m`；法球速度 `1300 → 13m/s`；碰撞宽度 `85 → 0.85m` | `attack1 → attack2 → attack3 → crit` 为连续四段；不可移动施放、允许转向；法球接触目标时结算伤害 | 使用 `basic_attack` 的 12 帧法球图集；命中停顿/受击硬直/击退分别为盖伦普攻的 `1/3`：`0.02s / 0.08s / 0.933m/s` |
-| Q · Overload | 方向投射物；来源距离 `550 → 5.5m`、宽 `110 → 1.1m`、速度 `1700 → 17m/s`；仅首个命中敌人受击；纵深容差 `1.1m` | 无霸体；伤害有效时点是法球接触目标，而非角色 `spell1` 的某一帧；命中反馈与盖伦普攻相同：停顿 `0.06s`、硬直 `0.24s`、击退初速 `2.8m/s`；普攻与 QWE 常态加速 1.35、超负荷 1.8，出手后按最短锁解锁 | 角色播放 `spell1`；命中时播放 `impact` |
+| Q · Overload | 方向投射物；来源距离 `550 → 5.5m`、宽 `110 → 1.1m`、速度 `1700 → 17m/s`；仅首个命中敌人受击；纵深容差 `1.1m` | 无霸体；伤害有效时点是法球接触目标，而非角色 `spell1` 的某一帧；命中反馈与盖伦普攻相同：停顿 `0.06s`、硬直 `0.24s`、击退初速 `2.8m/s`；普攻与 QWE 常态加速 1.35、超负荷 1.8，出手后按最短锁解锁 | 角色播放 `spell1`；飞行中对 `Spell1_Q` 序列帧做沿程弹性拉伸/压缩与微颤（`ryze.q.travel_*` / `launch_pulse` / `throb_*`）；命中时播放 `impact` |
 | W · Rune Prison | 锁定目标；来源距离 `550 → 5.5m`；目标指向、必中，非投射物，不做纵深容差判定 | 无霸体；角色 `spell2` 第 5 帧同步结算伤害与 `1 / 1.1 / 1.2 / 1.3 / 1.4s` 定身；无击退，受击硬直为盖伦普攻 `1/4 = 0.06s`；未指定额外命中停顿，暂定 `0s` | 目标处同步播放 `Spell2_W`；命中时播放 `impact`；定身存续期间循环 `W_loop`，结束时立即停止 |
 | E · Spell Flux | 锁定目标；来源距离 `550 → 5.5m`；初段投射物速度 `1500 → 15m/s`；弹射半径 `350 → 3.5m`、弹射速度 `1500 → 15m/s`；目标指向，不做纵深容差判定 | 无霸体；初段和每次弹射的伤害有效时点均为法球接触目标；命中反馈为盖伦普攻 `1/3`：停顿 `0.02s`、硬直 `0.08s`、击退初速 `0.933m/s`。链路包含主目标并将其作为后续弹射起点；无次级目标时回弹主目标；同一目标单链受伤次数不设上限。可把瑞兹自己当弹射节点，但自身不受伤害或减抗 | 初段及弹射均用 `Spell3_E`，外包 `ElasticVoxelShell` 体素壳；弹射额外挤压回弹。每次命中播放 `impact`。减抗复用盖伦破甲那套小图标弹出/晃动/回弹，贴图为 `MagicResistanceReduction.png` |
 | T · Desperate Power | 自身；基本技能外溢半径 `350 → 3.5m`；来源 `+80` 移速按既定比例换算为 `+0.8m/s` | 播放 `taunt` 后进入 6 秒觉醒强化；引导期间拥有霸体，强化持续期不默认继承霸体；引导结束授予满层超负荷且不消耗次数；保留被动冷却缩减 `10 / 20 / 30%` | 觉醒 Cut-In 使用原画与 `Ryze_awake.wav`；`TBuff` / `Shield` 手调 +X，`TBuffFlip` / `ShieldFlip` 手调 -X，运行时按朝向选用对应节点，不改 Transform。强化 6 秒内循环 `T_Buff`；引导期复用盖伦 `SuperArmorOutline` 黄红黄轮廓。触发外溢的主目标命中叠一层 `Lightning Chain` one-shot（`vfx_library_lightning_chain`） |
@@ -146,8 +146,9 @@
 
 | 层 | 位置 | 轴点 | 说明 |
 | --- | --- | --- | --- |
-| 魔法受击粒子 | `victim.get_hit_contact_point(attacker)` | 粒子自身 | 盖伦同款挂点；瑞兹不播黄色物理序列，也不走七海水花 `magic`，改走 `arcane` 蓝电命中 |
-| 瑞兹 impact 序列 | 同一挂点 + `IMPACT_CONTACT_Y_BIAS` | 播放时读 JSON `originPixel` | 叠在粒子上，`render_priority = 41` |
+| 魔法受击粒子 / arcane 溅射 | `victim.get_hit_contact_point(attacker)` | 粒子自身 / HitImpactPool | 盖伦同款挂点；瑞兹不播黄色物理序列，走 `arcane` 蓝电命中 |
+| 瑞兹 impact 序列 | **同一挂点**（`ryze.impact.contact_y_bias = 0`） | 播放时读 JSON `originPixel` | 叠在粒子上，`render_priority = 41` |
+| T 外溢闪电 | 同一挂点 | SubViewport 中心 | 只在绝望之力期间叠加 |
 | 普攻法球 | 场景出手点 → 接触挂点，提前 0.45m 刹车 | 场景已写 origin offset | 用户手调 scale / 出手点；动画名 `projectile` |
 | Q 法球 | 场景出手点高度水平飞到敌人 XZ | 场景已写 origin offset；朝 -X 时 `flip_h` 并取反 `offset.x` | 图集默认朝 +X；只翻 UV 会让弹头离开作者原点 |
 | E 法球 | 场景出手点 + `E_LAUNCH_Y_BIAS`，水平飞到敌人；命中 X += `E_HIT_X_BIAS` | 不接 origin（`offset = 0`） | 接 origin 会把整段抬高约 2.5m。体素壳跟 `Spell3_E` 作者原点，不跟节点中心，也不吃 `E_LAUNCH_Y_BIAS`。颜色 `78d9ff59` |
@@ -156,17 +157,19 @@
 补偿常量（只补产线轴点，不是技能数值；权威在 `combat_rules.csv`）：
 
 ```
-ryze.impact.contact_y_bias = -0.8
+ryze.impact.contact_y_bias = 0
 ryze.e.launch_y_bias = 0.8
 ryze.e.hit_x_bias = 0.5   # 世界坐标 +X，不随朝向翻转
 ```
+
+粒子、Impact 序列、arcane 溅射（及 T 外溢闪电）都走 `_hit_vfx_contact()`，默认与 `get_hit_contact_point` 重合。`contact_y_bias` 仅作微调，不要再默认写成 `-0.8`。
 
 已验收场景 Transform（勿用旧聊天数字覆盖）：
 
 | 节点 | position | scale | offset | modulate.a |
 | --- | --- | --- | --- | --- |
 | BasicProjectile | (1.055, 1.321, 0) | (2.894, 1.639, 1) | (-126.5, 622.5) | 1 |
-| QProjectile | (1.504, -0.626, 0) | (1.263, 1.535, 1) | (-126.5, 622.5) | 0.541 |
+| QProjectile | (1.504, 1.32, 0) | (1.263, 1.535, 1) | (-126.5, 622.5) | 0.541 |
 | EProjectile | (0.521, 1.696, 0) | (0.874, 0.824, 1) | (0, 0) | 0.573 |
 | Impact | 运行时忽略模板 position | (1, 1, 1) | 播放时按 origin 写入 | 1 |
 | WEffect | (-0.691, 3.410, -0.168) | (1.198, 1.212, 1) | (0, 0) | 1 |
@@ -195,7 +198,7 @@ ryze.e.hit_x_bias = 0.5   # 世界坐标 +X，不随朝向翻转
 | 命中 | 伤害粒子走目标 `get_hit_contact_point`。Impact 序列的作者 `(0, 0)` 叠在同一挂点上。 |
 | 地面特效 | W / W_loop / R 落地仍用脚底 / 地面枢轴，不要改成飞行中心。 |
 
-瑞兹当前已验收的 Transform 和 `ryze.impact.contact_y_bias` / `ryze.e.launch_y_bias` / `ryze.e.hit_x_bias` 是导入器未履约时的补丁，**不是**这条约定的一部分。修导入器或出下一个英雄时，先认 `originPixel`，再摆出手点；不要把这组米制 bias 写成通用标尺。未再验收前，不要为了「对齐新约定」改掉已通过的瑞兹场面。
+瑞兹当前已验收的 Transform 和 `ryze.e.launch_y_bias` / `ryze.e.hit_x_bias` 是导入器未履约时的补丁，**不是**这条约定的一部分。`ryze.impact.contact_y_bias` 已归零：命中三层 VFX 共用受击挂点。修导入器或出下一个英雄时，先认 `originPixel`，再摆出手点；不要把出手高度补偿写成通用命中标尺。未再验收前，不要为了「对齐新约定」改掉已通过的瑞兹出手 Transform。
 
 ## 资产生产问题
 

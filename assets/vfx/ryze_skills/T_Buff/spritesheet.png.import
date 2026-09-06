@@ -3,15 +3,16 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dpmxyswc1of2b"
-path="res://.godot/imported/spritesheet.png-9fdbe088af87eebccf28c99e84a7309f.ctex"
+path.s3tc="res://.godot/imported/spritesheet.png-9fdbe088af87eebccf28c99e84a7309f.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/vfx/ryze_skills/T_Buff/spritesheet.png"
-dest_files=["res://.godot/imported/spritesheet.png-9fdbe088af87eebccf28c99e84a7309f.ctex"]
+dest_files=["res://.godot/imported/spritesheet.png-9fdbe088af87eebccf28c99e84a7309f.s3tc.ctex"]
 
 [params]
 

@@ -3,15 +3,16 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://defuyvtn473a3"
-path="res://.godot/imported/spritesheet.png-3ca211b317d901fcbb7e35225d88dcb6.ctex"
+path.s3tc="res://.godot/imported/spritesheet.png-3ca211b317d901fcbb7e35225d88dcb6.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/characters/rune_mage_ryze/idle/spritesheet.png"
-dest_files=["res://.godot/imported/spritesheet.png-3ca211b317d901fcbb7e35225d88dcb6.ctex"]
+dest_files=["res://.godot/imported/spritesheet.png-3ca211b317d901fcbb7e35225d88dcb6.s3tc.ctex"]
 
 [params]
 

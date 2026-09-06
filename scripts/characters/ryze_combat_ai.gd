@@ -12,7 +12,7 @@ const Q_PROJECTILE_ANCHOR_JSON := "res://assets/vfx/ryze_skills/Spell1_Q/sprites
 const IMPACT_ANCHOR_JSON := "res://assets/vfx/ryze_skills/impact/spritesheet.json"
 const E_PROJECTILE_ANCHOR_JSON := "res://assets/vfx/ryze_skills/Spell3_E/spritesheet.json"
 const DEFAULT_PIXEL_SIZE := 0.004
-const DEFAULT_IMPACT_CONTACT_Y_BIAS := -0.8
+const DEFAULT_IMPACT_CONTACT_Y_BIAS := 0.0
 const DEFAULT_E_LAUNCH_Y_BIAS := 0.8
 const DEFAULT_E_HIT_X_BIAS := 0.5
 const DEFAULT_CAST_RANGE := 5.5
@@ -423,6 +423,10 @@ func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: f
 	projectile.frame = 0
 	projectile.play()
 	var e_shell: Node3D = _attach_e_voxel_shell(projectile, false) if payload == &"e" else null
+	var q_base_scale := projectile.scale
+	var q_elapsed := 0.0
+	if payload == &"q":
+		_update_q_travel_deform(projectile, q_base_scale, _skill_travel_point(victim, payload) - projectile.global_position, 0.0)
 	while is_instance_valid(projectile) and _valid_target(victim):
 		var hit_point := _skill_travel_point(victim, payload)
 		var direction := hit_point - projectile.global_position
@@ -436,6 +440,9 @@ func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: f
 			_sync_e_voxel_shell(projectile, e_shell)
 			if e_shell.has_method("set_travel"):
 				e_shell.call("set_travel", direction)
+		if payload == &"q":
+			_update_q_travel_deform(projectile, q_base_scale, direction, q_elapsed)
+			q_elapsed += 1.0 / 60.0
 		var step := speed / 60.0
 		if payload != &"basic" and direction.length() <= step:
 			projectile.global_position = hit_point
@@ -454,6 +461,28 @@ func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: f
 		&"q":
 			_damage(victim, _ranked_damage(&"ryze_q_damage", 60.0), &"magic", &"ryze_q_hit")
 		&"e": _resolve_e_chain(victim)
+
+
+func _update_q_travel_deform(
+	projectile: AnimatedSprite3D,
+	base_scale: Vector3,
+	direction: Vector3,
+	elapsed: float
+) -> void:
+	if projectile == null:
+		return
+	var stretch_strength := _rulef(&"ryze.q.travel_stretch", 0.38)
+	var squash_strength := _rulef(&"ryze.q.travel_squash", 0.24)
+	var launch_pulse := _rulef(&"ryze.q.launch_pulse", 1.15)
+	var throb_hz := _rulef(&"ryze.q.throb_hz", 5.5)
+	var throb_amount := _rulef(&"ryze.q.throb_amount", 0.07)
+	var pulse := exp(-elapsed * 7.5) * launch_pulse
+	var throb := sin(elapsed * TAU * throb_hz) * throb_amount
+	var speed_factor := clampf(direction.length() / maxf(_rulef(&"ryze.q.missile_speed", 17.0), 0.001), 0.35, 1.0)
+	var stretch := 1.0 + (stretch_strength * (0.55 + pulse * 0.85) + throb) * speed_factor
+	var squash := 1.0 - (squash_strength * (0.55 + pulse * 0.75) - throb * 0.5) * speed_factor
+	squash = maxf(squash, 0.55)
+	projectile.scale = Vector3(base_scale.x * stretch, base_scale.y * squash, base_scale.z)
 
 
 func _projectile_origin(payload: StringName) -> Vector3:
@@ -784,13 +813,21 @@ func _spill_desperate(primary: CharacterBody3D, amount: float, type: StringName,
 				_play_r_landing_zap_once(candidate)
 
 
+func _hit_vfx_contact(victim: CharacterBody3D) -> Vector3:
+	# Particles, Impact sequence, and arcane splash must share one world point.
+	return _target_visual_position(victim) + Vector3.UP * _rulef(
+		&"ryze.impact.contact_y_bias",
+		DEFAULT_IMPACT_CONTACT_Y_BIAS
+	)
+
+
 func _play_t_overflow_lightning(victim: CharacterBody3D) -> void:
 	if not _can_harm(victim) or LIGHTNING_CHAIN == null:
 		return
 	var host := Node3D.new()
 	host.name = "TOverflowLightning"
 	get_tree().current_scene.add_child(host)
-	host.global_position = _target_visual_position(victim) + Vector3.UP * _rulef(&"ryze.impact.contact_y_bias", DEFAULT_IMPACT_CONTACT_Y_BIAS)
+	host.global_position = _hit_vfx_contact(victim)
 	var viewport := SubViewport.new()
 	var viewport_size := _rulei(&"ryze.t.lightning_viewport_size", 256)
 	viewport.size = Vector2i(viewport_size, viewport_size)
@@ -824,7 +861,7 @@ func _play_t_overflow_lightning(victim: CharacterBody3D) -> void:
 
 func _play_impact(victim: CharacterBody3D) -> void:
 	# Pin the authored explosion (originPixel) onto the same contact as the
-	# magic particles. Centered playback drops the blast under the dummy feet.
+	# magic particles / arcane splash. Do not reintroduce a Y bias patch.
 	if not _can_harm(victim) or impact_template == null:
 		return
 	var effect := impact_template.duplicate() as AnimatedSprite3D
@@ -832,7 +869,7 @@ func _play_impact(victim: CharacterBody3D) -> void:
 	effect.render_priority = 41
 	_apply_vfx_canvas_anchor(effect, IMPACT_ANCHOR_JSON)
 	get_tree().current_scene.add_child(effect)
-	effect.global_position = _target_visual_position(victim) + Vector3.UP * _rulef(&"ryze.impact.contact_y_bias", DEFAULT_IMPACT_CONTACT_Y_BIAS)
+	effect.global_position = _hit_vfx_contact(victim)
 	effect.frame = 0
 	effect.play()
 	effect.animation_finished.connect(effect.queue_free)

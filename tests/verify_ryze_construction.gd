@@ -76,6 +76,7 @@ func _init() -> void:
 		var landing_zap := load("res://assets/BinbunVFX_Vol2/ElectricFX/effects/zap/vfx_zap_lightning_01.tscn")
 		valid = valid and voxel_shell != null and instance.has_method("_attach_e_voxel_shell")
 		valid = valid and landing_zap != null and instance.has_method("_play_r_landing_zap")
+		valid = valid and instance.has_method("_update_q_travel_deform")
 		if database != null:
 			valid = valid and int(database.get_rule(&"ryze.e.voxel_count", 0)) == 16
 			valid = valid and is_equal_approx(float(database.get_rule(&"ryze.supercharge.duration", 0.0)), 2.5)
@@ -87,8 +88,10 @@ func _init() -> void:
 			valid = valid and int(database.get_rule(&"ryze.t.grant_supercharge", 0)) == 1
 			valid = valid and is_equal_approx(float(database.get_rule(&"ryze.e.launch_y_bias", 0.0)), 0.8)
 			valid = valid and is_equal_approx(float(database.get_rule(&"ryze.hit.fallback_height", 0.0)), 1.15)
+			valid = valid and is_equal_approx(float(database.get_rule(&"ryze.impact.contact_y_bias", -1.0)), 0.0)
 			valid = valid and is_equal_approx(float(database.get_rule(&"ryze.e.bounce_ease", 0.0)), -2.2)
 			valid = valid and int(database.get_rule(&"ryze.t.lightning_viewport_size", 0)) == 256
+			valid = valid and is_equal_approx(float(database.get_rule(&"ryze.q.travel_stretch", 0.0)), 0.38)
 			var flux := database.get_buff_modifier(&"ryze_flux", &"magic_resistance")
 			valid = valid and flux != null and is_equal_approx(flux.value, 0.92)
 		instance.queue_free()

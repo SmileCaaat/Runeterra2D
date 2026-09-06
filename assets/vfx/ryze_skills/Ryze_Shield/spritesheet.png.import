@@ -3,15 +3,16 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bwqmk8j7dqfwb"
-path="res://.godot/imported/spritesheet.png-5528c31deb1063b6911c21e13233b727.ctex"
+path.s3tc="res://.godot/imported/spritesheet.png-5528c31deb1063b6911c21e13233b727.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/vfx/ryze_skills/Ryze_Shield/spritesheet.png"
-dest_files=["res://.godot/imported/spritesheet.png-5528c31deb1063b6911c21e13233b727.ctex"]
+dest_files=["res://.godot/imported/spritesheet.png-5528c31deb1063b6911c21e13233b727.s3tc.ctex"]
 
 [params]
 

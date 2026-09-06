@@ -8,7 +8,7 @@ garen_character,character_animation,res://assets/characters/rogue_admiral_garen/
 jolly_roger,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/JollyRoger,spell2_JollyRoger,,0,1,1,20,1,1,1,-102,429,0.004,-1,true,res://assets/vfx/garen_skills/jolly_roger_screen_material.tres,buff,4.0,false
 ocean_storm,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/OceanStorm,spell3_OceanStorm,,0,1,1,20,1.4,1.4,1.4,-102,429,0.0045,1,false,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,duration,3.0,false
 anchor,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/Anchor,spell4_Anchor,,0,1,1,20,1,1,1,-33.5,556,0.005,2,true,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,animation,0.63,false
-ghostship,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/Ghostship,spell5_Ghostship,,0,1,1,20,1.5,1.5,1.5,-102,429,0.006,2,false,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,animation,1.70,true
+ghostship,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/Ghostship,spell5_Ghostship,,0,1,1,20,1.5,1.5,1.5,-102,429,0.006,2,false,res://assets/vfx/garen_skills/ghostship_screen_material.tres,animation,1.70,true
 garen_attack_audio,audio,,,,res://assets/audio/garen_original/basic_attack_cast_1.ogg,0,0.98,1.02,40,1,1,1,0,0,0,0,false,,manual,0,false
 garen_basic_attack_2_cast,audio,,,,res://assets/audio/garen_original/basic_attack_cast_2.ogg,0,0.98,1.02,40,1,1,1,0,0,0,0,false,,manual,0,false
 garen_crit_attack_cast,audio,,,,res://assets/audio/garen_original/crit_attack_cast.ogg,1,0.98,1.02,42,1,1,1,0,0,0,0,false,,manual,0,false
@@ -57,7 +57,7 @@ ryze_spell_flux_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Spell_Fl
 ryze_realm_warp_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Realm_Warp_R.webp,UI/Skills/R,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false,0,0,0,1
 ryze_desperate_power_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Desperate_Power_P.webp,UI/Skills/T,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false,0,0,0,1
 ryze_basic_projectile,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/BasicProjectile,projectile,,0,1,1,20,2.8939996,1.6387346,1,-126.5,622.5,0.004,3,true,,animation,0,true,1.0551844,1.3209797,0,1
-ryze_q_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/QProjectile,Spell1_Q,,0,1,1,20,1.2631824,1.5346031,1,-126.5,622.5,0.004,3,true,,animation,0,true,1.5038263,-0.62555873,0,0.5411765
+ryze_q_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/QProjectile,Spell1_Q,,0,1,1,20,1.2631824,1.5346031,1,-126.5,622.5,0.004,3,true,,animation,0,true,1.5038263,1.32,0,0.5411765
 ryze_w_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/WEffect,Spell2_W,,0,1,1,20,1.1979198,1.2120566,1,0,0,0.004,3,true,,animation,0,false,-0.69091296,3.4096055,-0.16798759,1
 ryze_e_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/EProjectile,Spell3_E,,0,1,1,20,0.8741688,0.8238358,1,0,0,0.004,3,true,,animation,0,true,0.5205492,1.6959548,0,0.57254905
 ryze_r_winddown_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/RWinddown,Spell4_R_winddown,,0,1,1,20,1.2186399,1.1500558,1,0,0,0.004,3,true,,animation,0,true,-1.1266189,3.3852067,0,1

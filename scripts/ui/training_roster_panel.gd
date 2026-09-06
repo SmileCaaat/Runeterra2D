@@ -37,13 +37,20 @@ func set_roster(team: StringName, heroes: Array[StringName]) -> void:
 
 
 func _build_panel() -> void:
+	var root_host := Control.new()
+	root_host.name = "RosterHudRoot"
+	root_host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(root_host)
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	margin.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	margin.grow_vertical = Control.GROW_DIRECTION_END
 	margin.offset_left = -336.0
 	margin.offset_top = 18.0
 	margin.offset_right = -18.0
 	margin.offset_bottom = 286.0
-	add_child(margin)
+	root_host.add_child(margin)
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _panel_style())
 	margin.add_child(panel)

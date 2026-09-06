@@ -26,8 +26,8 @@ func _run() -> void:
 	passed = passed and StringName(stage.get_meta(&"stage_profile_id", &"")) == &"small"
 	passed = passed and StringName(stage.get_meta(&"stage_mode", &"")) == &"training"
 	passed = passed and String(stage.get_meta(&"stage_display_name", "")) == "训练场"
-	passed = passed and int(ProjectSettings.get_setting("display/window/size/viewport_width")) == 1920
-	passed = passed and int(ProjectSettings.get_setting("display/window/size/viewport_height")) == 1080
+	passed = passed and int(ProjectSettings.get_setting("display/window/size/viewport_width")) == 1440
+	passed = passed and int(ProjectSettings.get_setting("display/window/size/viewport_height")) == 600
 	passed = passed and String(ProjectSettings.get_setting("display/window/stretch/aspect")) == "keep"
 	var camera := stage.get_node("CameraRig/DNFCamera") as Camera3D
 	passed = passed and camera.projection == Camera3D.PROJECTION_ORTHOGONAL

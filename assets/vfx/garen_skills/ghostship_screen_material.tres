@@ -1,0 +1,26 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://12ble80lw1mi"]
+
+[ext_resource type="Shader" uid="uid://bjip788dp4k24" path="res://assets/vfx/garen_skills/garen_vfx_screen_key.gdshader" id="1_shader"]
+
+[resource]
+resource_local_to_scene = true
+render_priority = 2
+shader = ExtResource("1_shader")
+shader_parameter/black_cutoff = 0.045
+shader_parameter/black_feather = 0.16
+shader_parameter/edge_erosion = 0.35
+shader_parameter/alpha_feather = 0.08
+shader_parameter/frame_uv_rect = Vector4(0, 0, 1, 1)
+shader_parameter/canvas_edge_clear = 0.08
+shader_parameter/canvas_edge_fade = 0.28
+shader_parameter/canvas_inward_base = 0.04
+shader_parameter/canvas_inward_warp = 0.085
+shader_parameter/canvas_inward_softness = 0.045
+shader_parameter/canvas_inward_frequency = 4.0
+shader_parameter/tint = Color(1, 1, 1, 1)
+shader_parameter/ground_height = 0.0
+shader_parameter/ground_fade_width = 0.18
+shader_parameter/ground_occluded_alpha = 0.32
+shader_parameter/depth_bias = 0.02
+shader_parameter/ground_depth_fade = 0.9
+shader_parameter/show_over_models = false

@@ -16,7 +16,7 @@ func _initialize() -> void:
 	var generated_ok := generated_database != null and generated_database.source_digest == database.source_digest
 	var editor_plugin_ok := load("res://addons/combat_data/editor_plugin.gd") != null
 
-	var counts_ok := database.rules.size() == 172 and database.stats.size() == 62
+	var counts_ok := database.rules.size() == 177 and database.stats.size() == 62
 	counts_ok = counts_ok and database.hero_classes.size() == 7 and database.hero_subclasses.size() == 13 and database.ai_archetypes.size() == 13
 	counts_ok = counts_ok and database.units.size() == 4 and database.unit_stats.size() == 145
 	counts_ok = counts_ok and database.skills.size() == 12
@@ -40,7 +40,7 @@ func _initialize() -> void:
 	identity_ok = identity_ok and database.get_hero_class(&"fighter") != null and database.get_hero_subclass(&"juggernaut") != null
 	identity_ok = identity_ok and database.get_ai_archetype(&"juggernaut_pressure") != null
 	identity_ok = identity_ok and database.get_ai_profile(&"garen_demo").archetype_id == &"juggernaut_pressure"
-	identity_ok = identity_ok and database.schema_version == 19
+	identity_ok = identity_ok and database.schema_version == 20
 	identity_ok = identity_ok and database.get_rule(&"progression.level_cap", 0) == 30
 
 	var base_stats_ok := garen != null and is_equal_approx(garen.max_health, 690.0)
@@ -149,6 +149,8 @@ func _initialize() -> void:
 	rank_schema_ok = rank_schema_ok and is_equal_approx(perseverance_front.opacity, 0.3529412) and is_equal_approx(perseverance_hip.opacity, 0.27450982)
 	var perseverance_motes := database.get_particle_profile(&"garen_perseverance_motes")
 	rank_schema_ok = rank_schema_ok and perseverance_motes != null and perseverance_motes.amount == 14 and is_equal_approx(perseverance_motes.lifetime, 2.6)
+	rank_schema_ok = rank_schema_ok and is_equal_approx(float(database.get_rule(&"ryze.q.travel_stretch", 0.0)), 0.38)
+	rank_schema_ok = rank_schema_ok and is_equal_approx(float(database.get_rule(&"ryze.q.launch_pulse", 0.0)), 1.15)
 	rank_schema_ok = rank_schema_ok and is_equal_approx(float(database.get_rule(&"presentation.perseverance_vfx_frame_rate", 0.0)), 6.0)
 	rank_schema_ok = rank_schema_ok and database.get_unit_mode_modifiers(&"garen", &"training").is_empty()
 	var super_armor_profile := database.get_asset_profile(&"super_armor_outline_glow")
