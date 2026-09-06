@@ -1,2 +1,3 @@
 profile_id,owner_id,skill_id,display_name,subtitle,portrait_path,audio_path,faction,priority,primary,theme_color,accent_color,enter_duration,hold_duration,exit_duration,slant,feather,portrait_scale,portrait_offset_x,portrait_offset_y,voice_volume_db
 garen_seven_seas_awaken,garen,garen_seven_seas,盖伦,七海霸权,res://assets/presentation/awakening/garen/rogue_admiral_cutin.jpg,res://assets/presentation/awakening/garen/awakening_voice.wav,friendly,100,true,172b46ff,60e7ffff,0.16,0.42,0.14,0.28,0.015,1.0,0.10,0.0,0.0
+ryze_desperate_power_awaken,ryze,ryze_desperate_power,瑞兹,绝望之力,res://assets/vfx/ryze_skills/符文法师 - 原画.jpg,res://assets/vfx/ryze_skills/Ryze_awake.wav,friendly,100,true,4130a8ff,78d9ffff,0.16,0.42,0.14,0.28,0.015,1.0,0.10,0.0,0.0

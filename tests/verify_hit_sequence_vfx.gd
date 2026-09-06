@@ -20,7 +20,7 @@ func _run() -> void:
 	passed = passed and not bool(effect.get("last_critical")) and int(effect.get("burst_count")) == 1
 	var pool := get_first_node_in_group(&"hit_impact_vfx_pool")
 	passed = passed and pool != null and (pool.get("slots") as Array).size() == 8
-	passed = passed and (pool.get("profiles_by_id") as Dictionary).size() == 8
+	passed = passed and (pool.get("profiles_by_id") as Dictionary).size() == 9
 	passed = passed and int(pool.get("play_count")) == 1 and StringName(pool.get("last_profile_id")) == &"slash"
 	if pool != null:
 		var first_slot: Dictionary = (pool.get("slots") as Array)[0]
@@ -45,8 +45,15 @@ func _run() -> void:
 	passed = passed and StringName(effect.call("_resolve_procedural_profile", &"ocean_hit", false)) == &"slash"
 	passed = passed and StringName(effect.call("_resolve_procedural_profile", &"judgment_hit", false)) == &"true_damage"
 	passed = passed and StringName(effect.call("_resolve_procedural_profile", &"ghostship_hit", false)) == &"magic"
+	passed = passed and StringName(effect.call("_resolve_procedural_profile", &"ryze_basic_hit", false)) == &"arcane"
+	passed = passed and StringName(effect.call("_resolve_procedural_profile", &"ryze_q_hit", true)) == &"arcane"
 
-	print("HIT_VFX sequence=normal/critical/true gpu_layers=4 flash=true shockwave=true pool=8 profiles=8")
+	effect.call("burst", Vector3(2.0, 1.15, 0.0), Vector3.RIGHT, false, &"ryze_q_hit")
+	passed = passed and not sprite.visible
+	passed = passed and int(effect.get("burst_count")) == 3
+	passed = passed and int(pool.get("play_count")) == 3 and StringName(pool.get("last_profile_id")) == &"arcane"
+
+	print("HIT_VFX sequence=normal/critical/true gpu_layers=4 flash=true shockwave=true pool=8 profiles=9")
 	effect.queue_free()
 	if not passed:
 		push_error("Hit sequence VFX verification failed")

@@ -5,3 +5,5 @@ courage_magic_resistance,courage_stacks,magic_resistance,flat,1.0,per_stack,10
 seven_seas_rum_move_speed,seven_seas_rum,move_speed,add_percent,0.20,while_active,100
 scuttle_speed_zone_bonus,scuttle_speed_zone,move_speed,add_percent,0.30,while_inside,100
 judgment_armor_shred_armor,judgment_armor_shred,armor,multiply,0.75,while_active,100
+ryze_flux_magic_resistance,ryze_flux,magic_resistance,multiply,0.92,per_stack,100
+ryze_desperate_power_move_speed,ryze_desperate_power,move_speed,flat,0.8,while_active,100

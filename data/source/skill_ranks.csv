@@ -21,3 +21,25 @@ garen_tyrant_judgment,3,35.0,0.435,0.35,4.0,0,0.63,0,0,cooldown|cast_time|target
 garen_seven_seas,1,120.0,1.05,0.65,7.5,5.2,1.70,0,0,awakening|ghostship,project T rank 1 awakening cooldown; travel shell retained
 garen_seven_seas,2,100.0,1.05,0.65,7.5,5.2,1.70,0,0,awakening|ghostship,project T rank 2 awakening cooldown; travel shell retained
 garen_seven_seas,3,80.0,1.05,0.65,7.5,5.2,1.70,0,0,awakening|ghostship,project T rank 3 awakening cooldown; travel shell retained
+ryze_arcane_mastery,1,0,0,0,0,0,6,0,0,passive|arcane_mastery,5层统一刷新6秒
+ryze_overload,1,4,0,0,5.5,1.1,0,0,40,cooldown|range|width,550射程和110宽度按0.01换算
+ryze_overload,2,4,0,0,5.5,1.1,0,0,40,cooldown|range|width,超负荷等级二
+ryze_overload,3,4,0,0,5.5,1.1,0,0,40,cooldown|range|width,超负荷等级三
+ryze_overload,4,4,0,0,5.5,1.1,0,0,40,cooldown|range|width,超负荷等级四
+ryze_overload,5,4,0,0,5.5,1.1,0,0,40,cooldown|range|width,超负荷等级五
+ryze_rune_prison,1,14,0,0,5.5,0,0,0,60,cooldown|range,目标指向
+ryze_rune_prison,2,14,0,0,5.5,0,0,0,70,cooldown|range,目标指向
+ryze_rune_prison,3,14,0,0,5.5,0,0,0,80,cooldown|range,目标指向
+ryze_rune_prison,4,14,0,0,5.5,0,0,0,90,cooldown|range,目标指向
+ryze_rune_prison,5,14,0,0,5.5,0,0,0,100,cooldown|range,目标指向
+ryze_spell_flux,1,7,0,0,5.5,3.5,5,0,60,cooldown|range|bounce_radius,目标指向和弹射
+ryze_spell_flux,2,7,0,0,5.5,3.5,5,0,70,cooldown|range|bounce_radius,目标指向和弹射
+ryze_spell_flux,3,7,0,0,5.5,3.5,5,0,80,cooldown|range|bounce_radius,目标指向和弹射
+ryze_spell_flux,4,7,0,0,5.5,3.5,5,0,90,cooldown|range|bounce_radius,目标指向和弹射
+ryze_spell_flux,5,7,0,0,5.5,3.5,5,0,100,cooldown|range|bounce_radius,目标指向和弹射
+ryze_realm_warp,1,180,2,0,25,5.5,2,0,100,cooldown|channel|range,落地三次E且三层减抗
+ryze_realm_warp,2,160,2,0,25,5.5,2,0,100,cooldown|channel|range,落地三次E且三层减抗
+ryze_realm_warp,3,140,2,0,25,5.5,2,0,100,cooldown|channel|range,落地三次E且三层减抗
+ryze_desperate_power,1,50,0,0,0,3.5,6,0,0,cooldown|duration,觉醒技能
+ryze_desperate_power,2,50,0,0,0,3.5,6,0,0,cooldown|duration,觉醒技能
+ryze_desperate_power,3,50,0,0,0,3.5,6,0,0,cooldown|duration,觉醒技能

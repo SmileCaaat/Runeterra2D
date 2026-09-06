@@ -15,3 +15,12 @@ judgment_damage,garen_tyrant_judgment,10,on_impact,damage,target,true,125,,0,0.2
 seven_seas_damage,garen_seven_seas,10,on_impact,damage,enemies_in_area,magic,350,,0,0,1.35,0,false,false,,,0,ghostship_hit,area|ranked_impact
 seven_seas_stun,garen_seven_seas,20,on_impact,apply_control,enemies_in_area,none,0,,0,0,1.35,0,false,false,,stun,1.2,,crowd_control
 seven_seas_rum,garen_seven_seas,30,on_path,apply_buff,allies_in_path,none,5,move_speed,0.20,0,0,0,false,false,seven_seas_rum,,0,,ranked_duration|ranked_move_speed|half_immediate_half_delayed
+ryze_q_damage,ryze_overload,10,on_hit,damage,target,magic,60,ability_power,0.55,0,0,0,false,false,,,0,ryze_q_hit,first_target|projectile_contact
+ryze_w_damage,ryze_rune_prison,10,on_frame,damage,target,magic,80,ability_power,0.40,0,0,0,false,false,,,0,ryze_w_hit,frame_5
+ryze_w_root,ryze_rune_prison,20,on_frame,apply_control,target,none,0,,0,0,0,0,false,false,,root,1,ryze_w_hit,frame_5|w_loop
+ryze_e_damage,ryze_spell_flux,10,on_hit,damage,target,magic,36,ability_power,0.20,0,0,0,false,false,,,0,ryze_e_hit,primary_and_bounce
+ryze_e_flux,ryze_spell_flux,20,on_hit,apply_buff,target,none,0,,0,0,0,0,false,false,ryze_flux,,0,,up_to_three_stacks|multiplicative_mr
+ryze_p_shield,ryze_arcane_mastery,10,on_max_stacks,shield,self,none,25,max_resource,0.08,0,0,0,false,false,ryze_supercharged,,0,,level_scaled_25_to_110|screen_vfx
+ryze_t_buff,ryze_desperate_power,10,on_channel_complete,apply_buff,self,none,0,,0,0,0,0,false,false,ryze_desperate_power,,0,,six_seconds
+ryze_r_landing_damage,ryze_realm_warp,10,on_landing,damage,enemies_in_area,magic,36,ability_power,0.20,0,0,0,false,false,,,0,ryze_r_landing_hit,repeat_three|no_e_projectile
+ryze_r_landing_flux,ryze_realm_warp,20,on_landing,apply_buff,enemies_in_area,none,0,,0,0,0,0,false,false,ryze_flux,,0,,three_stacks|no_e_projectile

@@ -8,6 +8,7 @@
 - [公式与来源索引](formula-reference.md)：当前已实现公式、项目自定义公式、未实现语义和 Wiki 网址。
 - [战斗配表契约](data-contracts.md)：13 张源表的边界、引用、单位、生命周期和修改顺序。
 - [Garen 参考档案](heroes/garen.md)：当前 Garen 与参考英雄之间的逐技能映射、差异和待补项。
+- [Ryze 参考档案](heroes/ryze.md)：瑞兹的唯一档案，含来源、锁定决策、动作契约和视觉验收。
 - [Combat Data 工作流](../../data/README.md)：数据库构建、生成和自动测试命令。
 
 ## 权威性和同步规则

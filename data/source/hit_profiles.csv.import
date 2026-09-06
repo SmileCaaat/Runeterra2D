@@ -1,19 +1,4 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
+importer="keep"
 uid="uid://mcnvsw68u7ry"
-
-[deps]
-
-files=["res://data/source/hit_profiles.shape.translation", "res://data/source/hit_profiles.size.translation", "res://data/source/hit_profiles.size.translation", "res://data/source/hit_profiles.size.translation", "res://data/source/hit_profiles.offset.translation", "res://data/source/hit_profiles.offset.translation", "res://data/source/hit_profiles.offset.translation", "res://data/source/hit_profiles.depth.translation", "res://data/source/hit_profiles.active.translation", "res://data/source/hit_profiles.active.translation", "res://data/source/hit_profiles.hitstop.translation", "res://data/source/hit_profiles.hitstun.translation", "res://data/source/hit_profiles.poise.translation", "res://data/source/hit_profiles.knockback.translation", "res://data/source/hit_profiles.knockback.translation", "res://data/source/hit_profiles.launch.translation", "res://data/source/hit_profiles.hit.translation", "res://data/source/hit_profiles.hit.translation"]
-
-source_file="res://data/source/hit_profiles.csv"
-dest_files=["res://data/source/hit_profiles.shape.translation", "res://data/source/hit_profiles.size.translation", "res://data/source/hit_profiles.size.translation", "res://data/source/hit_profiles.size.translation", "res://data/source/hit_profiles.offset.translation", "res://data/source/hit_profiles.offset.translation", "res://data/source/hit_profiles.offset.translation", "res://data/source/hit_profiles.depth.translation", "res://data/source/hit_profiles.active.translation", "res://data/source/hit_profiles.active.translation", "res://data/source/hit_profiles.hitstop.translation", "res://data/source/hit_profiles.hitstun.translation", "res://data/source/hit_profiles.poise.translation", "res://data/source/hit_profiles.knockback.translation", "res://data/source/hit_profiles.knockback.translation", "res://data/source/hit_profiles.launch.translation", "res://data/source/hit_profiles.hit.translation", "res://data/source/hit_profiles.hit.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

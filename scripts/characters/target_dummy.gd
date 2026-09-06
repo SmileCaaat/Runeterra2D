@@ -187,6 +187,31 @@ func is_enemy_of(other_team: StringName) -> bool:
 	return StringName(team) != other_team
 
 
+func apply_root(duration: float) -> void:
+	# Targeted roots stop autonomous return movement but retain ground collision.
+	hit_timer = maxf(hit_timer, duration)
+
+
+func get_hit_contact_point(attacker_position: Vector3) -> Vector3:
+	var away := global_position - attacker_position
+	away.y = 0.0
+	if away.is_zero_approx():
+		away = Vector3.RIGHT
+	return global_position - away.normalized() * gameplay_radius + Vector3.UP * 1.15
+
+
+func apply_magic_resistance_shred(multiplier: float, duration: float) -> void:
+	# Flux stacks are multiplicative. The timeout restores the authored base stat.
+	if is_dead:
+		return
+	magic_resistance *= clampf(multiplier, 0.0, 1.0)
+	if armor_shred_burst != null:
+		armor_shred_burst.play_magic_resist_burst()
+	get_tree().create_timer(duration).timeout.connect(func() -> void:
+		magic_resistance = combat_database.get_unit_stat_value(&"training_dummy", &"magic_resistance", 1) if combat_database != null else 0.0
+	)
+
+
 func is_targetable() -> bool:
 	return not is_dead
 
@@ -237,7 +262,7 @@ func _apply_damage(
 	knockback_decay = hit_profile.knockback_decay if hit_profile != null else 12.0
 	knockback = away.normalized() * knockback_speed
 	return_timer = return_home_delay
-	var contact_point := global_position - away.normalized() * gameplay_radius + Vector3.UP * 1.15
+	var contact_point := get_hit_contact_point(attacker_position)
 	hit_particles.call("burst", contact_point, away.normalized(), critical, hit_profile_id)
 	if not CombatAudio.play_hit(hit_audio, combat_database, hit_profile, &"wood", critical, random):
 		hit_audio.pitch_scale = random.randf_range(0.94, 1.06)

@@ -1,19 +1,4 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
+importer="keep"
 uid="uid://djttl0dmqr5b3"
-
-[deps]
-
-files=["res://data/source/ai_archetypes.decision.translation", "res://data/source/ai_archetypes.preferred.translation", "res://data/source/ai_archetypes.engage.translation", "res://data/source/ai_archetypes.disengage.translation", "res://data/source/ai_archetypes.pressure.translation", "res://data/source/ai_archetypes.defend.translation", "res://data/source/ai_archetypes.execute.translation", "res://data/source/ai_archetypes.aoe.translation", "res://data/source/ai_archetypes.awakening.translation", "res://data/source/ai_archetypes.decision.translation"]
-
-source_file="res://data/source/ai_archetypes.csv"
-dest_files=["res://data/source/ai_archetypes.decision.translation", "res://data/source/ai_archetypes.preferred.translation", "res://data/source/ai_archetypes.engage.translation", "res://data/source/ai_archetypes.disengage.translation", "res://data/source/ai_archetypes.pressure.translation", "res://data/source/ai_archetypes.defend.translation", "res://data/source/ai_archetypes.execute.translation", "res://data/source/ai_archetypes.aoe.translation", "res://data/source/ai_archetypes.awakening.translation", "res://data/source/ai_archetypes.decision.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

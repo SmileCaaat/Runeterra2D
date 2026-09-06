@@ -1,0 +1,330 @@
+{
+  "frames": {
+	"frame_0001.png": {
+	  "frame": {
+		"x": 0,
+		"y": 0,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 42,
+	  "sourceFrameIndex": 0,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0002.png": {
+	  "frame": {
+		"x": 1076,
+		"y": 0,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 84,
+	  "timeMs": 125,
+	  "sourceFrameIndex": 1,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0003.png": {
+	  "frame": {
+		"x": 2152,
+		"y": 0,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 208,
+	  "sourceFrameIndex": 2,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0004.png": {
+	  "frame": {
+		"x": 3228,
+		"y": 0,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 292,
+	  "sourceFrameIndex": 3,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0005.png": {
+	  "frame": {
+		"x": 4304,
+		"y": 0,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 84,
+	  "timeMs": 375,
+	  "sourceFrameIndex": 4,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0006.png": {
+	  "frame": {
+		"x": 5380,
+		"y": 0,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 458,
+	  "sourceFrameIndex": 5,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0007.png": {
+	  "frame": {
+		"x": 6456,
+		"y": 0,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 542,
+	  "sourceFrameIndex": 6,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0008.png": {
+	  "frame": {
+		"x": 7532,
+		"y": 0,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 84,
+	  "timeMs": 625,
+	  "sourceFrameIndex": 7,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0009.png": {
+	  "frame": {
+		"x": 0,
+		"y": 1211,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 708,
+	  "sourceFrameIndex": 8,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0010.png": {
+	  "frame": {
+		"x": 1076,
+		"y": 1211,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 792,
+	  "sourceFrameIndex": 9,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0011.png": {
+	  "frame": {
+		"x": 2152,
+		"y": 1211,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 84,
+	  "timeMs": 875,
+	  "sourceFrameIndex": 10,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0012.png": {
+	  "frame": {
+		"x": 3228,
+		"y": 1211,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 958,
+	  "sourceFrameIndex": 11,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0013.png": {
+	  "frame": {
+		"x": 4304,
+		"y": 1211,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 1042,
+	  "sourceFrameIndex": 12,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0014.png": {
+	  "frame": {
+		"x": 5380,
+		"y": 1211,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 84,
+	  "timeMs": 1125,
+	  "sourceFrameIndex": 13,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0015.png": {
+	  "frame": {
+		"x": 6456,
+		"y": 1211,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 1208,
+	  "sourceFrameIndex": 14,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0016.png": {
+	  "frame": {
+		"x": 7532,
+		"y": 1211,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 1292,
+	  "sourceFrameIndex": 15,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0017.png": {
+	  "frame": {
+		"x": 0,
+		"y": 2422,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 84,
+	  "timeMs": 1375,
+	  "sourceFrameIndex": 16,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0018.png": {
+	  "frame": {
+		"x": 1076,
+		"y": 2422,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 1458,
+	  "sourceFrameIndex": 17,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0019.png": {
+	  "frame": {
+		"x": 2152,
+		"y": 2422,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 1542,
+	  "sourceFrameIndex": 18,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0020.png": {
+	  "frame": {
+		"x": 3228,
+		"y": 2422,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 84,
+	  "timeMs": 1625,
+	  "sourceFrameIndex": 19,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0021.png": {
+	  "frame": {
+		"x": 4304,
+		"y": 2422,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 1708,
+	  "sourceFrameIndex": 20,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0022.png": {
+	  "frame": {
+		"x": 5380,
+		"y": 2422,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 83,
+	  "timeMs": 1792,
+	  "sourceFrameIndex": 21,
+	  "rotated": false,
+	  "trimmed": false
+	},
+	"frame_0023.png": {
+	  "frame": {
+		"x": 6456,
+		"y": 2422,
+		"w": 1076,
+		"h": 1211
+	  },
+	  "duration": 84,
+	  "timeMs": 1875,
+	  "sourceFrameIndex": 22,
+	  "rotated": false,
+	  "trimmed": false
+	}
+  },
+  "meta": {
+	"app": "FrameDock Lite",
+	"version": 1,
+	"image": "spritesheet.png",
+	"format": "RGBA8888",
+	"size": {
+	  "w": 8608,
+	  "h": 3633
+	},
+	"canvas": {
+	  "width": 1076,
+	  "height": 1211,
+	  "originPixelX": 443,
+	  "originPixelY": 1074,
+	  "padding": 8
+	},
+	"baked": true,
+	"profileId": "Ryze",
+	"profileLabel": "Ryze",
+	"animationId": "spell1",
+	"frameRate": 12
+  },
+  "audio": {
+	"schemaVersion": 1,
+	"files": [],
+	"events": []
+  }
+}

@@ -26,6 +26,8 @@
 | `LOL-GAREN-Q` | Decisive Strike 的 5 级持续、额外伤害、沉默与强化普攻语义 | [Decisive Strike](https://wiki.leagueoflegends.com/en-us/Template:Data_Garen/Decisive_Strike) | 2026-08-25，数值由用户提供的当前模板截图核对 |
 | `LOL-GAREN-E` | Judgment 的五级冷却、每转物理伤害、攻速转数、最近目标增伤与破甲语义 | [Judgment](https://wiki.leagueoflegends.com/en-us/Template:Data_Garen/Judgment) | 2026-08-25，数值由用户提供的当前模板截图核对 |
 | `LOL-GAREN-R` | Demacian Justice 的三级冷却、施法时间、真伤与缺失生命值系数 | [Demacian Justice](https://wiki.leagueoflegends.com/en-us/Template:Data_Garen/Demacian_Justice) | 2026-08-26，数值由用户提供的当前模板截图核对 |
+| `LOL-RYZE-CURRENT` | Ryze 当前 PC 属性、Q/W/E/R 等级结构、冷却、射程与机制语义 | [Ryze](https://wiki.leagueoflegends.com/en-us/Ryze) | 2026-09-04；同次以 Data Dragon `16.17.1` 取得当前结构快照，实际入表前重新核对 Wiki 数据模板 |
+| `LOL-RYZE-HISTORY2` | Ryze History 第 2 套 Arcane Mastery、Overload、Rune Prison、Spell Flux 与 Desperate Power 的形态及数值 | [Ryze/History](https://wiki.leagueoflegends.com/en-us/Ryze/History) | 2026-09-04；用户提供六张技能截图作为可追溯快照，P/Q/W/E/T 用此形态，R 单独保留当前版本 |
 
 ## 已实现的通用公式
 

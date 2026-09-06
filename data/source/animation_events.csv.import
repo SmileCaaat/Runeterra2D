@@ -1,19 +1,4 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
+importer="keep"
 uid="uid://cdh732yxjtuv5"
-
-[deps]
-
-files=["res://data/source/animation_events.owner.translation", "res://data/source/animation_events.animation.translation", "res://data/source/animation_events.event.translation", "res://data/source/animation_events.timing.translation", "res://data/source/animation_events.timing.translation", "res://data/source/animation_events.end.translation", "res://data/source/animation_events.payload.translation", "res://data/source/animation_events.vector.translation", "res://data/source/animation_events.vector.translation", "res://data/source/animation_events.vector.translation", "res://data/source/animation_events.float.translation"]
-
-source_file="res://data/source/animation_events.csv"
-dest_files=["res://data/source/animation_events.owner.translation", "res://data/source/animation_events.animation.translation", "res://data/source/animation_events.event.translation", "res://data/source/animation_events.timing.translation", "res://data/source/animation_events.timing.translation", "res://data/source/animation_events.end.translation", "res://data/source/animation_events.payload.translation", "res://data/source/animation_events.vector.translation", "res://data/source/animation_events.vector.translation", "res://data/source/animation_events.vector.translation", "res://data/source/animation_events.float.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

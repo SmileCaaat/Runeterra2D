@@ -56,7 +56,9 @@ func present_miss() -> void:
 
 
 func get_instance_template_id() -> StringName:
-	return _instance_definition.instance_template_id if _instance_definition != null else &""
+	if _instance_definition == null:
+		return &""
+	return StringName(_instance_definition.instance_template_id)
 
 
 func is_courage_stack_eligible() -> bool:

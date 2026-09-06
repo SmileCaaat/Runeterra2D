@@ -1,19 +1,4 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
+importer="keep"
 uid="uid://botc3j1x2ca70"
-
-[deps]
-
-files=["res://data/source/skill_effects.skill.translation", "res://data/source/skill_effects.order.translation", "res://data/source/skill_effects.trigger.translation", "res://data/source/skill_effects.effect.translation", "res://data/source/skill_effects.target.translation", "res://data/source/skill_effects.damage.translation", "res://data/source/skill_effects.base.translation", "res://data/source/skill_effects.scaling.translation", "res://data/source/skill_effects.scaling.translation", "res://data/source/skill_effects.target.translation", "res://data/source/skill_effects.delay.translation", "res://data/source/skill_effects.interval.translation", "res://data/source/skill_effects.can.translation", "res://data/source/skill_effects.nonlethal.translation", "res://data/source/skill_effects.buff.translation", "res://data/source/skill_effects.control.translation", "res://data/source/skill_effects.control.translation", "res://data/source/skill_effects.hit.translation", "res://data/source/skill_effects.tags.translation"]
-
-source_file="res://data/source/skill_effects.csv"
-dest_files=["res://data/source/skill_effects.skill.translation", "res://data/source/skill_effects.order.translation", "res://data/source/skill_effects.trigger.translation", "res://data/source/skill_effects.effect.translation", "res://data/source/skill_effects.target.translation", "res://data/source/skill_effects.damage.translation", "res://data/source/skill_effects.base.translation", "res://data/source/skill_effects.scaling.translation", "res://data/source/skill_effects.scaling.translation", "res://data/source/skill_effects.target.translation", "res://data/source/skill_effects.delay.translation", "res://data/source/skill_effects.interval.translation", "res://data/source/skill_effects.can.translation", "res://data/source/skill_effects.nonlethal.translation", "res://data/source/skill_effects.buff.translation", "res://data/source/skill_effects.control.translation", "res://data/source/skill_effects.control.translation", "res://data/source/skill_effects.hit.translation", "res://data/source/skill_effects.tags.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

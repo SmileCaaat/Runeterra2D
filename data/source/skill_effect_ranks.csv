@@ -33,3 +33,22 @@ ocean_damage,5,16,0.52,0,0,0,0,physical_damage_per_spin|total_ad,E rank 5 per sp
 judgment_damage,1,125,0,0.25,0.435,0,0,true_damage|target_missing_health,R rank 1 true damage
 judgment_damage,2,200,0,0.30,0.435,0,0,true_damage|target_missing_health,R rank 2 true damage
 judgment_damage,3,275,0,0.35,0.435,0,0,true_damage|target_missing_health,R rank 3 true damage
+ryze_q_damage,1,60,0.55,0,0,0,0,magic_damage|ap|mana,历史二代Q
+ryze_q_damage,2,90,0.55,0,0,0,0,magic_damage|ap|mana,历史二代Q
+ryze_q_damage,3,120,0.55,0,0,0,0,magic_damage|ap|mana,历史二代Q
+ryze_q_damage,4,150,0.55,0,0,0,0,magic_damage|ap|mana,历史二代Q
+ryze_q_damage,5,180,0.55,0,0,0,0,magic_damage|ap|mana,历史二代Q
+ryze_w_damage,1,80,0.40,0,0,0,1,magic_damage|ap|mana,历史二代W
+ryze_w_damage,2,100,0.40,0,0,0,1.1,magic_damage|ap|mana,历史二代W
+ryze_w_damage,3,120,0.40,0,0,0,1.2,magic_damage|ap|mana,历史二代W
+ryze_w_damage,4,140,0.40,0,0,0,1.3,magic_damage|ap|mana,历史二代W
+ryze_w_damage,5,160,0.40,0,0,0,1.4,magic_damage|ap|mana,历史二代W
+ryze_e_damage,1,36,0.20,0,0,0,0,magic_damage|ap|mana,历史二代E
+ryze_e_damage,2,52,0.20,0,0,0,0,magic_damage|ap|mana,历史二代E
+ryze_e_damage,3,68,0.20,0,0,0,0,magic_damage|ap|mana,历史二代E
+ryze_e_damage,4,84,0.20,0,0,0,0,magic_damage|ap|mana,历史二代E
+ryze_e_damage,5,100,0.20,0,0,0,0,magic_damage|ap|mana,历史二代E
+ryze_p_shield,1,25,0.08,0,0,0,0,shield|mana,按英雄等级提升到110；当前等级1为25
+ryze_t_buff,1,0.15,0,0,0,0,0,spell_vamp,绝望之力一级法术吸血
+ryze_t_buff,2,0.20,0,0,0,0,0,spell_vamp,绝望之力二级法术吸血
+ryze_t_buff,3,0.25,0,0,0,0,0,spell_vamp,绝望之力三级法术吸血

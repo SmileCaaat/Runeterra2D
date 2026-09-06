@@ -16,3 +16,10 @@ spell4_impact,garen,spell4,hit,seconds,0.28,0,judgment_hit,0,0,0,0
 spell4_mark_audio,garen,spell4,audio,seconds,0,0,garen_r_buff_activate,0,0,0,1.0
 spell4_hit_audio,garen,spell4,audio,seconds,0.28,0,garen_r_hit,0,0,0,1.0
 taunt_ghostship,garen,taunt,vfx,seconds,0,1.70,ghostship,0,0,0,0
+ryze_attack1_frame_6,ryze,attack1,hit,frame,5,5,ryze_basic_hit,0,0,0,0
+ryze_attack2_frame_6,ryze,attack2,hit,frame,5,5,ryze_basic_hit,0,0,0,0
+ryze_attack3_frame_6,ryze,attack3,hit,frame,5,5,ryze_basic_hit,0,0,0,0
+ryze_crit_frame_6,ryze,crit,hit,frame,5,5,ryze_basic_hit,0,0,0,0
+ryze_q_frame_4,ryze,spell1,hit,frame,3,3,ryze_q_hit,0,0,0,0
+ryze_w_frame_6,ryze,spell2,hit,frame,5,5,ryze_w_hit,0,0,0,0
+ryze_e_frame_7,ryze,spell3,hit,frame,6,6,ryze_e_hit,0,0,0,0

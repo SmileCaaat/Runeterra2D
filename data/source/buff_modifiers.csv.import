@@ -1,19 +1,4 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
+importer="keep"
 uid="uid://c1nqlwg00f2sx"
-
-[deps]
-
-files=["res://data/source/buff_modifiers.buff.translation", "res://data/source/buff_modifiers.stat.translation", "res://data/source/buff_modifiers.operation.translation", "res://data/source/buff_modifiers.value.translation", "res://data/source/buff_modifiers.phase.translation", "res://data/source/buff_modifiers.priority.translation"]
-
-source_file="res://data/source/buff_modifiers.csv"
-dest_files=["res://data/source/buff_modifiers.buff.translation", "res://data/source/buff_modifiers.stat.translation", "res://data/source/buff_modifiers.operation.translation", "res://data/source/buff_modifiers.value.translation", "res://data/source/buff_modifiers.phase.translation", "res://data/source/buff_modifiers.priority.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

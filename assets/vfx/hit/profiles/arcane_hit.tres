@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="HitEffectProfile" format=3 uid="uid://b6d0l31rf4qpb"]
+
+[ext_resource type="Script" uid="uid://b3binity8vp1h" path="res://scripts/vfx/hit_effect_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"arcane"
+duration = 0.32
+world_scale = 0.59
+core_color = Color(0.95, 0.98, 1, 1)
+hot_color = Color(0.32, 0.68, 1, 1)
+fade_color = Color(0.22, 0.12, 0.92, 0)
+flash_duration = 0.08
+flash_scale = 1.18
+burst_amount = 8
+burst_speed = Vector2(160, 340)
+burst_scale = Vector2(0.12, 0.72)
+spark_amount = 16
+spark_speed = Vector2(340, 680)
+spark_spread = 58.0
+spark_scale = Vector2(0.28, 1.85)
+shockwave_duration = 0.18
+shockwave_width = 3.0
+dust_amount = 1
+dust_speed = Vector2(20, 50)
+dust_gravity = 10.0
+debris_amount = 4
+debris_speed = Vector2(180, 360)
+debris_gravity = 40.0

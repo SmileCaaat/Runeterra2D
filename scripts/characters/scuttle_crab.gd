@@ -162,6 +162,9 @@ func is_enemy_of(other_team: StringName) -> bool:
 func is_targetable() -> bool:
 	return not returning_on_death and not dissolving
 
+func get_hit_contact_point(_attacker_position: Vector3) -> Vector3:
+	return global_position + Vector3.UP * 0.7
+
 func get_health_ratio() -> float:
 	return current_health / maxf(max_health, 1.0)
 
@@ -199,7 +202,7 @@ func _apply_damage(amount: float, attacker_position: Vector3, damage_type: Strin
 	var away := global_position - attacker_position
 	away.y = 0.0
 	if away.is_zero_approx(): away = Vector3.RIGHT
-	hit_particles.call("burst", global_position + Vector3.UP * 0.7, away.normalized(), critical, hit_profile_id)
+	hit_particles.call("burst", get_hit_contact_point(attacker_position), away.normalized(), critical, hit_profile_id)
 	if not CombatAudio.play_hit(hit_audio, combat_database, hit_profile, &"flesh", critical, random):
 		hit_audio.pitch_scale = random.randf_range(hit_audio_pitch_min, hit_audio_pitch_max)
 		hit_audio.play()

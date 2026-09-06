@@ -1,19 +1,4 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
+importer="keep"
 uid="uid://chy6xcayp60fa"
-
-[deps]
-
-files=["res://data/source/particle_profiles.amount.translation", "res://data/source/particle_profiles.lifetime.translation", "res://data/source/particle_profiles.randomness.translation", "res://data/source/particle_profiles.spread.translation", "res://data/source/particle_profiles.gravity.translation", "res://data/source/particle_profiles.gravity.translation", "res://data/source/particle_profiles.gravity.translation", "res://data/source/particle_profiles.velocity.translation", "res://data/source/particle_profiles.velocity.translation", "res://data/source/particle_profiles.angular.translation", "res://data/source/particle_profiles.angular.translation", "res://data/source/particle_profiles.scale.translation", "res://data/source/particle_profiles.scale.translation", "res://data/source/particle_profiles.mesh.translation", "res://data/source/particle_profiles.mesh.translation", "res://data/source/particle_profiles.emission.translation", "res://data/source/particle_profiles.emission.translation", "res://data/source/particle_profiles.gradient.translation", "res://data/source/particle_profiles.gradient.translation", "res://data/source/particle_profiles.gradient.translation", "res://data/source/particle_profiles.gradient.translation"]
-
-source_file="res://data/source/particle_profiles.csv"
-dest_files=["res://data/source/particle_profiles.amount.translation", "res://data/source/particle_profiles.lifetime.translation", "res://data/source/particle_profiles.randomness.translation", "res://data/source/particle_profiles.spread.translation", "res://data/source/particle_profiles.gravity.translation", "res://data/source/particle_profiles.gravity.translation", "res://data/source/particle_profiles.gravity.translation", "res://data/source/particle_profiles.velocity.translation", "res://data/source/particle_profiles.velocity.translation", "res://data/source/particle_profiles.angular.translation", "res://data/source/particle_profiles.angular.translation", "res://data/source/particle_profiles.scale.translation", "res://data/source/particle_profiles.scale.translation", "res://data/source/particle_profiles.mesh.translation", "res://data/source/particle_profiles.mesh.translation", "res://data/source/particle_profiles.emission.translation", "res://data/source/particle_profiles.emission.translation", "res://data/source/particle_profiles.gradient.translation", "res://data/source/particle_profiles.gradient.translation", "res://data/source/particle_profiles.gradient.translation", "res://data/source/particle_profiles.gradient.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

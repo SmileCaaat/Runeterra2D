@@ -1,19 +1,4 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
+importer="keep"
 uid="uid://bgqmxfjnn030e"
-
-[deps]
-
-files=["res://data/source/combat_rules.category.translation", "res://data/source/combat_rules.value.translation", "res://data/source/combat_rules.value.translation", "res://data/source/combat_rules.description.translation"]
-
-source_file="res://data/source/combat_rules.csv"
-dest_files=["res://data/source/combat_rules.category.translation", "res://data/source/combat_rules.value.translation", "res://data/source/combat_rules.value.translation", "res://data/source/combat_rules.description.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "app": "FrameDock Lite",
+  "kind": "sheet",
+  "profileId": "Ryze",
+  "profileLabel": "Ryze",
+  "canvas": {
+    "width": 1076,
+    "height": 1211,
+    "originPixelX": 443,
+    "originPixelY": 1074,
+    "padding": 8
+  },
+  "animations": [
+    {
+      "id": "idle",
+      "folder": "idle"
+    },
+    {
+      "id": "attack1",
+      "folder": "attack1"
+    },
+    {
+      "id": "attack2",
+      "folder": "attack2"
+    },
+    {
+      "id": "attack3",
+      "folder": "attack3"
+    },
+    {
+      "id": "channel",
+      "folder": "channel"
+    },
+    {
+      "id": "channel_wndup",
+      "folder": "channel_wndup"
+    },
+    {
+      "id": "crit",
+      "folder": "crit"
+    },
+    {
+      "id": "dance",
+      "folder": "dance"
+    },
+    {
+      "id": "death",
+      "folder": "death"
+    },
+    {
+      "id": "joke",
+      "folder": "joke"
+    },
+    {
+      "id": "laugh",
+      "folder": "laugh"
+    },
+    {
+      "id": "recall",
+      "folder": "recall"
+    },
+    {
+      "id": "respawn",
+      "folder": "respawn"
+    },
+    {
+      "id": "run_spell",
+      "folder": "run_spell"
+    },
+    {
+      "id": "run",
+      "folder": "run"
+    },
+    {
+      "id": "spell4_winddown",
+      "folder": "spell4_winddown"
+    },
+    {
+      "id": "spell1",
+      "folder": "spell1"
+    },
+    {
+      "id": "spell2",
+      "folder": "spell2"
+    },
+    {
+      "id": "spell3",
+      "folder": "spell3"
+    },
+    {
+      "id": "spell4",
+      "folder": "spell4"
+    },
+    {
+      "id": "taunt",
+      "folder": "taunt"
+    }
+  ]
+}

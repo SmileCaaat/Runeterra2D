@@ -4,6 +4,7 @@ extends Node3D
 const FRAMES := preload("res://assets/vfx/status/armor_shred/armor_shred_burst_frames.tres")
 const METAL_HATCH := preload("res://addons/Sound FX Starter Pack Vol. 1/Motions and Impacts/Impact Metal Hatch.wav")
 const OVERWHELM_ICON := preload("res://assets/icons/status/overwhelm.png")
+const MAGIC_RESIST_ICON := preload("res://assets/icons/status/MagicResistanceReduction.png")
 const LIBRARY_SPARKS := preload("res://addons/vfx_library/effects/sparks.tscn")
 
 var burst_frames: AnimatedSprite3D
@@ -15,13 +16,13 @@ var sparks_sprite: Sprite3D
 var active_tween: Tween
 
 
-static func get_or_create(owner: Node3D) -> StatusDebuffBurst:
-	var existing := owner.get_node_or_null("ArmorShredBurst") as StatusDebuffBurst
+static func get_or_create(host: Node3D) -> StatusDebuffBurst:
+	var existing := host.get_node_or_null("ArmorShredBurst") as StatusDebuffBurst
 	if existing != null:
 		return existing
 	var burst := (load("res://scripts/presentation/status_debuff_burst.gd") as Script).new() as StatusDebuffBurst
 	burst.name = "ArmorShredBurst"
-	owner.add_child(burst)
+	host.add_child(burst)
 	return burst
 
 
@@ -79,22 +80,37 @@ func _build_library_sparks() -> void:
 
 
 func play_burst() -> void:
+	_play_status_burst(OVERWHELM_ICON, true)
+
+
+func play_magic_resist_burst() -> void:
+	_play_status_burst(MAGIC_RESIST_ICON, false)
+
+
+func _play_status_burst(icon_texture: Texture2D, physical: bool) -> void:
 	if active_tween != null and active_tween.is_valid():
 		active_tween.kill()
-	burst_frames.visible = true
-	burst_frames.frame = 0
-	burst_frames.speed_scale = 1.0
-	burst_frames.play(&"burst")
-	burst_frames.position = Vector3(0.0, 1.10, 0.06)
-	burst_frames.scale = Vector3.ONE
-	burst_frames.modulate = Color.WHITE
-	_play_library_sparks()
+	if physical:
+		burst_frames.visible = true
+		burst_frames.frame = 0
+		burst_frames.speed_scale = 1.0
+		burst_frames.play(&"burst")
+		burst_frames.position = Vector3(0.0, 1.10, 0.06)
+		burst_frames.scale = Vector3.ONE
+		burst_frames.modulate = Color.WHITE
+		_play_library_sparks()
+		audio.pitch_scale = 3.0
+		audio.play()
+	else:
+		burst_frames.visible = false
+		burst_frames.stop()
+		sparks_sprite.visible = false
+		sparks_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	icon.texture = icon_texture
 	icon.visible = true
 	icon.position = Vector3(0.0, 1.10, 0.04)
 	icon.scale = Vector3.ONE * 0.396
 	icon.modulate = Color(1.0, 1.0, 1.0, 0.0)
-	audio.pitch_scale = 3.0
-	audio.play()
 	active_tween = create_tween().set_parallel(true)
 	active_tween.tween_property(icon, "modulate:a", 1.0, 0.07)
 	active_tween.tween_property(icon, "scale", Vector3.ONE * 2.088, 0.11).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -113,10 +129,10 @@ func play_burst() -> void:
 
 func _play_library_sparks() -> void:
 	var database := CombatData.database()
-	var scale := float(database.get_rule(&"presentation.library_armor_shred_sparks_scale", 1.0)) if database != null else 1.0
+	var sparks_scale := float(database.get_rule(&"presentation.library_armor_shred_sparks_scale", 1.0)) if database != null else 1.0
 	sparks.amount = int(database.get_rule(&"presentation.library_armor_shred_sparks_amount", 30)) if database != null else 30
 	sparks.lifetime = float(database.get_rule(&"presentation.library_armor_shred_sparks_lifetime", 0.5)) if database != null else 0.5
-	sparks.scale = Vector2.ONE * scale
+	sparks.scale = Vector2.ONE * sparks_scale
 	sparks.restart()
 	sparks.emitting = true
 	sparks_sprite.position = Vector3(0.0, 1.10, 0.08)

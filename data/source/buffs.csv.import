@@ -1,19 +1,4 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
+importer="keep"
 uid="uid://ch121ypre2yri"
-
-[deps]
-
-files=["res://data/source/buffs.display.translation", "res://data/source/buffs.duration.translation", "res://data/source/buffs.max.translation", "res://data/source/buffs.stacking.translation", "res://data/source/buffs.refresh.translation", "res://data/source/buffs.dispel.translation", "res://data/source/buffs.visible.translation", "res://data/source/buffs.nonlethal.translation", "res://data/source/buffs.vfx.translation", "res://data/source/buffs.tags.translation"]
-
-source_file="res://data/source/buffs.csv"
-dest_files=["res://data/source/buffs.display.translation", "res://data/source/buffs.duration.translation", "res://data/source/buffs.max.translation", "res://data/source/buffs.stacking.translation", "res://data/source/buffs.refresh.translation", "res://data/source/buffs.dispel.translation", "res://data/source/buffs.visible.translation", "res://data/source/buffs.nonlethal.translation", "res://data/source/buffs.vfx.translation", "res://data/source/buffs.tags.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

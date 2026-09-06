@@ -1,19 +1,4 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
+importer="keep"
 uid="uid://ca4oy43drfwed"
-
-[deps]
-
-files=["res://data/source/hero_subclasses.class.translation", "res://data/source/hero_subclasses.display.translation", "res://data/source/hero_subclasses.combat.translation", "res://data/source/hero_subclasses.ai.translation", "res://data/source/hero_subclasses.notes.translation"]
-
-source_file="res://data/source/hero_subclasses.csv"
-dest_files=["res://data/source/hero_subclasses.class.translation", "res://data/source/hero_subclasses.display.translation", "res://data/source/hero_subclasses.combat.translation", "res://data/source/hero_subclasses.ai.translation", "res://data/source/hero_subclasses.notes.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

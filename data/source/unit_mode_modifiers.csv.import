@@ -1,16 +1,4 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
+importer="keep"
 uid="uid://c64mwjvc4vbmk"
-
-[deps]
-
-source_file="res://data/source/unit_mode_modifiers.csv"
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

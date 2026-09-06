@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bu24a6k8rjjgo"]
 
-[ext_resource type="SpriteFrames" uid="uid://clqjgimw4i4kr" path="res://assets/characters/rogue_admiral_garen/garen_sprite_frames.tres" id="1_08h5l"]
+[ext_resource type="SpriteFrames" uid="uid://dt3lb4kwqqf0a" path="res://assets/characters/rogue_admiral_garen/garen_sprite_frames.tres" id="1_08h5l"]
 [ext_resource type="Texture2D" uid="uid://s6tqtqunb51r" path="res://assets/fx/soft_ground_shadow.svg" id="2_shadow"]
 [ext_resource type="Script" uid="uid://dv8xxg0p6k8ch" path="res://scripts/characters/garen_combat_ai.gd" id="3_garen_ai"]
 [ext_resource type="AudioStream" uid="uid://cca16a1p03bpr" path="res://assets/audio/combat/garen_attack_swing.wav" id="6_attack_audio"]
@@ -12,7 +12,7 @@
 [ext_resource type="AudioStream" uid="uid://bgut4blvfp11f" path="res://assets/audio/skills/garen/spell_Ghost ship.mp3" id="13_ghostship_audio"]
 [ext_resource type="Material" uid="uid://bmomd6rtvumq7" path="res://assets/vfx/garen_skills/jolly_roger_screen_material.tres" id="14_jolly_material"]
 [ext_resource type="Material" uid="uid://gsco443lge80" path="res://assets/vfx/garen_skills/skill_vfx_soft_material.tres" id="15_soft_vfx_material"]
-[ext_resource type="PackedScene" path="res://scenes/units/target_dummy.tscn" id="16_target_dummy"]
+[ext_resource type="PackedScene" uid="uid://b6aty4b8c1cpm" path="res://scenes/units/target_dummy.tscn" id="16_target_dummy"]
 [ext_resource type="Script" uid="uid://ciwom2obe6fuw" path="res://scripts/rendering/character_depth_sorter.gd" id="17_depth_sorter"]
 [ext_resource type="Script" uid="uid://cng0mh5tto5jy" path="res://scripts/systems/scuttle_crab_spawner.gd" id="18_scuttle_spawner"]
 [ext_resource type="PackedScene" path="res://scenes/units/scuttle_crab.tscn" id="19_scuttle"]
@@ -28,6 +28,7 @@
 [ext_resource type="Shader" uid="uid://mptsdhv37oje" path="res://assets/shaders/stage_readability_alpha.gdshader" id="29_stage_readability_alpha"]
 [ext_resource type="SpriteFrames" path="res://assets/vfx/garen_perseverance/garen_perseverance_frames.tres" id="30_perseverance_vfx"]
 [ext_resource type="Shader" uid="uid://dhmnkmvmy6wu3" path="res://assets/shaders/stage_edge_tile.gdshader" id="31_stage_edge_tile"]
+[ext_resource type="Script" uid="uid://h8mbosk6ul2r" path="res://scripts/ui/training_roster_panel.gd" id="32_roster_ui"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_qf7t4"]
 sky_top_color = Color(0.11372549, 0.15294118, 0.21960784, 1)
@@ -408,7 +409,7 @@ offset = Vector2(245, 861.5)
 pixel_size = 0.004
 billboard = 1
 sprite_frames = ExtResource("1_08h5l")
-animation = &"attack3"
+animation = &"idle1"
 autoplay = "idle1"
 
 [node name="UnitReadability" type="Node3D" parent="Characters/Player" unique_id=1487209063]
@@ -573,3 +574,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.5)
 
 [node name="DepthLaneFar" type="Marker3D" parent="Markers" unique_id=1365935374]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.5)
+
+[node name="TrainingRosterUI" type="CanvasLayer" parent="." unique_id=936934129]
+script = ExtResource("32_roster_ui")

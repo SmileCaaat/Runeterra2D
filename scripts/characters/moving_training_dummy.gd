@@ -100,6 +100,13 @@ func get_health_ratio() -> float:
 	return current_health / maxf(max_health, 1.0)
 
 
+func get_hit_contact_point(attacker_position: Vector3) -> Vector3:
+	var away := global_position - attacker_position
+	away.y = 0.0
+	var contact_direction := -away.normalized() if not away.is_zero_approx() else Vector3.LEFT
+	return global_position + contact_direction * 0.48 + Vector3.UP * 1.05
+
+
 func _apply_damage(amount: float, source_name: String, can_crit: bool, attacker_position: Vector3, damage_type: StringName, hit_profile_id: StringName) -> void:
 	hit_count += 1
 	var hit_profile := combat_database.get_hit_profile(hit_profile_id) if combat_database != null else null
@@ -117,8 +124,7 @@ func _apply_damage(amount: float, source_name: String, can_crit: bool, attacker_
 	var knockback_speed := hit_profile.knockback_speed if hit_profile != null else 2.8
 	knockback_decay = hit_profile.knockback_decay if hit_profile != null else 12.0
 	knockback = away.normalized() * knockback_speed
-	var contact_direction := -away.normalized()
-	var contact_point := global_position + contact_direction * 0.48 + Vector3.UP * 1.05
+	var contact_point := get_hit_contact_point(attacker_position)
 	hit_particles.call("burst", contact_point, away.normalized(), critical, hit_profile_id)
 	if not CombatAudio.play_hit(hit_audio, combat_database, hit_profile, &"wood", critical, random):
 		hit_audio.pitch_scale = random.randf_range(hit_audio_pitch_min, hit_audio_pitch_max)

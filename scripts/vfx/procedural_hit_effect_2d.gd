@@ -5,6 +5,7 @@ const HIT_TEXTURES := preload("res://scripts/vfx/procedural_hit_textures.gd")
 const SHOCKWAVE_SCRIPT := preload("res://scripts/vfx/procedural_shockwave_2d.gd")
 const COMBO_RING_SCENE := preload("res://addons/vfx_library/effects/combo_ring.tscn")
 const WATER_SPLASH_SCENE := preload("res://addons/vfx_library/effects/water_splash.tscn")
+const LIGHTNING_CHAIN_SCENE := preload("res://addons/vfx_library/effects/lightning_chain.tscn")
 
 var profile: Variant
 var flash: Sprite2D
@@ -15,6 +16,7 @@ var dust_particles: GPUParticles2D
 var debris_particles: GPUParticles2D
 var combo_ring: CPUParticles2D
 var water_splash: CPUParticles2D
+var lightning_chain: Node2D
 var flash_elapsed := 0.0
 var flash_active := false
 
@@ -43,6 +45,10 @@ func _ready() -> void:
 	water_splash.position = Vector2.ZERO
 	water_splash.emitting = false
 	add_child(water_splash)
+	lightning_chain = LIGHTNING_CHAIN_SCENE.instantiate() as Node2D
+	lightning_chain.name = "LibraryLightningChain"
+	lightning_chain.position = Vector2.ZERO
+	add_child(lightning_chain)
 
 	shockwave = SHOCKWAVE_SCRIPT.new() as Node2D
 	shockwave.material = additive
@@ -67,6 +73,12 @@ func play(effect_profile: Variant, attack_direction: Vector2) -> void:
 	burst_particles.rotation = direction.angle()
 	debris_particles.rotation = direction.angle()
 	for emitter: GPUParticles2D in [burst_particles, spark_particles, dust_particles, debris_particles]:
+		if StringName(profile.id) == &"arcane":
+			emitter.randomness = 0.72
+			emitter.explosiveness = 0.62
+		else:
+			emitter.randomness = 0.35
+			emitter.explosiveness = 1.0
 		emitter.restart()
 		emitter.emitting = true
 
@@ -117,6 +129,30 @@ func _play_library_overlay(profile_id: StringName) -> void:
 		water_splash.scale = Vector2.ONE * _library_rule(&"presentation.library_water_splash_scale", 1.0)
 		water_splash.restart()
 		water_splash.emitting = true
+	if profile_id == &"arcane":
+		var chain_scale := _library_rule(&"presentation.library_lightning_chain_scale", 4.0)
+		lightning_chain.scale = Vector2.ONE * chain_scale
+		lightning_chain.rotation = randf_range(-PI, PI)
+		var index := 0
+		for child: Node in lightning_chain.get_children():
+			var emitter := child as CPUParticles2D
+			if emitter == null:
+				continue
+			var keep := index < 2 or randf() > 0.42
+			index += 1
+			emitter.amount = 8 + randi() % 16
+			emitter.lifetime = 0.16 + randf() * 0.2
+			emitter.spread = 4.0 + randf() * 48.0
+			emitter.randomness = 0.55 + randf() * 0.35
+			emitter.explosiveness = 0.4 + randf() * 0.5
+			emitter.initial_velocity_min = 70.0 + randf() * 70.0
+			emitter.initial_velocity_max = 130.0 + randf() * 110.0
+			emitter.scale_amount_min = 0.7 + randf() * 0.9
+			emitter.scale_amount_max = 1.4 + randf() * 2.4
+			emitter.rotation = randf_range(-PI, PI)
+			emitter.emitting = false
+			if keep:
+				emitter.restart()
 
 
 func _library_rule(rule_id: StringName, fallback: float) -> float:
@@ -136,19 +172,19 @@ func _configure_emitter(
 ) -> void:
 	emitter.amount = maxi(amount, 1)
 	emitter.lifetime = maxf(lifetime, 0.05)
-	var material := ParticleProcessMaterial.new()
-	material.direction = Vector3(cos(deg_to_rad(direction_degrees)), sin(deg_to_rad(direction_degrees)), 0.0)
-	material.spread = spread
-	material.initial_velocity_min = speed.x
-	material.initial_velocity_max = speed.y
-	material.gravity = Vector3(gravity.x, gravity.y, 0.0)
-	material.scale_min = scale_range.x
-	material.scale_max = scale_range.y
-	material.angular_velocity_min = -420.0
-	material.angular_velocity_max = 420.0
-	material.color_ramp = _color_ramp(profile.core_color, profile.hot_color, profile.fade_color)
-	material.scale_curve = _scale_curve()
-	emitter.process_material = material
+	var process_material := ParticleProcessMaterial.new()
+	process_material.direction = Vector3(cos(deg_to_rad(direction_degrees)), sin(deg_to_rad(direction_degrees)), 0.0)
+	process_material.spread = spread
+	process_material.initial_velocity_min = speed.x
+	process_material.initial_velocity_max = speed.y
+	process_material.gravity = Vector3(gravity.x, gravity.y, 0.0)
+	process_material.scale_min = scale_range.x
+	process_material.scale_max = scale_range.y
+	process_material.angular_velocity_min = -420.0
+	process_material.angular_velocity_max = 420.0
+	process_material.color_ramp = _color_ramp(profile.core_color, profile.hot_color, profile.fade_color)
+	process_material.scale_curve = _scale_curve()
+	emitter.process_material = process_material
 
 
 func _color_ramp(start: Color, middle: Color, finish: Color) -> GradientTexture1D:

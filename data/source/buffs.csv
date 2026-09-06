@@ -6,3 +6,7 @@ courage_stacks,勇气,0,30,stack,none,positive,false,false,,armor|magic_resistan
 seven_seas_rum,七海霸权朗姆酒,5.0,1,replace,refresh,positive,true,true,,move_speed|half_damage_delayed|nonlethal
 scuttle_speed_zone,迅捷蟹加速法阵,10.0,1,replace,refresh,positive,true,false,,move_speed|area_reward
 judgment_armor_shred,翻江倒海·破甲,6.0,1,replace,refresh,negative,true,false,,armor_reduction|debuff
+ryze_arcane_mastery,奥术精通,6.0,5,stack,refresh,positive,true,false,,qwe_rt_stack|refresh_all
+ryze_supercharged,超负荷,5.0,5,stack,refresh,positive,true,false,ryze_shield_vfx,consume_qwe_only|cooldown_reduction
+ryze_flux,法术洪流,5.0,3,stack,refresh,negative,true,false,,magic_resistance_multiply|per_target
+ryze_desperate_power,绝望之力,6.0,1,replace,refresh,positive,true,false,ryze_t_buff,spell_vamp|aoe_spill|move_speed

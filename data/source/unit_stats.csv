@@ -45,6 +45,34 @@ garen,depth_radius,0.65,0,none,0.65,0,1,,横版纵深自定义
 garen,poise,100,5,primary,100,5,1,,横版霸体自定义
 garen,poise_regen,20,0,none,20,0,1,,横版霸体恢复自定义
 garen,knockback_resistance,0,0,none,0,0,1,,横版击退抗性
+ryze,max_health,620,124,primary,620,124,1,hp_base|hp_lvl,当前LoL PC瑞兹基础与成长
+ryze,health_regen_per_5,8,0.8,primary,8,0.8,1,hp5_base|hp5_lvl,当前LoL PC瑞兹每5秒回复
+ryze,max_resource,300,70,primary,300,70,1,mp_base|mp_lvl,法力值；用于护盾公式
+ryze,resource_regen_per_5,8,1,primary,8,1,1,mp5_base|mp5_lvl,当前LoL PC瑞兹每5秒法力回复
+ryze,attack_damage,55,0,primary,55,0,1,dam_base|dam_lvl,当前LoL PC瑞兹攻击力
+ryze,ability_power,0,0,none,0,0,1,,默认零法强
+ryze,armor,22,4.2,primary,22,4.2,1,arm_base|arm_lvl,当前LoL PC瑞兹护甲
+ryze,magic_resistance,32,1.3,primary,32,1.3,1,mr_base|mr_lvl,当前LoL PC瑞兹魔抗
+ryze,move_speed,3.4,0,none,340,0,0.01,ms,转换为Godot米每秒
+ryze,acceleration,14,0,none,14,0,1,,横版动作自定义
+ryze,attack_range,5.5,0,none,550,0,0.01,range,普攻射程转换为Godot米
+ryze,attack_speed,0.658,0.0211,attack_speed,0.658,0.0211,1,as_base|as_lvl,当前LoL PC瑞兹攻击速度
+ryze,attack_speed_ratio,0.658,0,none,0.658,0,1,as_ratio,LoL攻速倍率
+ryze,missile_speed,13,0,none,1300,0,0.01,missile_speed,普攻法球速度
+ryze,critical_chance,0,0,none,0,0,1,,默认零暴击
+ryze,critical_damage,2,0,none,200,0,0.01,crit_base,通用默认
+ryze,ability_haste,0,0,none,0,0,1,,默认零技能急速
+ryze,tenacity,0,0,none,0,0,1,,默认零韧性
+ryze,omnivamp,0,0,none,0,0,1,,绝望之力运行时临时增益
+ryze,acquisition_radius,6,0,none,600,0,0.01,acquisition_radius,AI索敌范围
+ryze,selection_radius,0.65,0,none,65,0,0.01,selection_radius,与盖伦同体型
+ryze,selection_height,1.888889,0,none,188.8889,0,0.01,selection_height,与盖伦同体型
+ryze,gameplay_radius,0.65,0,none,65,0,0.01,gameplay_radius,与盖伦同体型
+ryze,pathing_radius,0.35,0,none,35,0,0.01,pathing_radius,与盖伦同体型
+ryze,depth_radius,0.65,0,none,0.65,0,1,,横版纵深自定义
+ryze,poise,100,5,primary,100,5,1,,横版受击韧性
+ryze,poise_regen,20,0,none,20,0,1,,横版动作恢复
+ryze,knockback_resistance,0,0,none,0,0,1,,默认零
 training_dummy,max_health,1000,0,none,1000,0,1,,训练假人默认属性
 scuttle_crab,max_health,1007.5,142.235294,linear,1007.5,142.235294,1,health,首次刷新1到18级线性插值
 scuttle_crab,health_regen_per_5,0,0,none,0,0,1,,中立生物

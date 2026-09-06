@@ -9,14 +9,20 @@
 [ext_resource type="Resource" path="res://assets/vfx/hit/profiles/elemental_hit.tres" id="7"]
 [ext_resource type="Resource" path="res://assets/vfx/hit/profiles/slash_hit.tres" id="8"]
 [ext_resource type="Resource" path="res://assets/vfx/hit/profiles/true_damage_hit.tres" id="9"]
+[ext_resource type="Resource" uid="uid://b6d0l31rf4qpb" path="res://assets/vfx/hit/profiles/arcane_hit.tres" id="10"]
 
 [resource]
 script = ExtResource("1")
-profiles = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9")])
+profiles = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10")])
 hit_profile_map = Dictionary[StringName, StringName]({
 &"basic_melee": &"slash",
 &"breaker_hit": &"heavy",
 &"ghostship_hit": &"magic",
 &"judgment_hit": &"true_damage",
-&"ocean_hit": &"slash"
+&"ocean_hit": &"slash",
+&"ryze_basic_hit": &"arcane",
+&"ryze_e_hit": &"arcane",
+&"ryze_q_hit": &"arcane",
+&"ryze_r_landing_hit": &"arcane",
+&"ryze_w_hit": &"arcane"
 })

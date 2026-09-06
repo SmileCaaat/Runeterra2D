@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "app": "FrameDock Lite",
+  "kind": "sheet",
+  "profileId": "Ryze_spell",
+  "profileLabel": "Ryze spell",
+  "canvas": {
+    "width": 1439,
+    "height": 1540,
+    "originPixelX": 846,
+    "originPixelY": 1468,
+    "padding": 8
+  },
+  "animations": [
+    {
+      "id": "W_loop",
+      "folder": "W_loop"
+    },
+    {
+      "id": "Spell2_W",
+      "folder": "Spell2_W"
+    },
+    {
+      "id": "Spell1_Q",
+      "folder": "Spell1_Q"
+    },
+    {
+      "id": "impact",
+      "folder": "impact"
+    },
+    {
+      "id": "T_Buff",
+      "folder": "T_Buff"
+    },
+    {
+      "id": "Spell3_E",
+      "folder": "Spell3_E"
+    },
+    {
+      "id": "Spell4_R_winddown",
+      "folder": "Spell4_R_winddown"
+    }
+  ]
+}

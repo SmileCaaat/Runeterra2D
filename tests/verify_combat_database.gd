@@ -16,16 +16,16 @@ func _initialize() -> void:
 	var generated_ok := generated_database != null and generated_database.source_digest == database.source_digest
 	var editor_plugin_ok := load("res://addons/combat_data/editor_plugin.gd") != null
 
-	var counts_ok := database.rules.size() == 122 and database.stats.size() == 62
+	var counts_ok := database.rules.size() == 167 and database.stats.size() == 62
 	counts_ok = counts_ok and database.hero_classes.size() == 7 and database.hero_subclasses.size() == 13 and database.ai_archetypes.size() == 13
-	counts_ok = counts_ok and database.units.size() == 3 and database.unit_stats.size() == 117
-	counts_ok = counts_ok and database.skills.size() == 6
-	counts_ok = counts_ok and database.skill_effects.size() == 16 and database.skill_ranks.size() == 22
-	counts_ok = counts_ok and database.skill_effect_ranks.size() == 34 and database.unit_mode_modifiers.is_empty() and database.buffs.size() == 7
-	counts_ok = counts_ok and database.buff_modifiers.size() == 6 and database.ai_profiles.size() == 4
-	counts_ok = counts_ok and database.hit_profiles.size() == 5 and database.animation_events.size() == 17
-	counts_ok = counts_ok and database.asset_profiles.size() == 48 and database.particle_profiles.size() == 9
-	counts_ok = counts_ok and database.awakening_cutin_profiles.size() == 1
+	counts_ok = counts_ok and database.units.size() == 4 and database.unit_stats.size() == 145
+	counts_ok = counts_ok and database.skills.size() == 12
+	counts_ok = counts_ok and database.skill_effects.size() == 25 and database.skill_ranks.size() == 44
+	counts_ok = counts_ok and database.skill_effect_ranks.size() == 53 and database.unit_mode_modifiers.is_empty() and database.buffs.size() == 11
+	counts_ok = counts_ok and database.buff_modifiers.size() == 8 and database.ai_profiles.size() == 5
+	counts_ok = counts_ok and database.hit_profiles.size() == 10 and database.animation_events.size() == 24
+	counts_ok = counts_ok and database.asset_profiles.size() == 67 and database.particle_profiles.size() == 9
+	counts_ok = counts_ok and database.awakening_cutin_profiles.size() == 2
 
 	var armor_ok := is_equal_approx(CombatMath.resolve_resistance(100.0, 100.0, 100.0), 50.0)
 	armor_ok = armor_ok and is_equal_approx(CombatMath.resolve_resistance(100.0, -100.0, 100.0), 150.0)
@@ -40,7 +40,7 @@ func _initialize() -> void:
 	identity_ok = identity_ok and database.get_hero_class(&"fighter") != null and database.get_hero_subclass(&"juggernaut") != null
 	identity_ok = identity_ok and database.get_ai_archetype(&"juggernaut_pressure") != null
 	identity_ok = identity_ok and database.get_ai_profile(&"garen_demo").archetype_id == &"juggernaut_pressure"
-	identity_ok = identity_ok and database.schema_version == 15
+	identity_ok = identity_ok and database.schema_version == 17
 	identity_ok = identity_ok and database.get_rule(&"progression.level_cap", 0) == 30
 
 	var base_stats_ok := garen != null and is_equal_approx(garen.max_health, 690.0)
@@ -179,6 +179,7 @@ func _initialize() -> void:
 	semantic_ok = semantic_ok and ocean_rank_five != null and is_equal_approx(ocean_rank_five.base_value, 16.0) and is_equal_approx(ocean_rank_five.scaling_coefficient, 0.52)
 	semantic_ok = semantic_ok and database.get_buff(&"judgment_armor_shred") != null
 	semantic_ok = semantic_ok and database.get_asset_profile(&"judgment_armor_shred_icon") != null
+	semantic_ok = semantic_ok and database.get_asset_profile(&"ryze_flux_icon") != null
 	semantic_ok = semantic_ok and seven != null and seven.target_type == "ground_area" and seven.snapshot_target_position
 	semantic_ok = semantic_ok and is_equal_approx(seven.travel_duration, 1.35)
 	semantic_ok = semantic_ok and seven.identity_status == &"adapted"

@@ -1,11 +1,11 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene format=3 uid="uid://b6aty4b8c1cpm"]
 
-[ext_resource type="Script" path="res://scripts/characters/target_dummy.gd" id="1_dummy"]
-[ext_resource type="SpriteFrames" path="res://assets/monsters/target_dummy/target_dummy_sprite_frames.tres" id="2_frames"]
-[ext_resource type="Script" path="res://scripts/vfx/hit_spark_particles.gd" id="3_hit_spark"]
-[ext_resource type="AudioStream" path="res://assets/audio/combat/training_dummy_hit.wav" id="4_hit_audio"]
-[ext_resource type="Texture2D" path="res://assets/fx/soft_ground_shadow.svg" id="5_shadow"]
-[ext_resource type="Script" path="res://scripts/rendering/unit_readability_layers.gd" id="6_readability"]
+[ext_resource type="Script" uid="uid://n6mee5gbk7v3" path="res://scripts/characters/target_dummy.gd" id="1_dummy"]
+[ext_resource type="SpriteFrames" uid="uid://b5w3ybh50vv04" path="res://assets/monsters/target_dummy/target_dummy_sprite_frames.tres" id="2_frames"]
+[ext_resource type="Script" uid="uid://ctyfh8i6tgqch" path="res://scripts/vfx/hit_spark_particles.gd" id="3_hit_spark"]
+[ext_resource type="AudioStream" uid="uid://dttc66fkvo0g" path="res://assets/audio/combat/training_dummy_hit.wav" id="4_hit_audio"]
+[ext_resource type="Texture2D" uid="uid://s6tqtqunb51r" path="res://assets/fx/soft_ground_shadow.svg" id="5_shadow"]
+[ext_resource type="Script" uid="uid://m8t41bkjgfud" path="res://scripts/rendering/unit_readability_layers.gd" id="6_readability"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape_dummy"]
 radius = 0.3
@@ -13,63 +13,62 @@ height = 2.3
 
 [sub_resource type="StandardMaterial3D" id="PlaceholderMaterial_dummy"]
 transparency = 1
-albedo_color = Color(0.32, 0.72, 0.84, 0.18)
 shading_mode = 0
+albedo_color = Color(0.32, 0.72, 0.84, 0.18)
 
 [sub_resource type="CapsuleMesh" id="PlaceholderMesh_dummy"]
 material = SubResource("PlaceholderMaterial_dummy")
 radius = 0.3
 height = 2.3
 
-[node name="TargetDummy" type="CharacterBody3D" groups=["depth_sort_actor", "training_dummy"]]
-floor_snap_length = 0.3
+[node name="TargetDummy" type="CharacterBody3D" unique_id=1953279873 groups=["depth_sort_actor", "training_dummy"]]
 collision_layer = 2
 collision_mask = 3
+floor_snap_length = 0.3
 script = ExtResource("1_dummy")
 
-[node name="EnemyCollision" type="CollisionShape3D" parent="."]
+[node name="EnemyCollision" type="CollisionShape3D" parent="." unique_id=587392767]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
 shape = SubResource("CapsuleShape_dummy")
 
-[node name="GroundShadow" type="Sprite3D" parent="."]
+[node name="GroundShadow" type="Sprite3D" parent="." unique_id=1890996662]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.018, 0)
 cast_shadow = 0
-no_depth_test = true
-render_priority = -10
 modulate = Color(1, 1, 1, 0.82)
 pixel_size = 0.005
+no_depth_test = true
 texture_filter = 1
+render_priority = -10
 texture = ExtResource("5_shadow")
 
-[node name="EnemyFrames" type="AnimatedSprite3D" parent="." groups=["depth_sort_body"]]
-cast_shadow = 0
+[node name="EnemyFrames" type="AnimatedSprite3D" parent="." unique_id=2138532033 groups=["depth_sort_body"]]
 sorting_use_aabb_center = false
+cast_shadow = 0
 offset = Vector2(29, 800.5)
 pixel_size = 0.00135
 billboard = 1
-render_priority = 0
 sprite_frames = ExtResource("2_frames")
 animation = &"idle"
 
-[node name="UnitReadability" type="Node3D" parent="."]
+[node name="UnitReadability" type="Node3D" parent="." unique_id=160470533]
 script = ExtResource("6_readability")
 source_sprite_path = NodePath("../EnemyFrames")
 
-[node name="EnemyEditorPlaceholder" type="MeshInstance3D" parent="."]
-visible = false
+[node name="EnemyEditorPlaceholder" type="MeshInstance3D" parent="." unique_id=1265198131]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
+visible = false
 mesh = SubResource("PlaceholderMesh_dummy")
 
-[node name="HitSparkParticles" type="CPUParticles3D" parent="."]
+[node name="HitSparkParticles" type="CPUParticles3D" parent="." unique_id=1511722018]
 emitting = false
 script = ExtResource("3_hit_spark")
 
-[node name="HitAudio" type="AudioStreamPlayer3D" parent="."]
+[node name="HitAudio" type="AudioStreamPlayer3D" parent="." unique_id=364750102]
 stream = ExtResource("4_hit_audio")
 volume_db = -1.0
 max_distance = 18.0
 
-[node name="DummyStateLabel" type="Label3D" parent="."]
+[node name="DummyStateLabel" type="Label3D" parent="." unique_id=1220283352]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.65, 0)
 billboard = 1
 no_depth_test = true

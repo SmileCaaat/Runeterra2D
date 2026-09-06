@@ -1,19 +1,4 @@
 [remap]
 
-importer="csv_translation"
-type="Translation"
+importer="keep"
 uid="uid://mht4wkjfodfv"
-
-[deps]
-
-files=["res://data/source/stage_layout_profiles.display.translation", "res://data/source/stage_layout_profiles.world.translation", "res://data/source/stage_layout_profiles.playable.translation", "res://data/source/stage_layout_profiles.background.translation", "res://data/source/stage_layout_profiles.background.translation", "res://data/source/stage_layout_profiles.ground.translation", "res://data/source/stage_layout_profiles.safe.translation", "res://data/source/stage_layout_profiles.recommended.translation", "res://data/source/stage_layout_profiles.recommended.translation"]
-
-source_file="res://data/source/stage_layout_profiles.csv"
-dest_files=["res://data/source/stage_layout_profiles.display.translation", "res://data/source/stage_layout_profiles.world.translation", "res://data/source/stage_layout_profiles.playable.translation", "res://data/source/stage_layout_profiles.background.translation", "res://data/source/stage_layout_profiles.background.translation", "res://data/source/stage_layout_profiles.ground.translation", "res://data/source/stage_layout_profiles.safe.translation", "res://data/source/stage_layout_profiles.recommended.translation", "res://data/source/stage_layout_profiles.recommended.translation"]
-
-[params]
-
-compress=1
-delimiter=0
-unescape_keys=false
-unescape_translations=true

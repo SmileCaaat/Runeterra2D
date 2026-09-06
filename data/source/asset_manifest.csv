@@ -38,6 +38,7 @@ judgment_armor_shred_icon,status_icon,res://addons/at-icons/lorc/zebra-shield.sv
 judgment_armor_shred_burst,skill_vfx,res://assets/vfx/status/armor_shred/armor_shred_burst_frames.tres,StatusDebuffBurst,burst,,0,1,1,0,1,1,1,0,0,0.015,46,true,,manual,0,false
 judgment_armor_shred_audio,audio,,,,res://addons/Sound FX Starter Pack Vol. 1/Motions and Impacts/Impact Metal Hatch.wav,0,3,3,22,1,1,1,0,0,0,0,false,,manual,0,false
 overwhelm_debuff_icon,status_icon,res://assets/icons/status/overwhelm.png,,,,0,1,1,0,1,1,1,0,0,0,0,false,,ui_and_burst,0,false
+ryze_flux_icon,status_icon,res://assets/icons/status/MagicResistanceReduction.png,,,,0,1,1,0,1,1,1,0,0,0,0,false,,ui_and_burst,0,false
 garen_perseverance_front,passive_vfx,res://assets/vfx/garen_perseverance/garen_perseverance_frames.tres,SkillController/PerseveranceFront,hip,,0,1,1,20,1.4105068,0.95627636,1,0,56,0.015,1,true,,passive,0,false,0.12230945,-0.09625608,0.08000004,0.3529412
 garen_perseverance_hip,passive_vfx,res://assets/vfx/garen_perseverance/garen_perseverance_frames.tres,SkillController/PerseveranceHip,slow1,,0,1,1,20,1.643449,1,1,0,0,0.015,2,true,,passive,0,false,0.07588625,0.45039487,0.120000005,0.27450982
 garen_perseverance_motes,particle_vfx,,SkillController/PerseveranceMotes,,,0,1,1,20,1,1,1,0,0,0.005,2,true,,passive,0,false,0.08,0.36,0.10,1
@@ -45,5 +46,23 @@ super_armor_outline_glow,hit_vfx,res://assets/shaders/super_armor_outline_glow.g
 vfx_library_combo_ring,particle_vfx,res://addons/vfx_library/effects/combo_ring.tscn,HitImpactVFXPool/ProceduralHitEffect/LibraryComboRing,,,0,1,1,20,1,1,1,0,0,0,39,true,,one_shot,0.5,false,0,0,0,1
 vfx_library_armor_shred_sparks,particle_vfx,res://addons/vfx_library/effects/sparks.tscn,ArmorShredBurst/LibraryArmorShredSparksSprite,,,0,1,1,20,1,1,1,0,0,0.005,48,true,,one_shot,0.5,false,0,1.1,0.08,1
 vfx_library_water_splash,particle_vfx,res://addons/vfx_library/effects/water_splash.tscn,HitImpactVFXPool/ProceduralHitEffect/LibraryWaterSplash,,,0,1,1,20,1,1,1,0,0,0,39,true,,one_shot,0.8,false,0,0,0,1
+vfx_library_lightning_chain,particle_vfx,res://addons/vfx_library/effects/lightning_chain.tscn,,,,0,1,1,20,1,1,1,0,0,0,42,true,,one_shot,0.4,false,0,0,0,1
 training_dummy_hit_audio,audio,,,,res://assets/audio/combat/training_dummy_hit.wav,-1,0.94,1.06,40,1,1,1,0,0,0,0,false,,manual,0,false
 ghostship_audio,audio,,,,res://assets/audio/skills/garen/spell_Ghost ship.mp3,5,1,1,44,1,1,1,0,0,0,0,false,,animation,1.70,false
+ryze_character,character_animation,res://assets/characters/rune_mage_ryze/ryze_sprite_frames.tres,CharacterFrames,,,0,1,1,20,1,1,1,95,468.5,0.004,0,false,,manual,0,true,0,0,0,1
+ryze_arcane_mastery_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Arcane_Mastery_old2_P.webp,UI/Skills/P,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false,0,0,0,1
+ryze_overload_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Overload_Q.webp,UI/Skills/Q,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false,0,0,0,1
+ryze_rune_prison_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Rune_Prison_W.webp,UI/Skills/W,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false,0,0,0,1
+ryze_spell_flux_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Spell_Flux_E.webp,UI/Skills/E,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false,0,0,0,1
+ryze_realm_warp_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Realm_Warp_R.webp,UI/Skills/R,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false,0,0,0,1
+ryze_desperate_power_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Desperate_Power_P.webp,UI/Skills/T,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false,0,0,0,1
+ryze_basic_projectile,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/BasicProjectile,projectile,,0,1,1,20,2.8939996,1.6387346,1,-126.5,622.5,0.004,3,true,,animation,0,true,1.0551844,1.3209797,0,1
+ryze_q_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/QProjectile,Spell1_Q,,0,1,1,20,1.2631824,1.5346031,1,-126.5,622.5,0.004,3,true,,animation,0,true,1.5038263,-0.62555873,0,0.5411765
+ryze_w_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/WEffect,Spell2_W,,0,1,1,20,1.1979198,1.2120566,1,0,0,0.004,3,true,,animation,0,false,-0.69091296,3.4096055,-0.16798759,1
+ryze_e_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/EProjectile,Spell3_E,,0,1,1,20,0.8741688,0.8238358,1,0,0,0.004,3,true,,animation,0,true,0.5205492,1.6959548,0,0.57254905
+ryze_r_winddown_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/RWinddown,Spell4_R_winddown,,0,1,1,20,1.2186399,1.1500558,1,0,0,0.004,3,true,,animation,0,true,-1.1266189,3.3852067,0,1
+ryze_w_loop_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/WLoop,W_loop,,0,1,1,20,1.3064591,1.2852701,1,0,0,0.004,3,true,,buff,1.4,false,-0.69091296,3.4096055,-0.16798759,0.62352943
+ryze_t_buff,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/TBuff,T_Buff,,0,1,1,20,1.169924,1.7367219,1,0,0,0.004,1,true,,buff,6,true,-0.5198593,5.23897,1.8116592,0.46666667
+ryze_shield_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,SkillController/Shield,Ryze_Shield,,0,1,1,20,1.915,2.74,1,0,0,0.004,1,true,,buff,5,false,-0.04285323,0.91,0,0.407843
+ryze_impact_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/Impact,impact,,0,1,1,20,1,1,1,-126.5,622.5,0.004,41,true,,animation,0,false,0,-0.8,0,1
+ryze_r_landing_zap,particle_vfx,res://assets/BinbunVFX_Vol2/ElectricFX/effects/zap/vfx_zap_lightning_01.tscn,,,,0,1,1,20,0.5,0.5,0.5,0,0,0,3,false,,one_shot,0.6,false,0,0,0,1

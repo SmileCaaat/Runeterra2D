@@ -61,20 +61,27 @@ func burst(
 ) -> void:
 	global_position = world_contact
 	last_critical = critical
-	hit_sprite.texture = CRITICAL_HIT_TEXTURE if critical else NORMAL_HIT_TEXTURE
-	hit_sprite.pixel_size = SYSTEM_CONFIG.critical_sequence_pixel_size if critical else SYSTEM_CONFIG.normal_sequence_pixel_size
-	hit_sprite.flip_h = impact_direction.x < 0.0
-	hit_sprite.frame = 0
-	hit_sprite.visible = true
-	playback_duration = SYSTEM_CONFIG.critical_sequence_duration if critical else SYSTEM_CONFIG.normal_sequence_duration
-	playback_elapsed = 0.0
-	playback_active = true
-	set_process(true)
+	var procedural_profile := _resolve_procedural_profile(hit_profile_id, critical)
+	var play_physical_sequence := not String(hit_profile_id).begins_with("ryze_")
+	if play_physical_sequence:
+		hit_sprite.texture = CRITICAL_HIT_TEXTURE if critical else NORMAL_HIT_TEXTURE
+		hit_sprite.pixel_size = SYSTEM_CONFIG.critical_sequence_pixel_size if critical else SYSTEM_CONFIG.normal_sequence_pixel_size
+		hit_sprite.flip_h = impact_direction.x < 0.0
+		hit_sprite.frame = 0
+		hit_sprite.visible = true
+		playback_duration = SYSTEM_CONFIG.critical_sequence_duration if critical else SYSTEM_CONFIG.normal_sequence_duration
+		playback_elapsed = 0.0
+		playback_active = true
+		set_process(true)
+	else:
+		hit_sprite.visible = false
+		playback_active = false
+		set_process(false)
 	burst_count += 1
 	if impact_pool == null:
 		impact_pool = HIT_IMPACT_POOL_SCRIPT.get_or_create(self)
 	if impact_pool != null:
-		impact_pool.play(world_contact, impact_direction, _resolve_procedural_profile(hit_profile_id, critical))
+		impact_pool.play(world_contact, impact_direction, procedural_profile)
 
 
 func _bind_impact_pool() -> void:
@@ -83,6 +90,8 @@ func _bind_impact_pool() -> void:
 
 
 func _resolve_procedural_profile(hit_profile_id: StringName, critical: bool) -> StringName:
+	if String(hit_profile_id).begins_with("ryze_"):
+		return SYSTEM_CONFIG.hit_profile_map.get(hit_profile_id, &"arcane")
 	if critical:
 		return SYSTEM_CONFIG.critical_profile_id
 	return SYSTEM_CONFIG.hit_profile_map.get(hit_profile_id, &"normal")
