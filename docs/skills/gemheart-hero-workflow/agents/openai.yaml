@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gemheart Hero Workflow"
+  short_description: "Build traceable DNF-style heroes from reference kits"
+  default_prompt: "Use $gemheart-hero-workflow to research and implement a referenced hero with documented formulas and action-game adaptations."

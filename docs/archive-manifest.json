@@ -1,0 +1,195 @@
+{
+  "date": "2026-09-06",
+  "files": [
+    {
+      "source": "README.md",
+      "destination": "docs/imported/README.md",
+      "sha256": "07A710257DF767A640AA022E3FA93EC7FAFED59D5466D38F46545D96176400D9"
+    },
+    {
+      "source": "docs-design\\cursor-handoff.md",
+      "destination": "docs/imported/docs-design/cursor-handoff.md",
+      "sha256": "94DC2A2C0DE5EEBC5A53EBE695111439B24FA50205FD7E1BBEEF3E3090238CF4"
+    },
+    {
+      "source": "docs-design\\AwakeningCutIn 系统设计方案（16_9 动态漫画分镜版）.md",
+      "destination": "docs/imported/docs-design/AwakeningCutIn 系统设计方案（16_9 动态漫画分镜版）.md",
+      "sha256": "E563335E29DFB20A652B094AC15D75C02C18DF17BAE052394D88F87690C79B09"
+    },
+    {
+      "source": "data\\README.md",
+      "destination": "docs/imported/data/README.md",
+      "sha256": "3CDAAA0B7982227FFB2B2A7A3B695A6917F87F96FABBE962FAA96C76466EAEB3"
+    },
+    {
+      "source": "addons\\vfx_library\\demo\\README.md",
+      "destination": "docs/imported/addons/vfx_library/demo/README.md",
+      "sha256": "F0607002DB7D4EC2A0BBC126208A6F702211E22CE66F52A2A68131A87CFFCA7C"
+    },
+    {
+      "source": "addons\\go_build\\CHANGELOG.md",
+      "destination": "docs/imported/addons/go_build/CHANGELOG.md",
+      "sha256": "8E9B2D541060B870D2B1F5C1D70762E254E98DE130E60C0E39C8EB6E1CACAC0F"
+    },
+    {
+      "source": "addons\\go_build\\README.md",
+      "destination": "docs/imported/addons/go_build/README.md",
+      "sha256": "74E9686E0C89AD51A8B51E4B50849C796860882A242352F1A4DF4A23B87CEE74"
+    },
+    {
+      "source": "addons\\go_build\\LICENSE.md",
+      "destination": "docs/imported/addons/go_build/LICENSE.md",
+      "sha256": "13A0C9C7F55007F435256F8D12DAE554709707BF66025A629B43D012E4E45C35"
+    },
+    {
+      "source": "addons\\godot_ai\\README.md",
+      "destination": "docs/imported/addons/godot_ai/README.md",
+      "sha256": "696C7E4994CF412400BB2AB25CF45D73CFBA5FB1A5CC77957EFBDE1D6719C705"
+    },
+    {
+      "source": "assets\\GODOT-VFX-LIBRARY\\RELEASE_GUIDE.md",
+      "destination": "docs/imported/assets/GODOT-VFX-LIBRARY/RELEASE_GUIDE.md",
+      "sha256": "F53AB367F180E561208F192F6A6FC950B716DF1019254DDB6ED0B8AD6D3DC6B1"
+    },
+    {
+      "source": "assets\\GODOT-VFX-LIBRARY\\README_CN.md",
+      "destination": "docs/imported/assets/GODOT-VFX-LIBRARY/README_CN.md",
+      "sha256": "E786A84B40F2E3A1C6B55B4AAD750B6B4673F84E1570EF0E0F76AD4097CCFB13"
+    },
+    {
+      "source": "assets\\GODOT-VFX-LIBRARY\\README.md",
+      "destination": "docs/imported/assets/GODOT-VFX-LIBRARY/README.md",
+      "sha256": "0E04BA53F578E206443E1FBBEAE88742B9996246560C8A1E20373E9140A14584"
+    },
+    {
+      "source": "assets\\GODOT-VFX-LIBRARY\\INSTALLATION.md",
+      "destination": "docs/imported/assets/GODOT-VFX-LIBRARY/INSTALLATION.md",
+      "sha256": "E47C8B28541D25DB34599F2F62945A9AD39EBC8C65455182628914FE2F4E0AAA"
+    },
+    {
+      "source": "assets\\GODOT-VFX-LIBRARY\\CONTRIBUTING.md",
+      "destination": "docs/imported/assets/GODOT-VFX-LIBRARY/CONTRIBUTING.md",
+      "sha256": "9B06D3C6F160DB98D80862C31289B81EAD0D1317E518197A0FFCB28C95C2A44F"
+    },
+    {
+      "source": "assets\\GODOT-VFX-LIBRARY\\CHANGELOG.md",
+      "destination": "docs/imported/assets/GODOT-VFX-LIBRARY/CHANGELOG.md",
+      "sha256": "BED35D72AE6A444F6227B507A372CA6D4856876C1A3BCF67DC85CF7B1BCC7D57"
+    },
+    {
+      "source": "assets\\GODOT-VFX-LIBRARY\\API_REFERENCE.md",
+      "destination": "docs/imported/assets/GODOT-VFX-LIBRARY/API_REFERENCE.md",
+      "sha256": "0286713E29B5B431F68AC578038DFD9B514361B126B39AB5BE819D7166B499E9"
+    },
+    {
+      "source": "assets\\GODOT-VFX-LIBRARY\\addons\\vfx_library\\demo\\README.md",
+      "destination": "docs/imported/assets/GODOT-VFX-LIBRARY/addons/vfx_library/demo/README.md",
+      "sha256": "F0607002DB7D4EC2A0BBC126208A6F702211E22CE66F52A2A68131A87CFFCA7C"
+    },
+    {
+      "source": "D:\\godot_projects\\gemheart2d\\.agents\\skills\\godot-ui\\SKILL.md",
+      "destination": "docs/skills/godot-ui/SKILL.md",
+      "sha256": "A65BE1AC7DEF1B464BF6D4564C9B12740BBE10F50E8A65E35F9D0C6BE5FDA4B9"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\gemheart-hero-workflow\\SKILL.md",
+      "destination": "docs/skills/gemheart-hero-workflow/SKILL.md",
+      "sha256": "B08DD0C407F1377E16BC72DCDA5D24C1F46CB91A72BDD1EFF71A1BA3E2A48030"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\gemheart-hero-workflow\\agents\\openai.yaml",
+      "destination": "docs/skills/gemheart-hero-workflow/agents/openai.yaml",
+      "sha256": "DF63B197C61282ECEEE487F009B75A6B2CB7C56EE734656120B00EF5A89F42EA"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\gemheart-hero-workflow\\references\\hero-reference-template.md",
+      "destination": "docs/skills/gemheart-hero-workflow/references/hero-reference-template.md",
+      "sha256": "89394738187FCEDCBBACBA73101CBDE2932E8B8BE6909921D2A18453B43C0CB4"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\LICENSE.txt",
+      "destination": "docs/skills/openai-docs/LICENSE.txt",
+      "sha256": "44E03F7E263EB3AD256440C1EEAB5E49168BAFF5A78ECEF9A5447261CF3A91BC"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\SKILL.md",
+      "destination": "docs/skills/openai-docs/SKILL.md",
+      "sha256": "4371FCC6652D78309CCF5E7710A4FD22314AD7F1F4928A6C172DDAE80C87CC87"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\agents\\openai.yaml",
+      "destination": "docs/skills/openai-docs/agents/openai.yaml",
+      "sha256": "0DD6C5FFA81A09782FD24CFA9FE1EC5C9633C90500B166AE18A462E613E876BE"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\assets\\openai-small.svg",
+      "destination": "docs/skills/openai-docs/assets/openai-small.svg",
+      "sha256": "85EF0A2CDE497872EDEC1525F1D538CCC42B33FF47ACDBB88499A1631A4BDB21"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\assets\\openai.png",
+      "destination": "docs/skills/openai-docs/assets/openai.png",
+      "sha256": "156CC84D7332BFE95B310350BD470B690D22AA33D65340CC6C2E06022946194C"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\references\\codex-self-knowledge.md",
+      "destination": "docs/skills/openai-docs/references/codex-self-knowledge.md",
+      "sha256": "F945BF2A7CEA6892D7A11AC38FB18B744FEFD6D273654A8410C4C79E9F647FBE"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\references\\latest-model.md",
+      "destination": "docs/skills/openai-docs/references/latest-model.md",
+      "sha256": "8BE54126EE4DEEC66D8257AE191AE0ECBD2C1022B2A47C6E959B11AE34AA5C97"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\references\\mcp-diagnostics.md",
+      "destination": "docs/skills/openai-docs/references/mcp-diagnostics.md",
+      "sha256": "E9DF2B2F8FAA28930DB4A2937CDB3665B4548AC958E80A8601A5DD0DA1E6FAD0"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\references\\model-migration.md",
+      "destination": "docs/skills/openai-docs/references/model-migration.md",
+      "sha256": "C3CC7848BF52E9ED2F03CB3A1466BD0406D7965B7782452B7D946376084FC91D"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\references\\model-selection.md",
+      "destination": "docs/skills/openai-docs/references/model-selection.md",
+      "sha256": "CE020100A28004500C927ABCD57CFF154C5C360EB72D918EF7D72492E2484CCE"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\references\\official-docs.md",
+      "destination": "docs/skills/openai-docs/references/official-docs.md",
+      "sha256": "B2301D72B8092BE5F5727D8D1CBC75740887D836F4F13B469F40C1DB16B39FE3"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\references\\prompting-guide.md",
+      "destination": "docs/skills/openai-docs/references/prompting-guide.md",
+      "sha256": "31743BE488F243B3FA59F8B73E4AAF6C2359E224AC642F93F9719A931ACF16D5"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\references\\upgrade-guide.md",
+      "destination": "docs/skills/openai-docs/references/upgrade-guide.md",
+      "sha256": "F1962DD5947041FB5344B095E639FE90C3E9ECFBB00C20D2394C912D1FEEC7C7"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\references\\upgrading-to-gpt-5p6-sol.md",
+      "destination": "docs/skills/openai-docs/references/upgrading-to-gpt-5p6-sol.md",
+      "sha256": "1F77377C26C5754A0BFEAAD72C9AC16FFCF25684AA51E220987A0A873AAB9CA0"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\scripts\\fetch-codex-manual.mjs",
+      "destination": "docs/skills/openai-docs/scripts/fetch-codex-manual.mjs",
+      "sha256": "1B9A36D3E59DDFF3317D1FAA182E5CD4967DB14FF993593A5F98D5682DBFFBE4"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\scripts\\resolve-latest-model-info",
+      "destination": "docs/skills/openai-docs/scripts/resolve-latest-model-info",
+      "sha256": "8F5006EFA15C034EDE29821B627D7B86C43F7DFAAB422D335F45B9BE8D04E2D5"
+    },
+    {
+      "source": "C:\\Users\\JamLew\\.codex\\skills\\.system\\openai-docs\\scripts\\resolve-latest-model-info.cjs",
+      "destination": "docs/skills/openai-docs/scripts/resolve-latest-model-info.cjs",
+      "sha256": "91EB045ABBF96FFB361E6EC2D3606540570FB32383EDB22061F5549381CE0EE5"
+    }
+  ]
+}
