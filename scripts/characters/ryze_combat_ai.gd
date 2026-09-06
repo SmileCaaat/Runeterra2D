@@ -46,7 +46,6 @@ var arena_min := Vector2(-14.5, -3.4)
 var arena_max := Vector2(14.5, 3.4)
 var super_armor_timer := 0.0
 var super_armor_outline: Node3D
-var t_buff_authored_position := Vector3.ZERO
 var r_winddown_authored_position := Vector3.ZERO
 var r_winddown_authored_scale := Vector3.ONE
 var supercharge_afterimages: Array[Sprite3D] = []
@@ -66,6 +65,8 @@ var _r_landing_zapped: Dictionary = {}
 @onready var label: Label3D = $AIStateLabel
 @onready var shield: AnimatedSprite3D = $Shield
 @onready var t_buff: AnimatedSprite3D = $TBuff
+@onready var shield_flip: AnimatedSprite3D = $ShieldFlip
+@onready var t_buff_flip: AnimatedSprite3D = $TBuffFlip
 @onready var basic_projectile_template: AnimatedSprite3D = $CastVFXPreview/BasicProjectile
 @onready var q_projectile_template: AnimatedSprite3D = $CastVFXPreview/QProjectile
 @onready var w_effect_template: AnimatedSprite3D = $CastVFXPreview/WEffect
@@ -87,15 +88,11 @@ func _ready() -> void:
 	character_frames.sprite_frames = FRAMES
 	_apply_sprite_canvas_anchor()
 	character_frames.play(&"idle")
-	shield.sprite_frames = VFX_FRAMES
-	t_buff_authored_position = t_buff.position
-	t_buff.visible = false
+	_bind_self_vfx_anchors()
+	_hide_self_vfx_nodes()
 	if r_winddown_template != null:
 		r_winddown_authored_position = r_winddown_template.position
 		r_winddown_authored_scale = r_winddown_template.scale
-	# The imported shield is authored with alpha.  Do not use Screen blending:
-	# on this sprite it resolves as an opaque white rectangle.
-	shield.material_override = null
 	_configure_cast_vfx_templates()
 	_cache_e_orb_from_center()
 	_build_super_armor_outline()
@@ -150,6 +147,62 @@ func _apply_vfx_canvas_anchor(sprite: AnimatedSprite3D, json_path: String) -> vo
 	sprite.offset = Vector2(width * 0.5 - origin_x, origin_y - height * 0.5)
 
 
+func _bind_self_vfx_anchors() -> void:
+	if character_frames == null:
+		character_frames = get_node_or_null("CharacterFrames") as AnimatedSprite3D
+	if shield == null:
+		shield = get_node_or_null("Shield") as AnimatedSprite3D
+	if t_buff == null:
+		t_buff = get_node_or_null("TBuff") as AnimatedSprite3D
+	if shield_flip == null:
+		shield_flip = get_node_or_null("ShieldFlip") as AnimatedSprite3D
+	if t_buff_flip == null:
+		t_buff_flip = get_node_or_null("TBuffFlip") as AnimatedSprite3D
+	if shield != null:
+		shield.sprite_frames = VFX_FRAMES
+		shield.material_override = null
+	if shield_flip != null:
+		shield_flip.sprite_frames = VFX_FRAMES
+		shield_flip.material_override = null
+	if t_buff != null:
+		t_buff.sprite_frames = VFX_FRAMES
+	if t_buff_flip != null:
+		t_buff_flip.sprite_frames = VFX_FRAMES
+
+
+func _hide_self_vfx_nodes() -> void:
+	if shield != null:
+		shield.visible = false
+	if shield_flip != null:
+		shield_flip.visible = false
+	if t_buff != null:
+		t_buff.visible = false
+	if t_buff_flip != null:
+		t_buff_flip.visible = false
+
+
+func _facing_left() -> bool:
+	return character_frames != null and character_frames.flip_h
+
+
+func _sync_self_vfx_node(plus_x: AnimatedSprite3D, flip_x: AnimatedSprite3D, animation: StringName, active: bool) -> void:
+	var use_flip := _facing_left() and flip_x != null
+	if plus_x != null:
+		plus_x.visible = active and not use_flip
+		if plus_x.visible:
+			if plus_x.animation != animation or not plus_x.is_playing():
+				plus_x.play(animation)
+		elif plus_x.is_playing():
+			plus_x.pause()
+	if flip_x != null:
+		flip_x.visible = active and use_flip
+		if flip_x.visible:
+			if flip_x.animation != animation or not flip_x.is_playing():
+				flip_x.play(animation)
+		elif flip_x.is_playing():
+			flip_x.pause()
+
+
 func _physics_process(delta: float) -> void:
 	for key: StringName in cooldowns:
 		cooldowns[key] = maxf(0.0, float(cooldowns[key]) - delta)
@@ -162,7 +215,7 @@ func _physics_process(delta: float) -> void:
 	desperate_timer = maxf(0.0, desperate_timer - delta)
 	super_armor_timer = maxf(0.0, super_armor_timer - delta)
 	_sync_t_buff_presentation()
-	shield.visible = supercharged_casts > 0 and supercharged_timer > 0.0
+	_sync_shield_presentation()
 	if super_armor_outline != null:
 		super_armor_outline.set_active(has_super_armor())
 	_update_label()
@@ -267,7 +320,10 @@ func cast_desperate_power() -> void:
 	await get_tree().create_timer(channel).timeout
 	desperate_timer = _desperate_duration()
 	_sync_t_buff_presentation()
-	_add_arcane_stack(false)
+	if _rulei(&"ryze.t.grant_supercharge", 1) != 0:
+		_grant_supercharge()
+	else:
+		_add_arcane_stack(false)
 
 
 func cast_realm_warp(destination: Vector3) -> void:
@@ -320,19 +376,30 @@ func receive_skill_damage(amount: float, _source: String, _crit: bool, _position
 
 
 func _play_action_to_end(animation: StringName, cast_frame: int, event: Callable) -> void:
-	# Supercharge speeds Q/W/E and basic attacks; it no longer clips recovery frames.
+	# Keep the authored frames. Unlock after the cast event plus a tabled
+	# minimum lock so the next Q/W/E/AA can interrupt leftover recovery.
 	action_lock = INF
-	character_frames.speed_scale = _supercharge_cast_speed() if _is_supercharged() and _is_supercharge_cast_animation(animation) else 1.0
+	var supercharged := _is_supercharged() and _is_supercharge_cast_animation(animation)
+	character_frames.speed_scale = _supercharge_cast_speed() if supercharged else _cast_speed()
 	character_frames.play(animation)
 	var event_sent := false
+	var event_elapsed := -1.0
+	var recovery := _rulef(&"ryze.cast.recovery_seconds", 0.35)
+	var min_lock := _rulef(&"ryze.supercharge.min_lock_seconds", 0.70) if supercharged else _rulef(&"ryze.cast.min_lock_seconds", 0.90)
 	while character_frames.animation == animation and character_frames.is_playing():
+		var elapsed := _animation_elapsed_seconds()
 		if not event_sent and character_frames.frame >= cast_frame:
 			event_sent = true
+			event_elapsed = elapsed
 			event.call()
+		var unlock_at := min_lock
+		if event_sent:
+			unlock_at = maxf(event_elapsed + recovery, min_lock)
+		if elapsed >= unlock_at:
+			break
 		await get_tree().process_frame
 	if not event_sent:
 		event.call()
-	character_frames.speed_scale = 1.0
 	action_lock = 0.0
 
 
@@ -349,8 +416,10 @@ func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: f
 		projectile.no_depth_test = true
 		projectile.render_priority = 3
 	projectile.visible = true
+	projectile.set_meta(&"authored_offset", projectile.offset)
 	get_tree().current_scene.add_child(projectile)
 	projectile.global_position = _projectile_origin(payload)
+	_update_projectile_facing(projectile, _skill_travel_point(victim, payload) - projectile.global_position)
 	projectile.frame = 0
 	projectile.play()
 	var e_shell: Node3D = _attach_e_voxel_shell(projectile, false) if payload == &"e" else null
@@ -543,8 +612,20 @@ func _skill_travel_point(victim: CharacterBody3D, payload: StringName) -> Vector
 
 
 func _update_projectile_facing(projectile: AnimatedSprite3D, direction: Vector3) -> void:
+	if projectile == null:
+		return
+	var face_left := _facing_left()
 	if absf(direction.x) > 0.02:
-		projectile.flip_h = direction.x < 0.0
+		face_left = direction.x < 0.0
+	projectile.flip_h = face_left
+	var authored := Vector2.ZERO
+	if projectile.has_meta(&"authored_offset"):
+		authored = projectile.get_meta(&"authored_offset")
+	else:
+		authored = projectile.offset
+		projectile.set_meta(&"authored_offset", authored)
+	# flip_h only swaps UVs. originPixel stays pinned only if offset.x flips too.
+	projectile.offset = Vector2(-authored.x if face_left else authored.x, authored.y)
 
 
 func _resolve_e_chain(victim: CharacterBody3D) -> void:
@@ -613,6 +694,7 @@ func _launch_e_bounce(source: CharacterBody3D, victim: CharacterBody3D, damage_m
 		return
 	var projectile := e_projectile_template.duplicate() as AnimatedSprite3D
 	projectile.visible = true
+	projectile.set_meta(&"authored_offset", projectile.offset)
 	get_tree().current_scene.add_child(projectile)
 	var start := _skill_travel_point(source, &"e")
 	var destination := _skill_travel_point(victim, &"e")
@@ -756,14 +838,18 @@ func _play_impact(victim: CharacterBody3D) -> void:
 	effect.animation_finished.connect(effect.queue_free)
 
 
+func _grant_supercharge() -> void:
+	supercharged_casts = _rulei(&"ryze.supercharge.max_casts", 5)
+	supercharged_timer = _rulef(&"ryze.supercharge.duration", 2.5)
+	arcane_stacks = 0
+
+
 func _add_arcane_stack(consumes_supercharge: bool) -> void:
 	var max_stacks := _buff_max_stacks(&"ryze_arcane_mastery", 5)
 	arcane_stacks = mini(max_stacks, arcane_stacks + 1)
 	arcane_timer = _buff_duration(&"ryze_arcane_mastery", 6.0)
 	if arcane_stacks == max_stacks:
-		supercharged_casts = _rulei(&"ryze.supercharge.max_casts", 5)
-		supercharged_timer = _rulef(&"ryze.supercharge.duration", 2.5)
-		arcane_stacks = 0
+		_grant_supercharge()
 	if consumes_supercharge and supercharged_casts > 0:
 		supercharged_casts -= 1
 		var refund := _rulef(&"ryze.supercharge.cooldown_refund", 4.0)
@@ -866,22 +952,11 @@ func _desperate_duration() -> float:
 
 
 func _sync_t_buff_presentation() -> void:
-	if t_buff == null:
-		return
-	var active := desperate_timer > 0.0
-	t_buff.visible = active
-	t_buff.position = Vector3(
-		t_buff_authored_position.x * (-1.0 if character_frames.flip_h else 1.0),
-		t_buff_authored_position.y,
-		t_buff_authored_position.z
-	)
-	t_buff.flip_h = character_frames.flip_h
-	if active:
-		if t_buff.animation != &"T_Buff" or not t_buff.is_playing():
-			t_buff.play(&"T_Buff")
-		return
-	if t_buff.is_playing():
-		t_buff.pause()
+	_sync_self_vfx_node(t_buff, t_buff_flip, &"T_Buff", desperate_timer > 0.0)
+
+
+func _sync_shield_presentation() -> void:
+	_sync_self_vfx_node(shield, shield_flip, &"Ryze_Shield", supercharged_casts > 0 and supercharged_timer > 0.0)
 
 
 func _build_super_armor_outline() -> void:
@@ -930,10 +1005,25 @@ func _is_supercharge_cast_animation(animation: StringName) -> bool:
 		or animation == &"attack1" or animation == &"attack2" or animation == &"attack3" or animation == &"crit"
 
 
+func _cast_speed() -> float:
+	return _rulef(&"ryze.cast.speed_scale", 1.35)
+
+
 func _supercharge_cast_speed() -> float:
-	if database == null:
-		return 1.6
-	return float(database.get_rule(&"ryze.supercharge.cast_speed_scale", 1.6))
+	return _rulef(&"ryze.supercharge.cast_speed_scale", 1.8)
+
+
+func _animation_elapsed_seconds() -> float:
+	var frames := character_frames.sprite_frames
+	if frames == null or not frames.has_animation(character_frames.animation):
+		return 0.0
+	var animation := character_frames.animation
+	var speed := maxf(frames.get_animation_speed(animation) * character_frames.speed_scale, 0.001)
+	var elapsed := 0.0
+	for frame_index: int in range(character_frames.frame):
+		elapsed += frames.get_frame_duration(animation, frame_index) / speed
+	elapsed += frames.get_frame_duration(animation, character_frames.frame) * character_frames.frame_progress / speed
+	return elapsed
 
 
 func _build_supercharge_afterimage_pool() -> void:

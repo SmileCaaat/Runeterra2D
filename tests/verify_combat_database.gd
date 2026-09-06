@@ -16,7 +16,7 @@ func _initialize() -> void:
 	var generated_ok := generated_database != null and generated_database.source_digest == database.source_digest
 	var editor_plugin_ok := load("res://addons/combat_data/editor_plugin.gd") != null
 
-	var counts_ok := database.rules.size() == 167 and database.stats.size() == 62
+	var counts_ok := database.rules.size() == 172 and database.stats.size() == 62
 	counts_ok = counts_ok and database.hero_classes.size() == 7 and database.hero_subclasses.size() == 13 and database.ai_archetypes.size() == 13
 	counts_ok = counts_ok and database.units.size() == 4 and database.unit_stats.size() == 145
 	counts_ok = counts_ok and database.skills.size() == 12
@@ -40,7 +40,7 @@ func _initialize() -> void:
 	identity_ok = identity_ok and database.get_hero_class(&"fighter") != null and database.get_hero_subclass(&"juggernaut") != null
 	identity_ok = identity_ok and database.get_ai_archetype(&"juggernaut_pressure") != null
 	identity_ok = identity_ok and database.get_ai_profile(&"garen_demo").archetype_id == &"juggernaut_pressure"
-	identity_ok = identity_ok and database.schema_version == 17
+	identity_ok = identity_ok and database.schema_version == 19
 	identity_ok = identity_ok and database.get_rule(&"progression.level_cap", 0) == 30
 
 	var base_stats_ok := garen != null and is_equal_approx(garen.max_health, 690.0)

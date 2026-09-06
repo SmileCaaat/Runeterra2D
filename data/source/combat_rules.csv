@@ -1,5 +1,5 @@
 rule_id,category,value_type,value,description
-schema.version,system,int,17,战斗数据库结构版本：瑞兹剩余表现常量入表
+schema.version,system,int,19,战斗数据库结构版本：T引导结束授予满层超负荷
 garen.ocean_storm.base_spins,hero_skill,int,7,翻江倒海在零额外攻速时的三秒基础转数
 garen.ocean_storm.loop_frame_count,hero_skill,int,8,翻江倒海角色动画循环使用零基0至7帧
 garen.ocean_storm.bonus_attack_speed_per_spin,hero_skill,float,0.25,每25%额外攻速增加一转
@@ -77,7 +77,11 @@ presentation.breaker_afterimage_count,presentation,int,3,破舰残影池大小
 presentation.breaker_afterimage_lifetime,presentation,float,0.28,破舰单帧残影寿命
 presentation.breaker_afterimage_alpha,presentation,float,0.36,破舰残影初始透明度
 presentation.breaker_afterimage_color,presentation,enum,29b8ffff,破舰残影海洋蓝颜色
-ryze.supercharge.cast_speed_scale,hero_skill,float,1.6,超负荷期间普攻与QWE施法动画速度倍率
+ryze.supercharge.cast_speed_scale,hero_skill,float,1.8,超负荷期间普攻与QWE施法动画速度倍率
+ryze.cast.speed_scale,hero_skill,float,1.35,普攻与QWE常态施法动画速度倍率
+ryze.cast.recovery_seconds,hero_skill,float,0.35,出手后再经过该秒数才考虑解锁
+ryze.cast.min_lock_seconds,hero_skill,float,0.90,普攻与QWE常态最短动作锁秒
+ryze.supercharge.min_lock_seconds,hero_skill,float,0.70,超负荷期间普攻与QWE最短动作锁秒
 ryze.e.voxel_count,presentation,int,16,E法球体素壳立方体数量
 ryze.e.voxel_size,presentation,float,0.08,E法球体素单块边长
 ryze.e.voxel_radius,presentation,float,0.36,E法球体素壳半径
@@ -94,6 +98,7 @@ ryze.supercharge.cooldown_refund,hero_skill,float,4,每次消耗超负荷时全�
 ryze.r.landing_e_hits,hero_skill,int,3,R落地对每名敌人直接结算的E初段次数
 ryze.r.escape_distance,hero_skill,float,8.0,R逃生折跃的平面距离
 ryze.t.channel_duration,hero_skill,float,0.8,T引导taunt时长与霸体时长
+ryze.t.grant_supercharge,hero_skill,int,1,T引导结束后授予满层超负荷且不消耗次数
 ryze.t.spill_damage_ratio,hero_skill,float,0.5,T外溢相对主目标伤害倍率
 ryze.t.ready_spell_count,hero_skill,int,2,AI开T所需最少就绪QWE数
 ryze.t.ready_stack_count,hero_skill,int,4,AI开T所需最少奥术层数

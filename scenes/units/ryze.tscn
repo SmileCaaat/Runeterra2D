@@ -28,13 +28,12 @@ texture = ExtResource("4")
 
 [node name="CharacterFrames" type="AnimatedSprite3D" parent="." unique_id=1467124988 groups=["depth_sort_body"]]
 offset = Vector2(95, 468.5)
+flip_h = true
 pixel_size = 0.004
 billboard = 1
 sprite_frames = ExtResource("2")
-animation = &"spell4"
+animation = &"idle"
 autoplay = "idle"
-frame = 20
-frame_progress = 0.28858173
 
 [node name="CastVFXPreview" type="Node3D" parent="." unique_id=1240651714]
 
@@ -144,6 +143,30 @@ sprite_frames = ExtResource("3")
 animation = &"T_Buff"
 autoplay = "T_Buff"
 frame_progress = 0.7079041
+
+[node name="ShieldFlip" type="AnimatedSprite3D" parent="." unique_id=1654676987]
+transform = Transform3D(1.915, 0, 0, 0, 2.74, 0, 0, 0, 1, 0.7456173, 0.91, 0)
+flip_h = true
+modulate = Color(1, 1, 1, 0.407843)
+pixel_size = 0.004
+billboard = 1
+no_depth_test = true
+sprite_frames = ExtResource("3")
+animation = &"Ryze_Shield"
+autoplay = "Ryze_Shield"
+frame_progress = 0.22081362
+
+[node name="TBuffFlip" type="AnimatedSprite3D" parent="." unique_id=1479855613]
+transform = Transform3D(1.169924, 0, 0, 0, 1.7367219, 0, 0, 0, 1, 1.2798579, 5.23897, 1.8116592)
+flip_h = true
+modulate = Color(1, 1, 1, 0.46666667)
+pixel_size = 0.004
+billboard = 1
+no_depth_test = true
+sprite_frames = ExtResource("3")
+animation = &"T_Buff"
+autoplay = "T_Buff"
+frame_progress = 0.33849895
 
 [node name="AIStateLabel" type="Label3D" parent="." unique_id=741867668]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, 0)
