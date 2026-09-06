@@ -1,0 +1,8 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://cntqkyfsxy3lm"]
+
+[ext_resource type="Texture2D" uid="uid://b3005w2r0jvtf" path="res://assets/stages/training_ground/ground.png" id="1_ot1av"]
+
+[resource]
+transparency = 1
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("1_ot1av")
