@@ -55,7 +55,7 @@ func _make_row(row_name: String, height: float) -> Node3D:
 	return row
 
 
-func _layout(entries: Dictionary[StringName, Sprite3D], row: Node3D) -> void:
+func _layout(entries: Dictionary[StringName, Sprite3D], _row: Node3D) -> void:
 	var visible_icons: Array[Sprite3D] = []
 	for icon: Sprite3D in entries.values():
 		if icon.visible:

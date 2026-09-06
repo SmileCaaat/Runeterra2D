@@ -10,7 +10,10 @@
 		{
 			"uuid": "0b6f185b-3309-4c06-8ff9-e5490f3b3ad8",
 			"title": "Todo",
-			"tasks": []
+			"tasks": [
+				"00fa418a-e6d4-4a76-8265-9aab1eae373b",
+				"aafd2a9c-957e-4573-a68a-3a8a67c7fe92"
+			]
 		},
 		{
 			"uuid": "44e91405-6b9a-4e14-9f29-3e8057776a04",
@@ -27,6 +30,20 @@
 		{
 			"uuid": "345420d6-b881-4fce-80e9-277ba3368e61",
 			"title": "New task",
+			"description": "",
+			"category": "ba66806f-72e8-4e21-8d13-e4b8c327d795",
+			"steps": []
+		},
+		{
+			"uuid": "00fa418a-e6d4-4a76-8265-9aab1eae373b",
+			"title": "瑞兹所有音频+觉醒立绘",
+			"description": "",
+			"category": "ba66806f-72e8-4e21-8d13-e4b8c327d795",
+			"steps": []
+		},
+		{
+			"uuid": "aafd2a9c-957e-4573-a68a-3a8a67c7fe92",
+			"title": "英雄现在没有互相战斗系统，并且血条魔法值这些都是空的",
 			"description": "",
 			"category": "ba66806f-72e8-4e21-8d13-e4b8c327d795",
 			"steps": []

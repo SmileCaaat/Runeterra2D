@@ -718,11 +718,11 @@ func _update_rum_visuals() -> void:
 			afterimage.call("set_active", active)
 
 
-func _emit_ghostship_impact_bursts(position: Vector3) -> void:
+func _emit_ghostship_impact_bursts(world_position: Vector3) -> void:
 	for burst: CPUParticles3D in [ghostship_blue_burst, ghostship_white_burst]:
 		if not is_instance_valid(burst):
 			continue
-		burst.global_position = position + Vector3.UP * 0.30
+		burst.global_position = world_position + Vector3.UP * 0.30
 		burst.restart()
 		burst.emitting = true
 	ghostship_impact_burst_count += 1
@@ -802,10 +802,10 @@ func _build_water_vapor_burst() -> void:
 	water_vapor_mist.top_level = true
 
 
-func _emit_impact_debris(position: Vector3, large_burst: bool) -> void:
+func _emit_impact_debris(world_position: Vector3, large_burst: bool) -> void:
 	if not is_instance_valid(impact_debris):
 		return
-	impact_debris.global_position = position + Vector3.UP * 0.16
+	impact_debris.global_position = world_position + Vector3.UP * 0.16
 	var profile_id := &"judgment_debris_large" if large_burst else &"judgment_debris_small"
 	var profile := combat_database.get_particle_profile(profile_id) if combat_database != null else null
 	impact_debris.amount = profile.amount if profile != null else (32 if large_burst else 22)
@@ -817,18 +817,18 @@ func _emit_impact_debris(position: Vector3, large_burst: bool) -> void:
 	impact_debris_burst_count += 1
 
 
-func _emit_water_vapor_burst(position: Vector3) -> void:
+func _emit_water_vapor_burst(world_position: Vector3) -> void:
 	if not is_instance_valid(water_vapor_burst) or not is_instance_valid(water_vapor_mist):
 		return
 	water_vapor_burst_active = true
 	water_vapor_burst_elapsed = 0.0
-	water_vapor_burst.global_position = position + Vector3.UP * 0.34
+	water_vapor_burst.global_position = world_position + Vector3.UP * 0.34
 	water_vapor_burst.scale = Vector3(0.35, 0.10, 0.35)
 	water_vapor_burst.visible = true
 	var vapor_material := water_vapor_burst.material_override as ShaderMaterial
 	if vapor_material != null:
 		vapor_material.set_shader_parameter(&"progress", 0.0)
-	water_vapor_mist.global_position = position + Vector3.UP * 0.26
+	water_vapor_mist.global_position = world_position + Vector3.UP * 0.26
 	water_vapor_mist.speed_scale = 1.0
 	water_vapor_mist.restart()
 	water_vapor_mist.emitting = true
@@ -901,11 +901,11 @@ func _handle_impact_vfx_frame(effect: AnimatedSprite3D) -> void:
 			_start_impact_camera_shake(ghostship_camera_shake_duration, ghostship_camera_shake_strength)
 
 
-func _emit_impact_shockwave(position: Vector3, size: float, strength: float, lifetime: float) -> void:
+func _emit_impact_shockwave(world_position: Vector3, size: float, strength: float, lifetime: float) -> void:
 	if impact_shockwaves.is_empty():
 		return
 	var shockwave := impact_shockwaves[impact_shockwave_cursor]
-	shockwave.global_position = position
+	shockwave.global_position = world_position
 	# Heavy impacts spread along the floor as a pressure sheet, not a UI-like circle.
 	shockwave.scale = Vector3(size, size * 0.48, 1.0)
 	var material := shockwave.material_override as ShaderMaterial
@@ -1232,7 +1232,7 @@ func _cast_skill_async(skill_index: int) -> void:
 		SKILL_BREAKER:
 			await _cast_breaker()
 		SKILL_BLACK_SAIL:
-			await _cast_black_sail()
+			_cast_black_sail()
 		SKILL_OCEAN_STORM:
 			await _cast_ocean_storm()
 		SKILL_TYRANT_JUDGMENT:

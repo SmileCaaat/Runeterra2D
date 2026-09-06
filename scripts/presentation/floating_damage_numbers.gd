@@ -14,7 +14,7 @@ const MISS_REGION := Rect2(0.0, 532.0, 300.0, 135.0)
 
 var _database: CombatDatabase
 var _entries: Array[DamageEntry] = []
-var _random := RandomNumberGenerator.new()
+# DamageEntry owns its own RNG; the outer class does not need one.
 
 
 static func get_or_create(host: Node3D, database: CombatDatabase = null) -> FloatingDamageNumbers:
