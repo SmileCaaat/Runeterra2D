@@ -1,0 +1,1 @@
+﻿此场景引用完整付费版特效，当前 Free 包缺失对应 tscn。请改用 electric_scene_free.tscn。
