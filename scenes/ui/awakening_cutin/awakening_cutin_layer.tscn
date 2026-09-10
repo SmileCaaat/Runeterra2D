@@ -1,13 +1,13 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3 uid="uid://c3cl4q6eef74p"]
 
-[ext_resource type="Script" path="res://scripts/presentation/awakening_cutin_manager.gd" id="1_manager"]
+[ext_resource type="Script" uid="uid://crigw7d7b5c1j" path="res://scripts/presentation/awakening_cutin_manager.gd" id="1_manager"]
 [ext_resource type="PackedScene" path="res://scenes/ui/awakening_cutin/awakening_cutin_slot.tscn" id="2_slot"]
 
-[node name="AwakeningCutIn" type="CanvasLayer"]
+[node name="AwakeningCutIn" type="CanvasLayer" unique_id=1960794114]
 layer = 90
 script = ExtResource("1_manager")
 
-[node name="Overlay" type="Control" parent="."]
+[node name="Overlay" type="Control" parent="." unique_id=1492290592]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -16,7 +16,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="BackgroundDarken" type="ColorRect" parent="Overlay"]
+[node name="BackgroundDarken" type="ColorRect" parent="Overlay" unique_id=81958061]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -26,7 +26,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.015, 0.025, 0.045, 0)
 
-[node name="Slots" type="Control" parent="Overlay"]
+[node name="Slots" type="Control" parent="Overlay" unique_id=1513101041]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -35,10 +35,16 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Slot0" parent="Overlay/Slots" instance=ExtResource("2_slot")]
-[node name="Slot1" parent="Overlay/Slots" instance=ExtResource("2_slot")]
-[node name="Slot2" parent="Overlay/Slots" instance=ExtResource("2_slot")]
-[node name="Slot3" parent="Overlay/Slots" instance=ExtResource("2_slot")]
+[node name="Slot0" parent="Overlay/Slots" unique_id=165516894 instance=ExtResource("2_slot")]
+layout_mode = 1
 
-[node name="VoicePlayer" type="AudioStreamPlayer" parent="."]
-bus = &"Master"
+[node name="Slot1" parent="Overlay/Slots" unique_id=630630643 instance=ExtResource("2_slot")]
+layout_mode = 1
+
+[node name="Slot2" parent="Overlay/Slots" unique_id=875404308 instance=ExtResource("2_slot")]
+layout_mode = 1
+
+[node name="Slot3" parent="Overlay/Slots" unique_id=385217737 instance=ExtResource("2_slot")]
+layout_mode = 1
+
+[node name="VoicePlayer" type="AudioStreamPlayer" parent="." unique_id=1043814310]

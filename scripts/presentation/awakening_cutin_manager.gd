@@ -1,9 +1,10 @@
 class_name AwakeningCutInManager
 extends CanvasLayer
 
+const CutInLook = preload("res://scripts/presentation/awakening_cutin_look.gd")
 const MAX_SLOTS := 4
 const BATCH_WINDOW := 0.10
-const DARKEN_ALPHA := 0.38
+const DARKEN_ALPHA := CutInLook.DARKEN_ALPHA
 
 @onready var darken: ColorRect = $Overlay/BackgroundDarken
 @onready var slot_root: Control = $Overlay/Slots
@@ -17,6 +18,20 @@ var request_sequence := 0
 var voice_play_count := 0
 var voice_suppressed_count := 0
 var rejected_request_count := 0
+## Shared panel size scale for 1–4 person layouts (canonical look).
+var panel_scale := CutInLook.PANEL_SCALE
+var darken_alpha := CutInLook.DARKEN_ALPHA
+## Debug harness aliases.
+var debug_panel_scale: Vector2:
+	get:
+		return panel_scale
+	set(value):
+		panel_scale = value
+var debug_darken_alpha: float:
+	get:
+		return darken_alpha
+	set(value):
+		darken_alpha = value
 var _darken_tween: Tween
 
 
@@ -64,6 +79,46 @@ func request_cutin(profile: AwakeningCutInProfileDefinition, context: Dictionary
 	return true
 
 
+## Debug/editor helper: show profiles fully revealed with no enter/exit timeline.
+func preview_static(profiles: Array[AwakeningCutInProfileDefinition]) -> void:
+	for slot: AwakeningCutInSlot in slots:
+		slot.stop_immediately()
+	active_slots.clear()
+	pending_requests.clear()
+	batch_remaining = 0.0
+	if voice_player.playing:
+		voice_player.stop()
+	if profiles.is_empty():
+		_hide_darken()
+		return
+	request_sequence = 0
+	for profile: AwakeningCutInProfileDefinition in profiles:
+		var slot := _next_free_slot()
+		if slot == null:
+			break
+		request_sequence += 1
+		active_slots.append(slot)
+		slot.show_static_profile(
+			profile,
+			Rect2(0.0, 0.0, 1.0, 1.0),
+			_is_right_entry(profile),
+			request_sequence
+		)
+	_refresh_layouts_immediate()
+	_show_darken()
+
+
+func _refresh_layouts_immediate() -> void:
+	active_slots.sort_custom(
+		func(a: AwakeningCutInSlot, b: AwakeningCutInSlot) -> bool:
+			return a.request_sequence < b.request_sequence
+	)
+	var count := active_slots.size()
+	for index: int in range(count):
+		var slot := active_slots[index]
+		slot.apply_layout(_layout_rect(index, count, slot.current_profile), false)
+
+
 func _flush_pending_requests() -> void:
 	if pending_requests.is_empty():
 		return
@@ -109,19 +164,37 @@ func _refresh_layouts() -> void:
 
 
 func _layout_rect(index: int, count: int, profile: AwakeningCutInProfileDefinition) -> Rect2:
+	var rect := Rect2(0.02, 0.08, 0.60, 0.84)
 	match count:
 		1:
-			return Rect2(0.38, 0.08, 0.60, 0.84) if _is_right_entry(profile) else Rect2(0.02, 0.08, 0.60, 0.84)
+			rect = Rect2(0.38, 0.08, 0.60, 0.84) if _is_right_entry(profile) else Rect2(0.02, 0.08, 0.60, 0.84)
 		2:
-			return Rect2(0.49, 0.07, 0.49, 0.86) if index == 1 else Rect2(0.02, 0.07, 0.49, 0.86)
+			rect = Rect2(0.49, 0.07, 0.49, 0.86) if index == 1 else Rect2(0.02, 0.07, 0.49, 0.86)
 		3:
 			if index == 0:
-				return Rect2(0.02, 0.06, 0.54, 0.88)
-			return Rect2(0.53, 0.51 if index == 2 else 0.06, 0.45, 0.43)
+				rect = Rect2(0.02, 0.06, 0.54, 0.88)
+			else:
+				rect = Rect2(0.53, 0.51 if index == 2 else 0.06, 0.45, 0.43)
 		_:
 			var column := index % 2
 			var row := floori(float(index) / 2.0)
-			return Rect2(0.02 + column * 0.49, 0.06 + row * 0.45, 0.47, 0.43)
+			rect = Rect2(0.02 + column * 0.49, 0.06 + row * 0.45, 0.47, 0.43)
+	return _scale_debug_rect(rect)
+
+
+func _scale_debug_rect(rect: Rect2) -> Rect2:
+	if is_equal_approx(panel_scale.x, 1.0) and is_equal_approx(panel_scale.y, 1.0):
+		return rect
+	var center := rect.get_center()
+	var scaled := Vector2(rect.size.x * panel_scale.x, rect.size.y * panel_scale.y)
+	return Rect2(center - scaled * 0.5, scaled)
+
+
+func refresh_active_layouts(animated := false) -> void:
+	if animated:
+		_refresh_layouts()
+	else:
+		_refresh_layouts_immediate()
 
 
 func _is_right_entry(profile: AwakeningCutInProfileDefinition) -> bool:
@@ -153,7 +226,7 @@ func _on_slot_finished(slot: AwakeningCutInSlot) -> void:
 
 
 func _show_darken() -> void:
-	_tween_darken(DARKEN_ALPHA, 0.10)
+	_tween_darken(darken_alpha, 0.10)
 
 
 func _hide_darken() -> void:

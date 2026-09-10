@@ -180,8 +180,8 @@ func _initialize() -> void:
 	var ocean_rank_five := database.get_skill_effect_rank(&"ocean_damage", 5)
 	semantic_ok = semantic_ok and ocean_rank_five != null and is_equal_approx(ocean_rank_five.base_value, 16.0) and is_equal_approx(ocean_rank_five.scaling_coefficient, 0.52)
 	semantic_ok = semantic_ok and database.get_buff(&"judgment_armor_shred") != null
-	semantic_ok = semantic_ok and database.get_asset_profile(&"judgment_armor_shred_icon") != null
 	semantic_ok = semantic_ok and database.get_asset_profile(&"ryze_flux_icon") != null
+	semantic_ok = semantic_ok and database.get_asset_profile(&"overwhelm_debuff_icon") != null
 	semantic_ok = semantic_ok and seven != null and seven.target_type == "ground_area" and seven.snapshot_target_position
 	semantic_ok = semantic_ok and is_equal_approx(seven.travel_duration, 1.35)
 	semantic_ok = semantic_ok and seven.identity_status == &"adapted"

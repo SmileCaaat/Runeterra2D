@@ -1,9 +1,9 @@
 extends Node
 
-## Keeps the standalone game window at the project design aspect (12:5).
+## Keeps the standalone game window at the project design aspect (16:9).
 ## Embedded editor chrome outside the game Viewport is ignored on purpose.
 
-const DESIGN_ASPECT := 12.0 / 5.0
+const DESIGN_ASPECT := 16.0 / 9.0
 const ASPECT_EPSILON_PX := 2
 
 var _locking := false

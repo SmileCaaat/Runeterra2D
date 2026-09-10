@@ -34,7 +34,6 @@ garen_perseverance_icon,skill_icon,res://assets/icons/garen/perseverance.png,,,,
 garen_decisive_strike_icon,skill_icon,res://assets/icons/garen/decisive_strike.webp,,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false
 garen_judgment_icon,skill_icon,res://assets/icons/garen/judgment.png,,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false
 garen_demacian_justice_icon,skill_icon,res://assets/icons/garen/demacian_justice.png,,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false
-judgment_armor_shred_icon,status_icon,res://addons/at-icons/lorc/zebra-shield.svg,,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false
 judgment_armor_shred_burst,skill_vfx,res://assets/vfx/status/armor_shred/armor_shred_burst_frames.tres,StatusDebuffBurst,burst,,0,1,1,0,1,1,1,0,0,0.015,46,true,,manual,0,false
 judgment_armor_shred_audio,audio,,,,res://addons/Sound FX Starter Pack Vol. 1/Motions and Impacts/Impact Metal Hatch.wav,0,3,3,22,1,1,1,0,0,0,0,false,,manual,0,false
 overwhelm_debuff_icon,status_icon,res://assets/icons/status/overwhelm.png,,,,0,1,1,0,1,1,1,0,0,0,0,false,,ui_and_burst,0,false

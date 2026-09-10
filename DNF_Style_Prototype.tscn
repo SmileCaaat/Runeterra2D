@@ -29,7 +29,7 @@
 [ext_resource type="Shader" uid="uid://mptsdhv37oje" path="res://assets/shaders/stage_readability_alpha.gdshader" id="29_stage_readability_alpha"]
 [ext_resource type="SpriteFrames" path="res://assets/vfx/garen_perseverance/garen_perseverance_frames.tres" id="30_perseverance_vfx"]
 [ext_resource type="Shader" uid="uid://dhmnkmvmy6wu3" path="res://assets/shaders/stage_edge_tile.gdshader" id="31_stage_edge_tile"]
-[ext_resource type="Script" uid="uid://h8mbosk6ul2r" path="res://scripts/ui/training_roster_panel.gd" id="32_roster_ui"]
+[ext_resource type="Script" uid="uid://grd5gbe0em8x" path="res://scripts/ui/battle_hud.gd" id="32_battle_hud"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_qf7t4"]
 sky_top_color = Color(0.11372549, 0.15294118, 0.21960784, 1)
@@ -576,5 +576,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.5)
 [node name="DepthLaneFar" type="Marker3D" parent="Markers" unique_id=1365935374]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.5)
 
-[node name="TrainingRosterUI" type="CanvasLayer" parent="." unique_id=936934129]
-script = ExtResource("32_roster_ui")
+[node name="BattleHUD" type="CanvasLayer" parent="." unique_id=936934129]
+script = ExtResource("32_battle_hud")

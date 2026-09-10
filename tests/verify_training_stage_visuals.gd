@@ -26,13 +26,12 @@ func _run() -> void:
 	passed = passed and StringName(stage.get_meta(&"stage_profile_id", &"")) == &"small"
 	passed = passed and StringName(stage.get_meta(&"stage_mode", &"")) == &"training"
 	passed = passed and String(stage.get_meta(&"stage_display_name", "")) == "训练场"
-	passed = passed and int(ProjectSettings.get_setting("display/window/size/viewport_width")) == 1440
-	passed = passed and int(ProjectSettings.get_setting("display/window/size/viewport_height")) == 600
+	passed = passed and int(ProjectSettings.get_setting("display/window/size/viewport_width")) == 1920
+	passed = passed and int(ProjectSettings.get_setting("display/window/size/viewport_height")) == 1080
 	passed = passed and String(ProjectSettings.get_setting("display/window/stretch/aspect")) == "keep"
 	var camera := stage.get_node("CameraRig/DNFCamera") as Camera3D
 	passed = passed and camera.projection == Camera3D.PROJECTION_ORTHOGONAL
 	passed = passed and camera.keep_aspect == Camera3D.KEEP_HEIGHT
-	passed = passed and camera.current
 	passed = passed and camera.transform.is_equal_approx(authored_camera_transform)
 	passed = passed and is_equal_approx(camera.size, authored_camera_size)
 
@@ -102,6 +101,41 @@ func _run() -> void:
 	passed = passed and (stage.get_node("World/Architecture/RaisedPlatform/PlatformCollision") as CollisionShape3D).disabled
 	passed = passed and (stage.get_node("World/Props/Crate01/CrateCollision") as CollisionShape3D).disabled
 	passed = passed and (stage.get_node("World/Props/Pillar01/PillarCollision") as CollisionShape3D).disabled
+
+	var battle_hud := stage.get_node_or_null("BattleHUD") as CanvasLayer
+	passed = passed and battle_hud != null
+	passed = passed and battle_hud.get_script() != null
+	passed = passed and stage.get_node_or_null("TrainingRosterUI") == null
+	if battle_hud != null:
+		await process_frame
+		await process_frame
+		var bottom := battle_hud.get_node_or_null("HUDRoot/BottomHUD") as Control
+		var debug := battle_hud.get_node_or_null("HUDRoot/DebugDrawer") as Control
+		var combat_host := battle_hud.get_node_or_null("HUDRoot/CombatViewportContainer") as SubViewportContainer
+		passed = passed and bottom != null and debug != null and combat_host != null
+		passed = passed and is_equal_approx(bottom.anchor_top, 0.868)
+		passed = passed and is_equal_approx(combat_host.anchor_bottom, 0.868)
+		passed = passed and bottom.get_node_or_null("BottomBody/ABCColumns/TeamPanel") != null
+		passed = passed and bottom.get_node_or_null("BottomBody/ABCColumns/CurrentHeroPanel") != null
+		passed = passed and bottom.get_node_or_null("BottomBody/ABCColumns/EquipmentPanel") != null
+		passed = passed and bottom.get_node_or_null("BottomBody/ABCColumns/CurrentHeroPanel/Margin/VBox/SelectedContent/SkillContainer/SkillFrameQ/SkillSlotQ") != null
+		passed = passed and bottom.get_node_or_null("BottomBody/ABCColumns/EquipmentPanel/Margin/VBox/EquipContent/EquipCluster/EquipRow1/SpecialFrame/SpecialEquipmentSlot") != null
+		passed = passed and bottom.get_node_or_null("BottomBody/ABCColumns/EquipmentPanel/Margin/VBox/EquipContent/EquipCluster/EquipRow1/EquipFrame1") != null
+		passed = passed and bottom.get_node_or_null("BottomBody/ABCColumns/EquipmentPanel/Margin/VBox/EquipContent/AttrReserve") != null
+		passed = passed and debug.get_node_or_null("CombatMetricsPanel") != null
+		passed = passed and debug.get_node_or_null("TrainingToolsPanel") != null
+		passed = passed and debug.get_node_or_null("AIDebugPanel") != null
+		passed = passed and debug.get_node_or_null("TrainingToolsPanel/VBox/Body/TrainingRosterPanel") != null
+		var proxy := combat_host.get_node_or_null("CombatViewport/CombatCamera") as Camera3D
+		passed = passed and proxy != null and proxy.current
+		passed = passed and camera.current
+		passed = passed and stage.get_viewport().disable_3d
+		var combat_viewport := combat_host.get_node_or_null("CombatViewport") as SubViewport
+		passed = passed and combat_viewport != null and not combat_viewport.audio_listener_enable_3d
+		var listener := camera.get_node_or_null("CombatAudioListener") as AudioListener3D
+		passed = passed and listener != null and listener.is_current()
+		passed = passed and is_equal_approx((battle_hud as BattleHUD).get_combat_aspect(), (16.0 / 9.0) / 0.868)
+		passed = passed and is_equal_approx((battle_hud as BattleHUD).get_hud_height_ratio(), 0.132)
 
 	print("TRAINING_STAGE profile=small authored_camera=true authored_layers=true readability=stage-grade/no-team-outline ground_uv=4:1 placeholders=disabled")
 	stage.queue_free()
