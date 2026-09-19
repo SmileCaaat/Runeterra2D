@@ -4,6 +4,7 @@
 [ext_resource type="SpriteFrames" uid="uid://dpbd4u6ucbcp1" path="res://assets/characters/rune_mage_ryze/ryze_sprite_frames.tres" id="2"]
 [ext_resource type="SpriteFrames" uid="uid://bjujrhb8prp6w" path="res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres" id="3"]
 [ext_resource type="Texture2D" uid="uid://s6tqtqunb51r" path="res://assets/fx/soft_ground_shadow.svg" id="4"]
+[ext_resource type="Script" path="res://scripts/rendering/unit_readability_layers.gd" id="5_readability"]
 
 [sub_resource type="CapsuleShape3D" id="shape"]
 radius = 0.42
@@ -25,6 +26,10 @@ pixel_size = 0.005
 no_depth_test = true
 render_priority = -10
 texture = ExtResource("4")
+
+[node name="UnitReadability" type="Node3D" parent="."]
+script = ExtResource("5_readability")
+source_sprite_path = NodePath("../CharacterFrames")
 
 [node name="CharacterFrames" type="AnimatedSprite3D" parent="." unique_id=1467124988 groups=["depth_sort_body"]]
 offset = Vector2(95, 468.5)

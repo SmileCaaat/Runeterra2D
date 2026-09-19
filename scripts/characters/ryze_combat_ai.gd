@@ -30,6 +30,17 @@ const LIGHTNING_CHAIN := preload("res://addons/vfx_library/effects/lightning_cha
 var database: CombatDatabase
 var definition: UnitDefinition
 var target: CharacterBody3D
+var max_health := 620.0
+var current_health := 620.0
+var armor := 22.0
+var magic_resistance := 32.0
+var is_dead := false
+var silence_timer := 0.0
+var armor_shred_timer := 0.0
+var armor_shred_ratio := 0.0
+var base_armor := 22.0
+var base_magic_resistance := 32.0
+var magic_resist_shred_timer := 0.0
 var cooldowns := {&"q": 0.0, &"w": 0.0, &"e": 0.0, &"r": 0.0, &"t": 0.0}
 var arcane_stacks := 0
 var arcane_timer := 0.0
@@ -83,6 +94,12 @@ func _ready() -> void:
 		bind_hero_instance(database, definition)
 		_bind_ai_profile()
 		_bind_playable_bounds()
+		max_health = definition.max_health
+		current_health = max_health
+		armor = definition.armor
+		base_armor = definition.armor
+		magic_resistance = definition.magic_resistance
+		base_magic_resistance = definition.magic_resistance
 	add_to_group(&"combat_target")
 	_configure_team_groups()
 	character_frames.sprite_frames = FRAMES
@@ -214,12 +231,18 @@ func _physics_process(delta: float) -> void:
 		supercharged_casts = 0
 	desperate_timer = maxf(0.0, desperate_timer - delta)
 	super_armor_timer = maxf(0.0, super_armor_timer - delta)
+	silence_timer = maxf(0.0, silence_timer - delta)
+	_update_armor_shred(delta)
+	_update_magic_resist_shred(delta)
 	_sync_t_buff_presentation()
 	_sync_shield_presentation()
 	if super_armor_outline != null:
 		super_armor_outline.set_active(has_super_armor())
 	_update_label()
 	_update_supercharge_afterimages(delta)
+	if is_dead:
+		velocity = Vector3.ZERO
+		return
 	if root_timer > 0.0:
 		root_timer = maxf(0.0, root_timer - delta)
 		velocity = Vector3.ZERO
@@ -232,6 +255,19 @@ func _physics_process(delta: float) -> void:
 		return
 	action_lock = maxf(0.0, action_lock - delta)
 	if action_lock > 0.0:
+		return
+	if silence_timer > 0.0:
+		var silence_offset := target.global_position - global_position
+		silence_offset.y = 0.0
+		var silence_distance := silence_offset.length()
+		_face(silence_offset)
+		if silence_distance > _cast_range():
+			velocity = silence_offset.normalized() * _move_speed()
+			character_frames.play(&"run")
+			move_and_slide()
+		else:
+			velocity = Vector3.ZERO
+			_basic_attack(target)
 		return
 	var to_target := target.global_position - global_position
 	to_target.y = 0.0
@@ -314,9 +350,7 @@ func cast_desperate_power() -> void:
 	var channel := _rulef(&"ryze.t.channel_duration", 0.8)
 	action_lock = channel
 	super_armor_timer = channel
-	var manager := get_tree().get_first_node_in_group(&"awakening_cutin_manager")
-	if manager != null:
-		manager.call("request_skill", &"ryze_desperate_power")
+	_request_awakening_cutin(&"ryze_desperate_power")
 	await get_tree().create_timer(channel).timeout
 	desperate_timer = _desperate_duration()
 	_sync_t_buff_presentation()
@@ -324,6 +358,15 @@ func cast_desperate_power() -> void:
 		_grant_supercharge()
 	else:
 		_add_arcane_stack(false)
+
+
+func _request_awakening_cutin(skill_id: StringName) -> void:
+	var manager := get_node_or_null("/root/AwakeningCutIn")
+	if manager == null:
+		manager = get_tree().get_first_node_in_group(&"awakening_cutin_manager")
+	if manager == null or not manager.has_method("request_skill"):
+		return
+	manager.call("request_skill", skill_id, {"source": self})
 
 
 func cast_realm_warp(destination: Vector3) -> void:
@@ -334,9 +377,16 @@ func cast_realm_warp(destination: Vector3) -> void:
 	var channel := _skill_cast_time(&"ryze_realm_warp", 2.0)
 	action_lock = channel
 	await get_tree().create_timer(channel).timeout
-	var planar := _clamp_to_arena(destination) - global_position
+	# Capture allies at the portal origin before Ryze moves, then share the same planar delta.
+	var origin := global_position
+	var planar := _clamp_to_arena(destination) - origin
 	planar.y = 0.0
-	global_position = _clamp_to_arena(global_position + planar.limit_length(_warp_range()))
+	var delta := planar.limit_length(_warp_range())
+	var ally_radius := _skill_radius(&"ryze_realm_warp", 5.5)
+	var allies := _collect_warp_allies(ally_radius)
+	_teleport_actor(self, origin + delta)
+	for ally: CharacterBody3D in allies:
+		_teleport_actor(ally, ally.global_position + delta)
 	character_frames.play(&"spell4_winddown")
 	action_lock = _sprite_animation_duration(character_frames, &"spell4_winddown")
 	_play_r_winddown()
@@ -346,13 +396,53 @@ func cast_realm_warp(destination: Vector3) -> void:
 		var candidate := candidate_node as CharacterBody3D
 		if candidate == null or candidate == self or not _is_enemy_candidate(candidate):
 			continue
-		if candidate.global_position.distance_to(global_position) <= _skill_radius(&"ryze_realm_warp", 5.5):
+		if candidate.global_position.distance_to(global_position) <= ally_radius:
 			_play_r_landing_zap_once(candidate)
 			for _i in _rulei(&"ryze.r.landing_e_hits", 3):
 				_apply_e(candidate)
 	_r_landing_resolving = false
 	_r_landing_zapped.clear()
 	_add_arcane_stack(true)
+
+
+func _collect_warp_allies(radius: float) -> Array[CharacterBody3D]:
+	var allies: Array[CharacterBody3D] = []
+	var seen: Dictionary = {}
+	for group_name: StringName in [&"combat_target", &"friendly_actor", &"enemy_actor", &"player_actor", &"hero_actor"]:
+		for node: Node in get_tree().get_nodes_in_group(group_name):
+			var candidate := node as CharacterBody3D
+			if candidate == null or seen.has(candidate.get_instance_id()):
+				continue
+			if not _is_warp_ally(candidate):
+				continue
+			var offset := candidate.global_position - global_position
+			offset.y = 0.0
+			if offset.length() > radius:
+				continue
+			seen[candidate.get_instance_id()] = true
+			allies.append(candidate)
+	return allies
+
+
+func _is_warp_ally(candidate: CharacterBody3D) -> bool:
+	if candidate == null or candidate == self or not is_instance_valid(candidate):
+		return false
+	if candidate.has_method("is_targetable") and not bool(candidate.call("is_targetable")):
+		return false
+	if candidate.has_method("get_team"):
+		return String(candidate.call("get_team")) == String(get_team())
+	if team == "friendly":
+		return candidate.is_in_group(&"friendly_actor")
+	if team == "enemy":
+		return candidate.is_in_group(&"enemy_actor")
+	return false
+
+
+func _teleport_actor(actor: CharacterBody3D, destination: Vector3) -> void:
+	if actor == null or not is_instance_valid(actor):
+		return
+	actor.global_position = _clamp_to_arena(destination)
+	actor.velocity = Vector3.ZERO
 
 
 func apply_root(duration: float) -> void:
@@ -368,11 +458,107 @@ func is_enemy_of(other_team: StringName) -> bool:
 
 
 func is_targetable() -> bool:
-	return true
+	return enabled and not is_dead and current_health > 0.0
 
 
-func receive_skill_damage(amount: float, _source: String, _crit: bool, _position: Vector3, _type: StringName = &"magic", _profile: StringName = &"ryze_e_hit") -> void:
-	present_resolved_damage(amount, _type)
+func get_health_ratio() -> float:
+	return current_health / maxf(max_health, 1.0)
+
+
+func receive_hit(attacker_position: Vector3, _attack_name: StringName, amount: float = -1.0) -> void:
+	var damage := amount if amount >= 0.0 else (definition.attack_damage if definition != null else 55.0)
+	receive_skill_damage(damage, "普攻", true, attacker_position, &"physical", &"basic_melee")
+
+
+func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, hit_profile_id: StringName = &"breaker_hit") -> void:
+	receive_skill_damage(base_attack + bonus_damage, "破舰", true, attacker_position, &"physical", hit_profile_id)
+
+
+func receive_skill_damage(amount: float, _source: String, is_critical: bool, _position: Vector3, damage_type: StringName = &"magic", _profile: StringName = &"ryze_e_hit") -> void:
+	if is_dead or amount <= 0.0:
+		return
+	var resolved := CombatMath.resolve_damage(amount, damage_type, armor, magic_resistance, database)
+	current_health = maxf(0.0, current_health - resolved)
+	if resolved > 0.0:
+		present_resolved_damage(resolved, damage_type, is_critical)
+	if current_health <= 0.0:
+		_die()
+
+
+func apply_silence(duration: float) -> void:
+	if is_dead:
+		return
+	silence_timer = maxf(silence_timer, duration)
+
+
+func apply_armor_shred(duration: float, reduction_ratio: float) -> void:
+	if is_dead:
+		return
+	armor_shred_timer = maxf(armor_shred_timer, duration)
+	armor_shred_ratio = clampf(reduction_ratio, 0.0, 0.95)
+	armor = base_armor * (1.0 - armor_shred_ratio)
+
+
+func apply_magic_resistance_shred(multiplier: float, duration: float) -> void:
+	if is_dead:
+		return
+	magic_resistance = base_magic_resistance * clampf(multiplier, 0.0, 1.0)
+	magic_resist_shred_timer = maxf(magic_resist_shred_timer, duration)
+
+
+func force_retarget_hostile() -> void:
+	target = null
+	_refresh_target()
+
+
+func _die() -> void:
+	if is_dead:
+		return
+	is_dead = true
+	current_health = 0.0
+	enabled = false
+	target = null
+	velocity = Vector3.ZERO
+	remove_from_group(&"combat_target")
+	character_frames.modulate = Color(0.55, 0.55, 0.55, 0.85)
+	character_frames.play(&"idle")
+	character_frames.pause()
+	_update_label()
+
+
+func revive_for_training() -> void:
+	is_dead = false
+	enabled = true
+	current_health = max_health
+	armor = base_armor
+	magic_resistance = base_magic_resistance
+	armor_shred_timer = 0.0
+	armor_shred_ratio = 0.0
+	magic_resist_shred_timer = 0.0
+	silence_timer = 0.0
+	if not is_in_group(&"combat_target"):
+		add_to_group(&"combat_target")
+	character_frames.modulate = Color.WHITE
+	character_frames.play(&"idle")
+	_configure_team_groups()
+	_update_label()
+
+
+func _update_armor_shred(delta: float) -> void:
+	if armor_shred_timer <= 0.0:
+		return
+	armor_shred_timer = maxf(0.0, armor_shred_timer - delta)
+	if armor_shred_timer <= 0.0:
+		armor_shred_ratio = 0.0
+		armor = base_armor
+
+
+func _update_magic_resist_shred(delta: float) -> void:
+	if magic_resist_shred_timer <= 0.0:
+		return
+	magic_resist_shred_timer = maxf(0.0, magic_resist_shred_timer - delta)
+	if magic_resist_shred_timer <= 0.0:
+		magic_resistance = base_magic_resistance
 
 
 func _play_action_to_end(animation: StringName, cast_frame: int, event: Callable) -> void:
@@ -914,14 +1100,34 @@ func _cast_frame(animation: StringName, fallback: int) -> int:
 
 
 func _refresh_target() -> void:
-	if _valid_target(target):
+	var preferred := _find_preferred_hostile()
+	if preferred == null:
+		target = null
 		return
+	var should_switch := not _valid_target(target)
+	if not should_switch and target != null and target.is_in_group(&"training_dummy") and preferred.is_in_group(&"hero_actor"):
+		should_switch = true
+	if should_switch:
+		target = preferred
+
+
+func _find_preferred_hostile() -> CharacterBody3D:
+	var closest_hero: CharacterBody3D
+	var closest_hero_distance := INF
+	var closest_any: CharacterBody3D
+	var closest_any_distance := INF
 	for node: Node in get_tree().get_nodes_in_group(&"combat_target"):
 		var candidate := node as CharacterBody3D
-		if candidate != self and _valid_target(candidate) and (not candidate.has_method("is_enemy_of") or candidate.call("is_enemy_of", get_team())):
-			target = candidate
-			return
-	target = null
+		if candidate == null or candidate == self or not _can_harm(candidate):
+			continue
+		var distance := global_position.distance_squared_to(candidate.global_position)
+		if distance < closest_any_distance:
+			closest_any = candidate
+			closest_any_distance = distance
+		if candidate.is_in_group(&"hero_actor") and distance < closest_hero_distance:
+			closest_hero = candidate
+			closest_hero_distance = distance
+	return closest_hero if closest_hero != null else closest_any
 
 
 func _valid_target(candidate: CharacterBody3D) -> bool:
@@ -940,6 +1146,9 @@ func _configure_team_groups() -> void:
 	else:
 		add_to_group(&"enemy_actor")
 		remove_from_group(&"friendly_actor")
+	var readability := get_node_or_null("UnitReadability")
+	if readability != null and readability.has_method("refresh_team_visuals"):
+		readability.call("refresh_team_visuals")
 
 
 func _bind_ai_profile() -> void:
@@ -1246,7 +1455,12 @@ func _update_label() -> void:
 	var state := "超负荷 %d" % supercharged_casts if _is_supercharged() else "奥术 %d/%d" % [arcane_stacks, _buff_max_stacks(&"ryze_arcane_mastery", 5)]
 	if desperate_timer > 0.0:
 		state += " · 觉醒"
-	label.text = "瑞兹 · %s\n%s" % ["蓝方" if team == "friendly" else "红方", state]
+	label.text = "瑞兹 · %s\n%s · HP %d/%d" % [
+		"蓝方" if team == "friendly" else "红方",
+		state,
+		int(current_health),
+		int(max_health),
+	]
 
 
 func _rulef(rule_id: StringName, fallback: float) -> float:

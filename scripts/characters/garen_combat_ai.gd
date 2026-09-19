@@ -50,6 +50,8 @@ var breaker_lunge_pending := false
 func _ready() -> void:
 	_apply_combat_data()
 	bind_hero_instance(combat_database, garen_definition)
+	add_to_group(&"combat_target")
+	_configure_team_groups()
 	target = get_node_or_null(target_path) as CharacterBody3D
 	if not _is_target_available(target):
 		target = _find_closest_target()
@@ -58,6 +60,18 @@ func _ready() -> void:
 	unflipped_sprite_offset = character_frames.offset
 	character_frames.animation_finished.connect(_on_animation_finished)
 	_set_state(CombatState.CHASE if is_instance_valid(target) else CombatState.IDLE)
+
+
+func _configure_team_groups() -> void:
+	if team == "friendly":
+		add_to_group(&"friendly_actor")
+		remove_from_group(&"enemy_actor")
+	else:
+		add_to_group(&"enemy_actor")
+		remove_from_group(&"friendly_actor")
+	var readability := get_node_or_null("UnitReadability")
+	if readability != null and readability.has_method("refresh_team_visuals"):
+		readability.call("refresh_team_visuals")
 
 
 func _apply_sprite_canvas_anchor() -> void:
@@ -168,8 +182,13 @@ func _check_attack_hit(distance: float) -> void:
 		if current_attack_is_breaker:
 			skill_controller.call("resolve_breaker_attack", target)
 			current_attack_is_breaker = false
-		elif target.has_method("receive_hit"):
-			target.call("receive_hit", global_position, character_frames.animation)
+		else:
+			var damage := garen_definition.attack_damage if garen_definition != null else 69.0
+			var hit_profile_id: StringName = hit_event.payload_id if hit_event != null else &"basic_melee"
+			if target.has_method("receive_hit"):
+				target.call("receive_hit", global_position, character_frames.animation, damage)
+			elif target.has_method("receive_skill_damage"):
+				target.call("receive_skill_damage", damage, String(character_frames.animation), true, global_position, &"physical", hit_profile_id)
 			if skill_controller != null:
 				skill_controller.call("register_courage_kill", target)
 		attack_landed.emit(character_frames.animation)
@@ -319,9 +338,9 @@ func _count_nearby_enemies(radius: float) -> int:
 	var count := 0
 	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
 		var candidate := candidate_node as CharacterBody3D
-		if not _is_target_available(candidate):
+		if candidate == self or not _is_target_available(candidate):
 			continue
-		if candidate.has_method("is_enemy_of") and not bool(candidate.call("is_enemy_of", get_team())):
+		if not _is_hostile_candidate(candidate):
 			continue
 		var planar := candidate.global_position - global_position
 		planar.y = 0.0
@@ -421,16 +440,28 @@ func receive_knockback(direction: Vector3, speed: float) -> bool:
 
 
 func _refresh_target() -> void:
-	if _is_target_available(target):
+	var preferred := _find_closest_target()
+	if preferred == null:
+		target = null
+		skill_controller.call("set_target", target)
 		return
-	target = _find_closest_target()
+	var should_switch := not _is_target_available(target)
+	if not should_switch and _is_training_dummy(target) and _is_hero_actor(preferred):
+		should_switch = true
+	if not should_switch:
+		return
+	target = preferred
 	skill_controller.call("set_target", target)
-	if _is_target_available(target):
-		_set_state(CombatState.CHASE)
+	_set_state(CombatState.CHASE)
+
+
+func force_retarget_hostile() -> void:
+	target = null
+	_refresh_target()
 
 
 func _is_target_available(candidate: CharacterBody3D) -> bool:
-	if not is_instance_valid(candidate):
+	if not is_instance_valid(candidate) or candidate == self:
 		return false
 	if candidate.has_method("is_targetable"):
 		return bool(candidate.call("is_targetable"))
@@ -438,23 +469,62 @@ func _is_target_available(candidate: CharacterBody3D) -> bool:
 
 
 func _find_closest_target() -> CharacterBody3D:
-	var closest: CharacterBody3D
-	var closest_distance := INF
+	var closest_hero: CharacterBody3D
+	var closest_hero_distance := INF
+	var closest_any: CharacterBody3D
+	var closest_any_distance := INF
 	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
 		var candidate := candidate_node as CharacterBody3D
-		if not _is_target_available(candidate):
+		if candidate == self or not _is_target_available(candidate):
 			continue
-		if candidate.has_method("is_enemy_of") and not bool(candidate.call("is_enemy_of", get_team())):
+		if not _is_hostile_candidate(candidate):
 			continue
 		var candidate_distance := global_position.distance_squared_to(candidate.global_position)
-		if candidate_distance < closest_distance:
-			closest = candidate
-			closest_distance = candidate_distance
-	return closest
+		if candidate_distance < closest_any_distance:
+			closest_any = candidate
+			closest_any_distance = candidate_distance
+		if _is_hero_actor(candidate) and candidate_distance < closest_hero_distance:
+			closest_hero = candidate
+			closest_hero_distance = candidate_distance
+	return closest_hero if closest_hero != null else closest_any
+
+
+func _is_hostile_candidate(candidate: CharacterBody3D) -> bool:
+	if candidate.has_method("is_enemy_of"):
+		return bool(candidate.call("is_enemy_of", get_team()))
+	if candidate.has_method("get_team"):
+		return StringName(candidate.call("get_team")) != get_team()
+	return false
+
+
+func _is_hero_actor(candidate: Node) -> bool:
+	return candidate != null and candidate.is_in_group(&"hero_actor")
+
+
+func _is_training_dummy(candidate: Node) -> bool:
+	return candidate != null and candidate.is_in_group(&"training_dummy")
 
 
 func get_team() -> StringName:
 	return StringName(team)
+
+
+func is_enemy_of(other_team: StringName) -> bool:
+	return StringName(team) != other_team
+
+
+var max_health: float:
+	get:
+		if skill_controller == null:
+			return 1000.0
+		return float(skill_controller.get("max_health"))
+
+
+var current_health: float:
+	get:
+		if skill_controller == null:
+			return 1000.0
+		return float(skill_controller.get("current_health"))
 
 
 func get_health_ratio() -> float:
@@ -470,8 +540,32 @@ func is_targetable() -> bool:
 	return float(skill_controller.get("current_health")) > 0.0
 
 
+func receive_hit(attacker_position: Vector3, _attack_name: StringName, amount: float = -1.0) -> void:
+	var damage := amount if amount >= 0.0 else (garen_definition.attack_damage if garen_definition != null else 69.0)
+	receive_skill_damage(damage, "普攻", true, attacker_position, &"physical", &"basic_melee")
+
+
+func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, _hit_profile_id: StringName = &"breaker_hit") -> void:
+	receive_skill_damage(base_attack + bonus_damage, "破舰", true, attacker_position, &"physical", &"breaker_hit")
+
+
 func receive_skill_damage(amount: float, _source_name: String, _can_crit: bool, _attacker_position: Vector3, damage_type: StringName = &"physical", _hit_profile_id: StringName = &"basic_melee") -> void:
 	skill_controller.call("receive_incoming_damage", amount, damage_type, _can_crit)
+
+
+func apply_silence(duration: float) -> void:
+	if skill_controller != null and skill_controller.has_method("apply_silence"):
+		skill_controller.call("apply_silence", duration)
+
+
+func apply_armor_shred(duration: float, reduction_ratio: float) -> void:
+	if skill_controller != null and skill_controller.has_method("apply_armor_shred"):
+		skill_controller.call("apply_armor_shred", duration, reduction_ratio)
+
+
+func apply_magic_resistance_shred(multiplier: float, duration: float) -> void:
+	if skill_controller != null and skill_controller.has_method("apply_magic_resistance_shred"):
+		skill_controller.call("apply_magic_resistance_shred", multiplier, duration)
 
 
 func apply_seven_seas_rum(duration: float, move_speed_bonus: float) -> void:

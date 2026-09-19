@@ -112,8 +112,8 @@ func _physics_process(delta: float) -> void:
 	_update_label()
 
 
-func receive_hit(attacker_position: Vector3, attack_name: StringName) -> void:
-	var damage := attacker_definition.attack_damage if attacker_definition != null else 58.0
+func receive_hit(attacker_position: Vector3, attack_name: StringName, amount: float = -1.0) -> void:
+	var damage := amount if amount >= 0.0 else (attacker_definition.attack_damage if attacker_definition != null else 58.0)
 	var event := combat_database.get_animation_event(&"garen", attack_name, "hit") if combat_database != null else null
 	var hit_profile_id: StringName = event.payload_id if event != null else &"basic_melee"
 	_apply_damage(damage, String(attack_name), true, attacker_position, &"physical", hit_profile_id)
@@ -392,10 +392,13 @@ func _configure_team_groups() -> void:
 		add_to_group(&"enemy_actor")
 		remove_from_group(&"friendly_actor")
 		state_label.modulate = Color(1.0, 0.56, 0.56, 1.0)
+	var readability := get_node_or_null("UnitReadability")
+	if readability != null and readability.has_method("refresh_team_visuals"):
+		readability.call("refresh_team_visuals")
 
 
 func _configure_visual_feedback() -> void:
-	# Team outline is supplied by UnitReadability's shared Outline Glow shader.
+	# Faction cue is the soft foot ring on UnitReadability (not pixel outline).
 	pass
 
 

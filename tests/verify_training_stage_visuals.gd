@@ -76,6 +76,10 @@ func _run() -> void:
 	passed = passed and not player_frames.no_depth_test
 	passed = passed and not player_readability.has_node("MaskOutline")
 	passed = passed and not player_readability.has_node("OutlineGlow")
+	player_readability.call("refresh_team_visuals")
+	var player_ring := player_readability.get_node_or_null("TeamGroundRing") as Sprite3D
+	passed = passed and player_ring != null and player_ring.visible
+	passed = passed and player_ring.modulate.b > player_ring.modulate.r
 
 	var environment := (stage.get_node("Environment") as WorldEnvironment).environment
 	var sun := stage.get_node("Sun") as DirectionalLight3D

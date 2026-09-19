@@ -45,6 +45,9 @@ func _run() -> void:
 	var readability := crab.get_node("UnitReadability")
 	_assert(not (crab.get_node("Frames") as AnimatedSprite3D).no_depth_test, "unit body respects ground depth")
 	_assert(not readability.has_node("MaskOutline") and not readability.has_node("OutlineGlow"), "neutral unit has no faction outline")
+	readability.call("refresh_team_visuals")
+	var ring := readability.get_node_or_null("TeamGroundRing") as Sprite3D
+	_assert(ring != null and not ring.visible, "neutral unit hides foot ring")
 	crab.call("register_damage_source", Vector3(-3, 0, 0), &"friendly")
 	crab.call("receive_skill_damage", 999999.0, "TEST", false, Vector3(-3, 0, 0), &"physical", &"basic_melee")
 	_assert(not crab.is_in_group(&"combat_target"), "dead crab exits targeting immediately")

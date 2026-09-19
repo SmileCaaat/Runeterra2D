@@ -8,7 +8,7 @@
 - 最近核对：2026-09-04。
 - 当前数值参考：[Ryze](https://wiki.leagueoflegends.com/en-us/Ryze)。页面语义由 [Data Dragon `16.17.1` 的 Ryze 数据](https://ddragon.leagueoflegends.com/cdn/16.17.1/data/en_US/champion/Ryze.json) 同次核对；将来实际入表前必须再次核对当前 Wiki 数据模板或补丁说明。
 - 技能形态参考入口：[Ryze/History](https://wiki.leagueoflegends.com/en-us/Ryze/History)。已选择 History 第 2 套形态用于 P/Q/W/E，并将其 `Desperate Power` 改编为项目觉醒槽 T；该历史快照的精确数值与结构来自用户于 2026-09-04 提供的六张技能截图。R 则保留当前 `Realm Warp` 形态与数值锚点。
-- 原画来源（已复制到 `res://assets/vfx/ryze_skills/符文法师 - 原画.jpg`，作为后续觉醒 Cut-In 或角色展示候选）：`D:/1Gameassets_share/SpriteAssets/Skills/Ryze_spell_sheet_json_20260831_033950Z/符文法师 - 原画.jpg`。
+- 觉醒 Cut-In 立绘 / 语音：`res://assets/presentation/awakening/ryze/desperate_power_cutin.jpg`、`res://assets/presentation/awakening/ryze/awakening_voice.wav`（由 `cast_desperate_power()` 经 `AwakeningCutIn` 触发）。
 - 已知限制：历史页本次无法由自动抓取器读取正文，因此第 2 套形态以用户截图作为本项目的可追溯快照；后续若出现截图未覆盖的历史细节，不得依靠记忆补写。
 
 ## 身份摘要
@@ -40,7 +40,7 @@
 | Q · Overload | 方向投射物；来源距离 `550 → 5.5m`、宽 `110 → 1.1m`、速度 `1700 → 17m/s`；仅首个命中敌人受击；纵深容差 `1.1m` | 无霸体；伤害有效时点是法球接触目标，而非角色 `spell1` 的某一帧；命中反馈与盖伦普攻相同：停顿 `0.06s`、硬直 `0.24s`、击退初速 `2.8m/s`；普攻与 QWE 常态加速 1.35、超负荷 1.8，出手后按最短锁解锁 | 角色播放 `spell1`；飞行中对 `Spell1_Q` 序列帧做沿程弹性拉伸/压缩与微颤（`ryze.q.travel_*` / `launch_pulse` / `throb_*`）；命中时播放 `impact` |
 | W · Rune Prison | 锁定目标；来源距离 `550 → 5.5m`；目标指向、必中，非投射物，不做纵深容差判定 | 无霸体；角色 `spell2` 第 5 帧同步结算伤害与 `1 / 1.1 / 1.2 / 1.3 / 1.4s` 定身；无击退，受击硬直为盖伦普攻 `1/4 = 0.06s`；未指定额外命中停顿，暂定 `0s` | 目标处同步播放 `Spell2_W`；命中时播放 `impact`；定身存续期间循环 `W_loop`，结束时立即停止 |
 | E · Spell Flux | 锁定目标；来源距离 `550 → 5.5m`；初段投射物速度 `1500 → 15m/s`；弹射半径 `350 → 3.5m`、弹射速度 `1500 → 15m/s`；目标指向，不做纵深容差判定 | 无霸体；初段和每次弹射的伤害有效时点均为法球接触目标；命中反馈为盖伦普攻 `1/3`：停顿 `0.02s`、硬直 `0.08s`、击退初速 `0.933m/s`。链路包含主目标并将其作为后续弹射起点；无次级目标时回弹主目标；同一目标单链受伤次数不设上限。可把瑞兹自己当弹射节点，但自身不受伤害或减抗 | 初段及弹射均用 `Spell3_E`，外包 `ElasticVoxelShell` 体素壳；弹射额外挤压回弹。每次命中播放 `impact`。减抗复用盖伦破甲那套小图标弹出/晃动/回弹，贴图为 `MagicResistanceReduction.png` |
-| T · Desperate Power | 自身；基本技能外溢半径 `350 → 3.5m`；来源 `+80` 移速按既定比例换算为 `+0.8m/s` | 播放 `taunt` 后进入 6 秒觉醒强化；引导期间拥有霸体，强化持续期不默认继承霸体；引导结束授予满层超负荷且不消耗次数；保留被动冷却缩减 `10 / 20 / 30%` | 觉醒 Cut-In 使用原画与 `Ryze_awake.wav`；`TBuff` / `Shield` 手调 +X，`TBuffFlip` / `ShieldFlip` 手调 -X，运行时按朝向选用对应节点，不改 Transform。强化 6 秒内循环 `T_Buff`；引导期复用盖伦 `SuperArmorOutline` 黄红黄轮廓。触发外溢的主目标命中叠一层 `Lightning Chain` one-shot（`vfx_library_lightning_chain`） |
+| T · Desperate Power | 自身；基本技能外溢半径 `350 → 3.5m`；来源 `+80` 移速按既定比例换算为 `+0.8m/s` | 播放 `taunt` 后进入 6 秒觉醒强化；引导期间拥有霸体，强化持续期不默认继承霸体；引导结束授予满层超负荷且不消耗次数；保留被动冷却缩减 `10 / 20 / 30%` | 觉醒 Cut-In 使用 `assets/presentation/awakening/ryze/` 立绘与语音；`TBuff` / `Shield` 手调 +X，`TBuffFlip` / `ShieldFlip` 手调 -X，运行时按朝向选用对应节点，不改 Transform。强化 6 秒内循环 `T_Buff`；引导期复用盖伦 `SuperArmorOutline` 黄红黄轮廓。触发外溢的主目标命中叠一层 `Lightning Chain` one-shot（`vfx_library_lightning_chain`） |
 | R · Realm Warp | 友军选取来源半径 `550 → 5.5m`；最大传送来源距离 `2500 → 25m`；落点与传送路径钳在 `GroundMesh` 与 `ryze_demo` 交集内 | 2 秒引导仅能被沉默、眩晕、击飞打断；打断/主动取消后全额返还冷却。传送落地后强制进入专属 `spell4_winddown` 出生动作；以落点为中心 `5.5m` 内每个敌人承受 3 次 E 初段伤害并直接获得 3 层 5 秒乘算减魔抗，不生成 E 初段弹道、分裂或回弹 | 角色 `spell4_winddown` 与场景 `RWinddown` 同步；特效用 `ryze.tscn` 手调 Transform，时长等于落地动画，随朝向翻转 X。范围内每个受伤敌人脚底播一次 `VFXZapLightning_01`；T 外溢到的敌人同样各一次。缩放 `ryze.r.zap_scale`，不跟三次 E 重复播放 |
 
 ### 超负荷施法加速
@@ -62,7 +62,7 @@
 
 - 角色序列帧已复制到 `res://assets/characters/rune_mage_ryze/`，并由 `build_ryze_sprite_frames.gd` 生成 `ryze_sprite_frames.tres`：共 21 个状态、501 帧。`taunt` 是预留给项目 T 槽位的角色动画；它不是对当前 PC 技能组存在 T 技能的声明。
 - 技能序列帧、普攻法球、护盾、图标、觉醒语音和原画已复制到 `res://assets/vfx/ryze_skills/`，并由 `build_ryze_skill_vfx.gd` 生成 `ryze_skill_vfx_frames.tres`：`basic_attack`（12 帧）、`Ryze_Shield`（32 帧循环，Screen/滤色材质）、`Spell1_Q`、`Spell2_W`、`Spell3_E`、`Spell4_R_winddown`、`W_loop`、`T_Buff` 与 `impact`。
-- `W_loop` 是当前唯一预设循环的技能表现；它仅表达资源播放方式，尚不等价于 W 的最终机制。`Ryze_awake.wav` 与原画保留给后续觉醒 Cut-In profile。
+- `W_loop` 是当前唯一预设循环的技能表现；它仅表达资源播放方式，尚不等价于 W 的最终机制。觉醒 Cut-In 已接入 `awakening_cutin_profiles.csv` 的 `ryze_desperate_power_awaken`。
 - 瑞兹体型与盖伦相同；角色 `pixel_size`、逻辑脚底锚点与受击高度将复用盖伦的同量级标尺，不能仅按瑞兹图集的像素尺寸自动放大或缩小。
 - 普攻动作固定采用 `attack1 → attack2 → attack3 → crit` 四段连续序列；法球使用 `basic_attack`，其射程、速度、碰撞宽度与命中时机仍须通过基础攻击 hit profile 接线。
 
@@ -122,7 +122,7 @@
 
 - 法力值目前只是属性契约，尚无通用消耗/回复/额外法力缩放运行时管线；P 与 Q/W/E 伤害不能在该能力补齐前假称已完成。
 - 普攻 / Q/E 接触结算、W 第 5 帧、hit profile 与 animation_events 已入表。Q 用 `1.1m` 纵深容差，W/E 锁定不做纵深判定。
-- R 落点已钳在 `GroundMesh` 与 `ryze_demo` 档案边界；有友军的传送资格仍待有队友的场景验收。
+- R 落点已钳在 `GroundMesh` 与 `ryze_demo` 档案边界；引导结束后于原点 `5.5m` 内捕获同队友军，与瑞兹共用同一平面位移（各自再钳边界）。
 - T 的法术吸血必须以通用“技能伤害治疗”能力实现；不能在瑞兹控制器中硬编码。
 - 觉醒 Cut-In 与技能音频已有档案行和资源路径，明天再接线。
 

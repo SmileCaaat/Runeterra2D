@@ -36,7 +36,7 @@ window/stretch/aspect="keep"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/BurstParticles2D/plugin.cfg", "res://addons/at-icons/plugin.cfg", "res://addons/combat_data/plugin.cfg", "res://addons/dialogue_manager/plugin.cfg", "res://addons/go_build/plugin.cfg", "res://addons/godot_ai/plugin.cfg", "res://addons/kanban_tasks/plugin.cfg", "res://addons/phantom_camera/plugin.cfg", "res://addons/vfx_library/plugin.cfg", "res://addons/yard/plugin.cfg")
+enabled=PackedStringArray("res://addons/BurstParticles2D/plugin.cfg", "res://addons/combat_data/plugin.cfg", "res://addons/dialogue_manager/plugin.cfg", "res://addons/go_build/plugin.cfg", "res://addons/godot_ai/plugin.cfg", "res://addons/kanban_tasks/plugin.cfg", "res://addons/phantom_camera/plugin.cfg", "res://addons/vfx_library/plugin.cfg", "res://addons/yard/plugin.cfg")
 
 [physics]
 

@@ -24,8 +24,8 @@ func _initialize() -> void:
 	var skill_total := _frame_total(skill_frames)
 	skill_ok = skill_ok and skill_total == 147
 	var shield_material_ok := ResourceLoader.exists("res://assets/vfx/ryze_skills/ryze_shield_screen_material.tres")
-	var audio_ok := ResourceLoader.exists("res://assets/vfx/ryze_skills/Ryze_awake.wav")
-	var portrait_ok := ResourceLoader.exists("res://assets/vfx/ryze_skills/符文法师 - 原画.jpg")
+	var audio_ok := ResourceLoader.exists("res://assets/presentation/awakening/ryze/awakening_voice.wav")
+	var portrait_ok := ResourceLoader.exists("res://assets/presentation/awakening/ryze/desperate_power_cutin.jpg")
 	var icon_ok := ResourceLoader.exists("res://assets/vfx/ryze_skills/icons/Ryze_Overload_Q.webp")
 	icon_ok = icon_ok and ResourceLoader.exists("res://assets/vfx/ryze_skills/icons/Ryze_Desperate_Power_P.webp")
 	print("RYZE_ASSETS character=%s frames=%d skill=%s frames=%d shield_material=%s taunt_t=true audio=%s portrait=%s icons=%s" % [

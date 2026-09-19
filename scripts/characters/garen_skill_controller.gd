@@ -189,6 +189,11 @@ var black_sail_rum_cleanse_ratio := 0.30
 var skill_ranks: Dictionary[int, int] = {SKILL_BREAKER: 1, SKILL_BLACK_SAIL: 1, SKILL_OCEAN_STORM: 1, SKILL_TYRANT_JUDGMENT: 1, SKILL_SEVEN_SEAS: 1}
 var ocean_storm_hit_counts: Dictionary[int, int] = {}
 var audio_cue_play_counts: Dictionary[StringName, int] = {}
+var armor_shred_timer := 0.0
+var armor_shred_ratio := 0.0
+var magic_resist_shred_timer := 0.0
+var magic_resist_shred_multiplier := 1.0
+var silence_timer := 0.0
 
 
 func _ready() -> void:
@@ -262,6 +267,8 @@ func set_target(next_target: CharacterBody3D) -> void:
 
 func begin_skill(skill_index: int, skill_target: CharacterBody3D) -> bool:
 	if skill_index < SKILL_BREAKER or skill_index > SKILL_SEVEN_SEAS:
+		return false
+	if silence_timer > 0.0 and skill_index != SKILL_BLACK_SAIL:
 		return false
 	if cooldowns[skill_index] > 0.0 or not is_instance_valid(skill_target):
 		return false
@@ -355,13 +362,31 @@ func get_courage_resistance_bonus() -> float:
 
 
 func get_effective_armor() -> float:
-	var base_armor := garen_definition.armor if garen_definition != null else 38.0
-	return base_armor + get_courage_resistance_bonus()
+	var base := garen_definition.armor if garen_definition != null else 38.0
+	if armor_shred_timer > 0.0:
+		base *= 1.0 - armor_shred_ratio
+	return base + get_courage_resistance_bonus()
 
 
 func get_effective_magic_resistance() -> float:
 	var base_resistance := garen_definition.magic_resistance if garen_definition != null else 32.0
+	if magic_resist_shred_timer > 0.0:
+		base_resistance *= magic_resist_shred_multiplier
 	return base_resistance + get_courage_resistance_bonus()
+
+
+func apply_armor_shred(duration: float, reduction_ratio: float) -> void:
+	armor_shred_timer = maxf(armor_shred_timer, duration)
+	armor_shred_ratio = clampf(reduction_ratio, 0.0, 0.95)
+
+
+func apply_magic_resistance_shred(multiplier: float, duration: float) -> void:
+	magic_resist_shred_multiplier = clampf(multiplier, 0.0, 1.0)
+	magic_resist_shred_timer = maxf(magic_resist_shred_timer, duration)
+
+
+func apply_silence(duration: float) -> void:
+	silence_timer = maxf(silence_timer, duration)
 
 
 func register_courage_kill(target_actor: CharacterBody3D) -> void:
@@ -395,13 +420,12 @@ func resolve_breaker_attack(skill_target: CharacterBody3D) -> void:
 	var bonus_damage := breaker_damage + attack_damage * breaker_damage_coefficient
 	if skill_target.has_method("receive_breaker_attack"):
 		skill_target.call("receive_breaker_attack", attack_damage, bonus_damage, fighter.global_position, &"breaker_hit")
-	else:
-		# Compatibility path for future targets that have not implemented compound hits yet.
-		if skill_target.has_method("receive_hit"):
-			skill_target.call("receive_hit", fighter.global_position, &"spell1")
+	elif skill_target.has_method("receive_hit"):
+		skill_target.call("receive_hit", fighter.global_position, &"spell1", attack_damage)
 		if skill_target.has_method("receive_skill_damage"):
 			skill_target.call("receive_skill_damage", bonus_damage, "破舰额外伤害", false, fighter.global_position, &"physical", &"breaker_hit")
-		skill_target.call("receive_skill_damage", bonus_damage, "破舰额外伤害", false, fighter.global_position, &"physical", &"breaker_hit")
+	elif skill_target.has_method("receive_skill_damage"):
+		skill_target.call("receive_skill_damage", attack_damage + bonus_damage, "破舰", true, fighter.global_position, &"physical", &"breaker_hit")
 	if skill_target.has_method("apply_silence"):
 		skill_target.call("apply_silence", breaker_silence_duration)
 	register_courage_kill(skill_target)
@@ -1373,6 +1397,8 @@ func _request_awakening_cutin(skill_index: int) -> void:
 	if definition == null or not definition.tags.has(&"awakening"):
 		return
 	var manager := get_node_or_null("/root/AwakeningCutIn")
+	if manager == null:
+		manager = get_tree().get_first_node_in_group(&"awakening_cutin_manager")
 	if manager == null or not manager.has_method("request_skill"):
 		return
 	manager.call("request_skill", definition.id, {"source": fighter})
@@ -1459,14 +1485,20 @@ func _is_within_ship_path(point: Vector3, path_start: Vector3, path_end: Vector3
 
 func _get_enemy_targets_in_radius(area_center: Vector3, radius: float) -> Array[CharacterBody3D]:
 	var enemies: Array[CharacterBody3D] = []
+	var fighter_team := StringName(fighter.call("get_team")) if fighter != null and fighter.has_method("get_team") else &"friendly"
 	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
 		var candidate := candidate_node as CharacterBody3D
-		if not is_instance_valid(candidate):
+		if not is_instance_valid(candidate) or candidate == fighter:
 			continue
 		if candidate.has_method("is_targetable") and not bool(candidate.call("is_targetable")):
 			continue
-		var fighter_team := StringName(fighter.call("get_team")) if fighter.has_method("get_team") else &"friendly"
-		if candidate.has_method("is_enemy_of") and not bool(candidate.call("is_enemy_of", fighter_team)):
+		if candidate.has_method("is_enemy_of"):
+			if not bool(candidate.call("is_enemy_of", fighter_team)):
+				continue
+		elif candidate.has_method("get_team"):
+			if StringName(candidate.call("get_team")) == fighter_team:
+				continue
+		else:
 			continue
 		var horizontal_offset := candidate.global_position - area_center
 		horizontal_offset.y = 0.0
@@ -1487,6 +1519,13 @@ func _update_timers(delta: float) -> void:
 	breaker_timer = maxf(0.0, breaker_timer - delta)
 	if breaker_timer <= 0.0:
 		breaker_empowered_attack = false
+	silence_timer = maxf(0.0, silence_timer - delta)
+	armor_shred_timer = maxf(0.0, armor_shred_timer - delta)
+	if armor_shred_timer <= 0.0:
+		armor_shred_ratio = 0.0
+	magic_resist_shred_timer = maxf(0.0, magic_resist_shred_timer - delta)
+	if magic_resist_shred_timer <= 0.0:
+		magic_resist_shred_multiplier = 1.0
 	var had_black_sail := black_sail_timer > 0.0
 	black_sail_timer = maxf(0.0, black_sail_timer - delta)
 	black_sail_guard_timer = maxf(0.0, black_sail_guard_timer - delta)

@@ -48,6 +48,14 @@ func _initialize() -> void:
 	visual_ok = visual_ok and shadow.no_depth_test
 	visual_ok = visual_ok and not enemy_readability.has_node("MaskOutline") and not enemy_readability.has_node("OutlineGlow")
 	visual_ok = visual_ok and not friendly_readability.has_node("MaskOutline") and not friendly_readability.has_node("OutlineGlow")
+	enemy_readability.call("refresh_team_visuals")
+	friendly_readability.call("refresh_team_visuals")
+	var enemy_ring := enemy_readability.get_node_or_null("TeamGroundRing") as Sprite3D
+	var friendly_ring := friendly_readability.get_node_or_null("TeamGroundRing") as Sprite3D
+	visual_ok = visual_ok and enemy_ring != null and friendly_ring != null
+	visual_ok = visual_ok and enemy_ring.visible and friendly_ring.visible
+	visual_ok = visual_ok and enemy_ring.modulate.r > enemy_ring.modulate.g
+	visual_ok = visual_ok and friendly_ring.modulate.b > friendly_ring.modulate.r
 
 	var stats_ok := is_equal_approx(float(enemy_one.get("max_health")), 1000.0)
 	stats_ok = stats_ok and is_equal_approx(float(enemy_one.get("attack_speed")), 0.66)

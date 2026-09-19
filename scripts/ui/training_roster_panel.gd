@@ -115,7 +115,15 @@ func _sync_runtime_roster(team: StringName) -> void:
 			existing.name = ryze_name
 			characters.add_child(existing)
 		existing.set("team", String(team))
-		existing.set("enabled", true)
+		if existing.has_method("revive_for_training"):
+			existing.call("revive_for_training")
+		else:
+			existing.set("enabled", true)
+			existing.set("is_dead", false)
+			if float(existing.get("max_health")) > 0.0:
+				existing.set("current_health", existing.get("max_health"))
+			if not existing.is_in_group(&"combat_target"):
+				existing.add_to_group(&"combat_target")
 		existing.global_position = Vector3(-5.5, 0.0, -1.9) if team == &"friendly" else Vector3(5.5, 0.0, 1.9)
 		if existing.has_method("_configure_team_groups"):
 			existing.call("_configure_team_groups")
@@ -125,6 +133,9 @@ func _sync_runtime_roster(team: StringName) -> void:
 		var player := characters.get_node_or_null("Player") as Node3D
 		if player != null:
 			_set_combatant_active(player, heroes.has(&"garen"))
+			if heroes.has(&"garen") and player.has_method("_configure_team_groups"):
+				player.set("team", "friendly")
+				player.call("_configure_team_groups")
 	else:
 		var red_garen := characters.get_node_or_null("RosterGarenRed") as CharacterBody3D
 		if heroes.has(&"garen"):
@@ -135,12 +146,34 @@ func _sync_runtime_roster(team: StringName) -> void:
 					red_garen.name = "RosterGarenRed"
 					characters.add_child(red_garen)
 			if red_garen != null:
-				red_garen.set("team", "enemy")
-				red_garen.set("target_path", NodePath("../FriendlyTargetDummy1"))
-				red_garen.global_position = Vector3(5.5, 0.0, -1.9)
+				_prepare_red_garen(red_garen)
 		elif red_garen != null:
 			red_garen.queue_free()
+	_retarget_roster_combatants(characters)
 
+
+func _prepare_red_garen(red_garen: CharacterBody3D) -> void:
+	red_garen.set("team", "enemy")
+	red_garen.set("target_path", NodePath())
+	red_garen.set("target", null)
+	red_garen.global_position = Vector3(5.5, 0.0, -1.9)
+	red_garen.remove_from_group(&"player_actor")
+	red_garen.add_to_group(&"combat_target")
+	if red_garen.has_method("_configure_team_groups"):
+		red_garen.call("_configure_team_groups")
+	_set_combatant_active(red_garen, true)
+	var skill_controller := red_garen.get_node_or_null("SkillController")
+	if skill_controller != null:
+		skill_controller.set("automatic_demo", true)
+		skill_controller.set("is_casting", false)
+		var max_hp := float(skill_controller.get("max_health"))
+		skill_controller.set("current_health", max_hp)
+
+
+func _retarget_roster_combatants(characters: Node3D) -> void:
+	for child: Node in characters.get_children():
+		if child.has_method("force_retarget_hostile"):
+			child.call("force_retarget_hostile")
 
 func _set_combatant_active(combatant: Node3D, active: bool) -> void:
 	combatant.visible = active

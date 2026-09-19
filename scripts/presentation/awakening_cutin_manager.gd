@@ -37,6 +37,7 @@ var _darken_tween: Tween
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group(&"awakening_cutin_manager")
 	for child: Node in slot_root.get_children():
 		var slot := child as AwakeningCutInSlot
 		if slot == null:

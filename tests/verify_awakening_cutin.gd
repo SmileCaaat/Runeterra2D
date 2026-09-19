@@ -12,12 +12,16 @@ func _initialize() -> void:
 		return
 	var database := build_result.database as CombatDatabase
 	var profile := database.get_awakening_cutin_profile_for_skill(&"garen_seven_seas")
+	var ryze_profile := database.get_awakening_cutin_profile_for_skill(&"ryze_desperate_power")
 	var data_ok := profile != null
 	data_ok = data_ok and profile.skill_id == &"garen_seven_seas"
 	data_ok = data_ok and profile.faction == "friendly" and profile.primary
 	data_ok = data_ok and profile.total_duration() > 0.5
 	data_ok = data_ok and FileAccess.file_exists(profile.portrait_path)
 	data_ok = data_ok and FileAccess.file_exists(profile.audio_path)
+	data_ok = data_ok and ryze_profile != null
+	data_ok = data_ok and FileAccess.file_exists(ryze_profile.portrait_path)
+	data_ok = data_ok and FileAccess.file_exists(ryze_profile.audio_path)
 
 	var layer := root.get_node_or_null("AwakeningCutIn") as AwakeningCutInManager
 	if layer == null:

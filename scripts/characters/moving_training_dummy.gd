@@ -74,8 +74,8 @@ func _physics_process(delta: float) -> void:
 	global_position.z = clampf(global_position.z, arena_min.y, arena_max.y)
 
 
-func receive_hit(attacker_position: Vector3, attack_name: StringName) -> void:
-	var damage := attacker_definition.attack_damage if attacker_definition != null else 58.0
+func receive_hit(attacker_position: Vector3, attack_name: StringName, amount: float = -1.0) -> void:
+	var damage := amount if amount >= 0.0 else (attacker_definition.attack_damage if attacker_definition != null else 58.0)
 	var event := combat_database.get_animation_event(&"garen", attack_name, "hit") if combat_database != null else null
 	var hit_profile_id: StringName = event.payload_id if event != null else &"basic_melee"
 	_apply_damage(damage, String(attack_name), true, attacker_position, &"physical", hit_profile_id)
