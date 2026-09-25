@@ -58,54 +58,21 @@ func _initialize() -> void:
 	breaker_ok = breaker_ok and is_equal_approx(float(player.call("_breaker_lunge_range")), 2.4)
 	player.set("current_attack_is_breaker", false)
 	breaker_ok = breaker_ok and is_equal_approx(float(player.call("get_current_attack_hit_range")), 1.95)
-	var character_frames := player.get_node("CharacterFrames") as AnimatedSprite3D
-	var breaker_afterimages: Array = skills.get("breaker_afterimages")
-	var afterimage_ok := breaker_afterimages.size() == 3
-	var configured_afterimage_color := skills.get("breaker_afterimage_color") as Color
-	skills.set("breaker_afterimage_capture_count", 0)
-	character_frames.animation = &"run_spell"
-	character_frames.frame = mini(1, character_frames.sprite_frames.get_frame_count(&"run_spell") - 1)
-	skills.call("_capture_breaker_afterimage")
-	var run_capture_count := int(skills.get("breaker_afterimage_capture_count"))
-	afterimage_ok = afterimage_ok and run_capture_count > 0
-	var visible_afterimages := 0
-	for afterimage_variant: Variant in breaker_afterimages:
-		var afterimage := afterimage_variant as Sprite3D
-		afterimage_ok = afterimage_ok and afterimage != null
-		if afterimage != null and afterimage.visible:
-			visible_afterimages += 1
-			afterimage_ok = afterimage_ok and afterimage.texture != null and afterimage.top_level
-			var afterimage_material := afterimage.material_override as ShaderMaterial
-			afterimage_ok = afterimage_ok and afterimage_material != null
-			if afterimage_material != null:
-				var ocean_tint: Variant = afterimage_material.get_shader_parameter(&"ocean_tint")
-				afterimage_ok = afterimage_ok and ocean_tint is Color
-				if ocean_tint is Color:
-					var tint := ocean_tint as Color
-					afterimage_ok = afterimage_ok and is_equal_approx(tint.r, configured_afterimage_color.r)
-					afterimage_ok = afterimage_ok and is_equal_approx(tint.g, configured_afterimage_color.g)
-					afterimage_ok = afterimage_ok and is_equal_approx(tint.b, configured_afterimage_color.b)
-	afterimage_ok = afterimage_ok and visible_afterimages > 0
-	character_frames.animation = &"spell1"
-	character_frames.frame = 0
-	skills.call("_capture_breaker_afterimage")
-	var attack_capture_count := int(skills.get("breaker_afterimage_capture_count"))
-	afterimage_ok = afterimage_ok and attack_capture_count > run_capture_count
-	character_frames.flip_h = true
-	skills.call("_capture_breaker_afterimage")
-	var captured_index := wrapi(int(skills.get("breaker_afterimage_cursor")) - 1, 0, breaker_afterimages.size())
-	var flipped_afterimage := breaker_afterimages[captured_index] as Sprite3D
-	afterimage_ok = afterimage_ok and flipped_afterimage != null and flipped_afterimage.flip_h
-	afterimage_ok = afterimage_ok and flipped_afterimage.offset.is_equal_approx(character_frames.offset)
-	character_frames.flip_h = false
-	attack_capture_count = int(skills.get("breaker_afterimage_capture_count"))
-	character_frames.animation = &"run"
-	skills.call("_capture_breaker_afterimage")
-	afterimage_ok = afterimage_ok and int(skills.get("breaker_afterimage_capture_count")) == attack_capture_count
-	skills.call("_update_breaker_afterimages", 1.0)
-	for afterimage_variant: Variant in breaker_afterimages:
-		var afterimage := afterimage_variant as Sprite3D
-		afterimage_ok = afterimage_ok and afterimage != null and not afterimage.visible
+	# The sequence-frame afterimage pool was deliberately retired with the 3D
+	# body.  Verify the replacement presentation contract instead: semantics
+	# remain stable and 2.0s GLB attacks are retimed to the 0.8s legacy window.
+	var character_model := player.get_node("GarenModel") as GarenModelAnimator
+	var afterimage_ok := character_model != null
+	afterimage_ok = afterimage_ok and player.get_node_or_null("CharacterFrames") == null
+	if character_model != null:
+		afterimage_ok = afterimage_ok and StringName(character_model.SEMANTIC_TO_MODEL[&"attack1"]) == &"Attack1"
+		afterimage_ok = afterimage_ok and StringName(character_model.SEMANTIC_TO_MODEL[&"attack2"]) == &"Attack2"
+		afterimage_ok = afterimage_ok and StringName(character_model.SEMANTIC_TO_MODEL[&"attack3"]) == &"Crit"
+		afterimage_ok = afterimage_ok and is_equal_approx(character_model.get_semantic_speed(&"attack1"), 2.5)
+		afterimage_ok = afterimage_ok and is_equal_approx(character_model.get_semantic_speed(&"attack2"), 2.5)
+		afterimage_ok = afterimage_ok and is_equal_approx(character_model.get_semantic_speed(&"attack3"), 2.5)
+		character_model.play_semantic(&"attack1")
+		afterimage_ok = afterimage_ok and character_model.current_animation == &"attack1"
 	var passive_ok := is_zero_approx(float(skills.call("get_courage_resistance_bonus")))
 	passive_ok = passive_ok and is_equal_approx(float(skills.call("get_perseverance_regen_ratio_per_5", 1)), 0.015)
 	passive_ok = passive_ok and is_equal_approx(float(skills.call("get_perseverance_regen_ratio_per_5", 6)), 0.025)
@@ -368,10 +335,8 @@ func _initialize() -> void:
 	moving_storm_ok = moving_storm_ok and is_equal_approx(float(skills.get("ocean_storm_radius")), 3.8)
 	moving_storm_ok = moving_storm_ok and not bool(player.call("try_interrupt"))
 	moving_storm_ok = moving_storm_ok and not bool(player.call("receive_knockback", Vector3.RIGHT, 4.0))
-	var super_armor_outline := skills.get_node("SuperArmorOutline") as Node3D
-	var super_armor_sprite := super_armor_outline.get_node("OutlineGlow") as Sprite3D
-	character_frames.animation = &"spell3"
-	character_frames.frame = mini(1, character_frames.sprite_frames.get_frame_count(&"spell3") - 1)
+	var outline_highlight := player.get_node_or_null("OutlineHighlight") as Node3D
+	character_model.play_semantic(&"spell3") if character_model != null else null
 	# Losing the current victim may switch the logical state to CHASE, but E
 	# retains the spell3 animation and repairs any external locomotion override.
 	dummy.set("is_dead", true)
@@ -379,31 +344,35 @@ func _initialize() -> void:
 	skills.call("set_target", dummy)
 	player.call("_refresh_target")
 	moving_storm_ok = moving_storm_ok and player.get("target") != dummy
-	moving_storm_ok = moving_storm_ok and character_frames.animation == &"spell3"
-	character_frames.play(&"run")
+	moving_storm_ok = moving_storm_ok and character_model != null and character_model.current_animation == &"spell3"
+	character_model.play_semantic(&"run") if character_model != null else null
 	skills.set("ocean_storm_loop_active", true)
 	skills.call("_update_ocean_storm_animation_loop", 0.05)
-	moving_storm_ok = moving_storm_ok and character_frames.animation == &"spell3"
+	moving_storm_ok = moving_storm_ok and character_model != null and character_model.current_animation == &"spell3"
 	dummy.set("is_dead", false)
 	player.set("target", dummy)
 	skills.call("set_target", dummy)
-	super_armor_outline.call("set_active", true)
-	super_armor_outline.call("_process", 0.0)
-	var super_armor_visual_ok := super_armor_sprite.visible
-	super_armor_visual_ok = super_armor_visual_ok and super_armor_sprite.texture == character_frames.sprite_frames.get_frame_texture(&"spell3", character_frames.frame)
-	var super_armor_material := super_armor_sprite.material_override as ShaderMaterial
-	var super_armor_red: Variant = super_armor_material.get_shader_parameter(&"outline_red") if super_armor_material != null else null
-	var super_armor_gold: Variant = super_armor_material.get_shader_parameter(&"outline_gold") if super_armor_material != null else null
-	super_armor_visual_ok = super_armor_visual_ok and super_armor_red is Color and super_armor_gold is Color
-	super_armor_visual_ok = super_armor_visual_ok and (super_armor_red as Color).r > 0.95 and (super_armor_gold as Color).g > 0.65
+	# The 3D body keeps interaction highlights independent from buff visuals.
+	var super_armor_visual_ok := outline_highlight != null and not bool(outline_highlight.call("is_highlighted"))
 	skills.set("current_skill", 4)
 	skills.set("ocean_storm_loop_active", false)
 	moving_storm_ok = moving_storm_ok and not bool(skills.call("allows_movement_while_casting"))
 	moving_storm_ok = moving_storm_ok and not bool(skills.call("has_super_armor"))
 	moving_storm_ok = moving_storm_ok and not bool(skills.call("preserves_character_animation"))
-	super_armor_outline.call("set_active", false)
-	super_armor_visual_ok = super_armor_visual_ok and not super_armor_sprite.visible
 	skills.set("is_casting", false)
+	var cast_generation_before_cancel := int(skills.get("_cast_generation"))
+	skills.set("is_casting", true)
+	skills.set("current_skill", 3)
+	skills.set("ocean_storm_loop_active", true)
+	ocean.visible = true
+	ocean.play(ocean.animation)
+	ocean_audio.play()
+	skills.call("cancel_ocean_storm")
+	var ocean_cancel_ok := not bool(skills.get("is_casting"))
+	ocean_cancel_ok = ocean_cancel_ok and int(skills.get("current_skill")) == 0
+	ocean_cancel_ok = ocean_cancel_ok and int(skills.get("_cast_generation")) == cast_generation_before_cancel + 1
+	ocean_cancel_ok = ocean_cancel_ok and not bool(skills.get("ocean_storm_loop_active"))
+	ocean_cancel_ok = ocean_cancel_ok and not ocean.visible and not ocean.is_playing() and not ocean_audio.is_playing()
 	var layering_ok := ocean.scale.is_equal_approx(Vector3.ONE * 1.4)
 	layering_ok = layering_ok and ocean.render_priority > 0 and anchor.render_priority > 0
 	layering_ok = layering_ok and anchor.no_depth_test
@@ -500,16 +469,16 @@ func _initialize() -> void:
 			if show_over_models_value is bool:
 				ground_occlusion_ok = ground_occlusion_ok and bool(show_over_models_value) == effect.no_depth_test
 
-	print("SKILL_RULES breaker=%s afterimage=%s super_armor_visual=%s impact_shockwave=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s vfx_anchor=%s ghost_area=%s aoe=%s moving_storm=%s layering=%s filter=%s shader=%s canvas_fade=%s inward_edge=%s ground_occlusion=%s audio=%s" % [
+	print("SKILL_RULES breaker=%s afterimage=%s super_armor_visual=%s impact_shockwave=%s passive=%s reduction=%s rum=%s cleanse=%s nonlethal=%s judgment=%s jolly=%s anchor=%s ghost=%s vfx_anchor=%s ghost_area=%s aoe=%s moving_storm=%s ocean_cancel=%s layering=%s filter=%s shader=%s canvas_fade=%s inward_edge=%s ground_occlusion=%s audio=%s" % [
 		breaker_ok, afterimage_ok, super_armor_visual_ok, impact_shockwave_ok, passive_ok, reduction_ok, rum_ok, cleanse_ok, nonlethal_ok, judgment_ok,
 		jolly_duration_ok, anchor_follow_ok, ghost_flip_ok, vfx_anchor_ok, ghost_area_ok, aoe_ok,
-		moving_storm_ok, layering_ok, filter_clip_ok, shader_ok, canvas_fade_ok, inward_edge_ok, ground_occlusion_ok, audio_ok,
+		moving_storm_ok, ocean_cancel_ok, layering_ok, filter_clip_ok, shader_ok, canvas_fade_ok, inward_edge_ok, ground_occlusion_ok, audio_ok,
 	])
 	var passed := breaker_ok and afterimage_ok and super_armor_visual_ok and impact_shockwave_ok and passive_ok and reduction_ok and rum_ok
 	passed = passed and cleanse_ok and nonlethal_ok and judgment_ok
 	passed = passed and jolly_duration_ok and anchor_follow_ok and ghost_flip_ok
 	passed = passed and vfx_anchor_ok and ghost_area_ok and aoe_ok
-	passed = passed and moving_storm_ok and layering_ok and filter_clip_ok and shader_ok and canvas_fade_ok
+	passed = passed and moving_storm_ok and ocean_cancel_ok and layering_ok and filter_clip_ok and shader_ok and canvas_fade_ok
 	passed = passed and inward_edge_ok
 	passed = passed and ground_occlusion_ok
 	passed = passed and audio_ok

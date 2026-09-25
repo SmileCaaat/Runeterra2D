@@ -62,8 +62,8 @@ R：2s 引导，仅沉默/眩晕/击飞打断，取消返还冷却；传送瑞�
 
 - 角色原始资源：`D:/1Gameassets_share/SpriteAssets/Character/Ryze_sheet_json_20260831_033619Z/`。
 - 最新技能源目录：`D:/1Gameassets_share/SpriteAssets/Skills/Ryze_spell_sheet_json_20260905_135938Z/`，普攻最新指定子目录为 `projectile`。
-- 工程内：`assets/characters/rune_mage_ryze/ryze_sprite_frames.tres`、`assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres`。
-- 生成器：`scripts/tools/build_ryze_sprite_frames.gd`、`scripts/tools/build_ryze_skill_vfx.gd`。
+- 当前：瑞兹角色本体序列帧与生成器已清理；GLB 状态机驱动本体。仍使用的技能/VFX 图集位于 `assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres`。
+- 生成器：仅保留 `scripts/tools/build_ryze_skill_vfx.gd` 作为技能/VFX 资源生成工具。
 - 预览节点：`CastVFXPreview/{BasicProjectile,QProjectile,WEffect,EProjectile,WLoop,RWinddown,Impact}`，以及 `Shield`、`TBuff`。它们的 Transform 与运行时实例化方式需一起检查。
 - 配表：`asset_manifest.csv`、`animation_events.csv`、`skills.csv`、`skill_ranks.csv`、`skill_effects.csv`、`skill_effect_ranks.csv`、`hit_profiles.csv`、`buffs.csv`、`buff_modifiers.csv`、`units.csv`、`unit_stats.csv`、`ai_profiles.csv`、`awakening_cutin_profiles.csv`。
 
@@ -90,7 +90,7 @@ $godotExe = 'C:/Users/JamLew/Desktop/Godot_v4.7-stable_win64.exe/Godot_v4.7-stab
 & $godotExe --headless --path D:/godot_projects/gemheart2d --script res://tests/verify_combat_database.gd
 ```
 
-资产测试当前硬编码角色 501 帧、技能 147 帧、普攻 12 帧。换新资源后应按新 JSON 检查契约，不能机械改预期让测试变绿。旧 `verify_garen_audio_workflow.gd` 曾有失败，需复核，不能宣称全套测试通过。
+瑞兹资产验证现在只覆盖仍在使用的技能/VFX 图集（147 帧，其中 basic_attack 12 帧）；不再检查角色本体图集。`verify_garen_audio_workflow.gd` 已改为通过 GLB 动画进度验证音频事件。本说明保留的历史测试记录不代表本轮已运行完整测试套件。
 
 ## 在 Cursor 中开始
 

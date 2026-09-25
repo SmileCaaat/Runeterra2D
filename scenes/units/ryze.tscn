@@ -1,10 +1,12 @@
 [gd_scene format=3 uid="uid://b05cxt20dfbt6"]
 
 [ext_resource type="Script" uid="uid://j7fa0rm30lbk" path="res://scripts/characters/ryze_combat_ai.gd" id="1"]
-[ext_resource type="SpriteFrames" uid="uid://dpbd4u6ucbcp1" path="res://assets/characters/rune_mage_ryze/ryze_sprite_frames.tres" id="2"]
 [ext_resource type="SpriteFrames" uid="uid://bjujrhb8prp6w" path="res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres" id="3"]
 [ext_resource type="Texture2D" uid="uid://s6tqtqunb51r" path="res://assets/fx/soft_ground_shadow.svg" id="4"]
 [ext_resource type="Script" path="res://scripts/rendering/unit_readability_layers.gd" id="5_readability"]
+[ext_resource type="PackedScene" path="res://assets/characters/rune_mage_ryze_3d/rune_mage_ryze.glb" id="6_ryze_model"]
+[ext_resource type="Script" path="res://scripts/characters/actor_model_animator.gd" id="7_model_animator"]
+[ext_resource type="Script" path="res://scripts/presentation/mesh_outline_highlight_3d.gd" id="8_outline"]
 
 [sub_resource type="CapsuleShape3D" id="shape"]
 radius = 0.42
@@ -29,16 +31,16 @@ texture = ExtResource("4")
 
 [node name="UnitReadability" type="Node3D" parent="."]
 script = ExtResource("5_readability")
-source_sprite_path = NodePath("../CharacterFrames")
 
-[node name="CharacterFrames" type="AnimatedSprite3D" parent="." unique_id=1467124988 groups=["depth_sort_body"]]
-offset = Vector2(95, 468.5)
-flip_h = true
-pixel_size = 0.004
-billboard = 1
-sprite_frames = ExtResource("2")
-animation = &"idle"
-autoplay = "idle"
+[node name="RyzeModel" type="Node3D" parent="." groups=["depth_sort_body"]]
+script = ExtResource("7_model_animator")
+animation_map = {&"attack1": &"Attack1", &"attack2": &"Attack2", &"attack3": &"Attack3", &"crit": &"Crit", &"death": &"Death", &"idle": &"Idle1", &"run": &"Run_Normal", &"spell1": &"Spell1", &"spell2": &"Spell2", &"spell3": &"Spell3", &"spell4": &"Spell4_Idle", &"spell4_winddown": &"Ryze_Spell4_Winddown.anm", &"taunt": &"Taunt"}
+looping_states = [&"idle", &"run"]
+
+[node name="Model" parent="RyzeModel" instance=ExtResource("6_ryze_model")]
+
+[node name="OutlineHighlight" type="Node3D" parent="."]
+script = ExtResource("8_outline")
 
 [node name="CastVFXPreview" type="Node3D" parent="." unique_id=1240651714]
 

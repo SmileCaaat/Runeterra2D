@@ -10,6 +10,7 @@ const RYZE_SCENE := preload("res://scenes/units/ryze.tscn")
 signal roster_changed(team: StringName, heroes: Array[StringName])
 
 var roster := {&"friendly": [], &"enemy": []}
+var training_units := {&"friendly_dummy": true, &"enemy_dummy": true, &"scuttle": true}
 var controls: Dictionary = {}
 var _syncing_controls := false
 
@@ -19,6 +20,7 @@ func _ready() -> void:
 	_build_content()
 	set_roster(&"friendly", [&"garen"])
 	set_roster(&"enemy", [])
+	set_training_units(training_units)
 
 
 func set_roster(team: StringName, heroes: Array[StringName]) -> void:
@@ -81,6 +83,28 @@ func _build_content() -> void:
 	slots.modulate = Color(0.64, 0.69, 0.8)
 	slots.add_theme_font_size_override("font_size", 11)
 	add_child(slots)
+	var divider := HSeparator.new()
+	add_child(divider)
+	var targets_title := Label.new()
+	targets_title.text = "训练目标"
+	targets_title.add_theme_font_size_override("font_size", 13)
+	targets_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(targets_title)
+	var targets := HBoxContainer.new()
+	targets.alignment = BoxContainer.ALIGNMENT_CENTER
+	targets.add_theme_constant_override("separation", 10)
+	add_child(targets)
+	for unit_id: StringName in [&"friendly_dummy", &"enemy_dummy", &"scuttle"]:
+		var box := CheckBox.new()
+		box.text = {
+			&"friendly_dummy": "蓝方木桩",
+			&"enemy_dummy": "红方木桩",
+			&"scuttle": "迅捷蟹",
+		}.get(unit_id, String(unit_id))
+		box.tooltip_text = "切换训练场中的%s" % box.text
+		box.toggled.connect(_on_training_unit_toggled.bind(unit_id))
+		targets.add_child(box)
+		controls["unit/%s" % unit_id] = box
 
 
 func _on_hero_toggled(pressed: bool, team: StringName, hero: StringName) -> void:
@@ -97,6 +121,22 @@ func _on_hero_toggled(pressed: bool, team: StringName, hero: StringName) -> void
 	elif not pressed:
 		next.erase(hero)
 	set_roster(team, next)
+
+
+func set_training_units(next_units: Dictionary) -> void:
+	for unit_id: StringName in training_units.keys():
+		training_units[unit_id] = bool(next_units.get(unit_id, training_units[unit_id]))
+		var box := controls.get("unit/%s" % unit_id) as CheckBox
+		if box != null:
+			box.button_pressed = training_units[unit_id]
+	_sync_runtime_training_units()
+
+
+func _on_training_unit_toggled(pressed: bool, unit_id: StringName) -> void:
+	if _syncing_controls:
+		return
+	training_units[unit_id] = pressed
+	_sync_runtime_training_units()
 
 
 func _sync_runtime_roster(team: StringName) -> void:
@@ -152,6 +192,31 @@ func _sync_runtime_roster(team: StringName) -> void:
 	_retarget_roster_combatants(characters)
 
 
+func _sync_runtime_training_units() -> void:
+	var current_scene := get_tree().current_scene
+	if current_scene == null:
+		return
+	var characters := current_scene.get_node_or_null("Characters") as Node3D
+	if characters == null:
+		return
+	_set_training_targets_active(characters, [&"FriendlyTargetDummy1", &"FriendlyTargetDummy2"], bool(training_units[&"friendly_dummy"]))
+	_set_training_targets_active(characters, [&"EnemyTargetDummy1", &"EnemyTargetDummy2"], bool(training_units[&"enemy_dummy"]))
+	var scuttle_spawner := characters.get_node_or_null("ScuttleCrabSpawner")
+	if scuttle_spawner != null and scuttle_spawner.has_method("set_training_enabled"):
+		scuttle_spawner.call("set_training_enabled", bool(training_units[&"scuttle"]))
+	_retarget_roster_combatants(characters)
+
+
+func _set_training_targets_active(characters: Node3D, target_names: Array[StringName], active: bool) -> void:
+	for target_name: StringName in target_names:
+		var target := characters.get_node_or_null(NodePath(target_name)) as Node3D
+		if target == null:
+			continue
+		if active and bool(target.get("is_dead")) and target.has_method("_respawn"):
+			target.call("_respawn")
+		_set_combatant_active(target, active)
+
+
 func _prepare_red_garen(red_garen: CharacterBody3D) -> void:
 	red_garen.set("team", "enemy")
 	red_garen.set("target_path", NodePath())
@@ -178,6 +243,15 @@ func _retarget_roster_combatants(characters: Node3D) -> void:
 func _set_combatant_active(combatant: Node3D, active: bool) -> void:
 	combatant.visible = active
 	combatant.process_mode = Node.PROCESS_MODE_INHERIT if active else Node.PROCESS_MODE_DISABLED
+	if active and combatant.has_method("revive_for_training"):
+		combatant.call("revive_for_training")
+	elif active:
+		if not combatant.is_in_group(&"combat_target"):
+			combatant.add_to_group(&"combat_target")
+		if combatant.has_method("_configure_team_groups"):
+			combatant.call("_configure_team_groups")
+	elif combatant.is_in_group(&"combat_target"):
+		combatant.remove_from_group(&"combat_target")
 	var skill_controller := combatant.get_node_or_null("SkillController")
 	if skill_controller != null:
 		skill_controller.set("automatic_demo", active)

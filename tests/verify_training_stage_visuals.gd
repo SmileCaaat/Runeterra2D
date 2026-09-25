@@ -72,8 +72,8 @@ func _run() -> void:
 		passed = passed and layer.position.is_equal_approx(authored_layer_positions[layer_name])
 	passed = passed and float(background_material.get_shader_parameter(&"saturation")) < float(ground_material.get_shader_parameter(&"saturation"))
 	var player_readability := stage.get_node("Characters/Player/UnitReadability")
-	var player_frames := stage.get_node("Characters/Player/CharacterFrames") as AnimatedSprite3D
-	passed = passed and not player_frames.no_depth_test
+	var player_model := stage.get_node("Characters/Player/GarenModel") as Node3D
+	passed = passed and player_model != null
 	passed = passed and not player_readability.has_node("MaskOutline")
 	passed = passed and not player_readability.has_node("OutlineGlow")
 	player_readability.call("refresh_team_visuals")
@@ -92,10 +92,9 @@ func _run() -> void:
 		sun.light_energy,
 		sun.shadow_enabled,
 	])
-	passed = passed and is_zero_approx(environment.ambient_light_energy)
-	passed = passed and not sun.visible
-	passed = passed and is_zero_approx(sun.light_energy)
-	passed = passed and not sun.shadow_enabled
+	passed = passed and environment.ambient_light_energy > 0.0
+	passed = passed and sun.visible
+	passed = passed and sun.light_energy > 0.0
 
 	passed = passed and is_equal_approx(stage.get_node("World/Architecture/BackWall").position.z, -4.0)
 	passed = passed and is_equal_approx(stage.get_node("World/StageBounds/FrontLimit").position.z, 4.0)
@@ -129,7 +128,42 @@ func _run() -> void:
 		passed = passed and debug.get_node_or_null("CombatMetricsPanel") != null
 		passed = passed and debug.get_node_or_null("TrainingToolsPanel") != null
 		passed = passed and debug.get_node_or_null("AIDebugPanel") != null
-		passed = passed and debug.get_node_or_null("TrainingToolsPanel/VBox/Body/TrainingRosterPanel") != null
+		var roster_panel := debug.get_node_or_null("TrainingToolsPanel/VBox/Body/TrainingRosterPanel") as TrainingRosterPanel
+		passed = passed and roster_panel != null
+		if roster_panel != null:
+			var controls := roster_panel.get("controls") as Dictionary
+			passed = passed and controls.get("unit/friendly_dummy") is CheckBox
+			passed = passed and controls.get("unit/enemy_dummy") is CheckBox
+			passed = passed and controls.get("unit/scuttle") is CheckBox
+			var team_slots: Array = battle_hud.get("_team_slots")
+			var team_slot_row := bottom.get_node("BottomBody/ABCColumns/TeamPanel/Margin/VBox/HeroSlots") as HBoxContainer
+			passed = passed and team_slots.size() == 1
+			passed = passed and team_slot_row != null and team_slot_row.get_child_count() == 5
+			if team_slots.size() == 1:
+				var garen_avatar := team_slots[0].find_child("HeroAvatar", true, false) as TextureRect
+				passed = passed and garen_avatar != null and garen_avatar.texture != null
+				passed = passed and garen_avatar.texture.resource_path.ends_with("garen/rogue_admiral_cutin.jpg")
+				passed = passed and team_slot_row.get_child(1).get_child_count() == 0
+			var duo_roster: Array[StringName] = [&"garen", &"ryze"]
+			roster_panel.call("set_roster", &"friendly", duo_roster)
+			team_slots = battle_hud.get("_team_slots")
+			passed = passed and team_slots.size() == 2
+			passed = passed and team_slot_row.get_child_count() == 5
+			passed = passed and team_slot_row.get_child(2).get_child_count() == 0
+			if team_slots.size() == 2:
+				var ryze_avatar := team_slots[1].find_child("HeroAvatar", true, false) as TextureRect
+				passed = passed and ryze_avatar != null and ryze_avatar.texture != null
+				passed = passed and ryze_avatar.texture.resource_path.ends_with("ryze/desperate_power_cutin.jpg")
+				var ryze_key := InputEventKey.new()
+				ryze_key.keycode = KEY_F2
+				ryze_key.pressed = true
+				battle_hud.call("_unhandled_key_input", ryze_key)
+				passed = passed and String((battle_hud.get("_name_label") as Label).text) == "瑞兹"
+				passed = passed and not bool((battle_hud.get("_mp_fill") as ColorRect).get_parent().visible)
+			var garen_roster: Array[StringName] = [&"garen"]
+			roster_panel.call("set_roster", &"friendly", garen_roster)
+			team_slots = battle_hud.get("_team_slots")
+			passed = passed and team_slots.size() == 1
 		var proxy := combat_host.get_node_or_null("CombatViewport/CombatCamera") as Camera3D
 		passed = passed and proxy != null and proxy.current
 		passed = passed and camera.current

@@ -24,7 +24,7 @@
 | `buff_modifiers.csv` | `modifier_id` | Buff 对属性的运算、阶段和优先级 |
 | `hit_profiles.csv` | `profile_id` | 命中形状、尺寸、纵深、有效帧、停顿、硬直、削韧和击退 |
 | `animation_events.csv` | `event_id` | 动画中的命中、音效、VFX、位移、取消和无敌事件 |
-| `asset_manifest.csv` | `asset_id` | SpriteFrames、VFX、音频、Shader、缩放、局部三维位置、逐层不透明度、层级、朝向和生命周期 |
+| `asset_manifest.csv` | `asset_id` | GLB/SpriteFrames、VFX、音频、Shader、缩放、局部三维位置、逐层不透明度、层级、朝向和生命周期；运行时 GLB 语义动画映射由角色状态机脚本维护 |
 | `particle_profiles.csv` | `profile_id` | 粒子数量、寿命、速度、颜色、重力和尺寸 |
 | `ai_profiles.csv` | `profile_id` | 英雄/单位对 AI 范式的绑定、竞技场范围、可选遗留序列和可复现随机种子 |
 
@@ -33,7 +33,7 @@
 - ID 使用稳定的英文小写 `snake_case`；显示名不参与引用。
 - 多个引用用 `|` 分隔，但只有字段本身声明为 ID 列表时才能使用。
 - 百分比统一存为比例；`35%` 写作 `0.35`。
-- 时间统一为秒；动画时序可用 `frame`、`normalized` 或 `seconds`，不可混写。
+- 时间统一为秒；`animation_events.csv` 支持 `seconds`、`normalized`，以及兼容遗留表的 `frame` 模式。当前盖伦使用归一化/秒事件，瑞兹使用秒事件，不依赖角色 SpriteFrames。
 - X/Z 平面距离、速度和半径使用 Godot 世界米；Y 表示高度。
 - 外部游戏单位必须保留来源值，并通过 `conversion_scale` 得到运行时值。
 - 数值单元格只保存数值或枚举，不保存任意脚本表达式。
@@ -74,7 +74,7 @@
 
 预期聚合顺序为 `flat -> add_percent -> multiply -> override`。当前部分 Garen Buff 由控制器显式读取，完整通用聚合器仍属于待实现能力。
 
-Buff 绑定的表现必须拥有兼容生命周期。`lifecycle=buff` 的 VFX/音频持续时间必须与 Buff 一致；动画型表现跟随序列帧结束；手动生命周期必须由控制器明确关闭。
+Buff 绑定的表现必须拥有兼容生命周期。`lifecycle=buff` 的 VFX/音频持续时间必须与 Buff 一致；动画型表现跟随其 SpriteFrames 或 GLB `AnimationPlayer` 的结束；手动生命周期必须由控制器明确关闭。
 
 ## 动作与打击规则
 

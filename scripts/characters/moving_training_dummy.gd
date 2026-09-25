@@ -74,16 +74,16 @@ func _physics_process(delta: float) -> void:
 	global_position.z = clampf(global_position.z, arena_min.y, arena_max.y)
 
 
-func receive_hit(attacker_position: Vector3, attack_name: StringName, amount: float = -1.0) -> void:
+func receive_hit(attacker_position: Vector3, attack_name: StringName, amount: float = -1.0, source_actor: Node = null) -> void:
 	var damage := amount if amount >= 0.0 else (attacker_definition.attack_damage if attacker_definition != null else 58.0)
 	var event := combat_database.get_animation_event(&"garen", attack_name, "hit") if combat_database != null else null
 	var hit_profile_id: StringName = event.payload_id if event != null else &"basic_melee"
-	_apply_damage(damage, String(attack_name), true, attacker_position, &"physical", hit_profile_id)
+	_apply_damage(damage, String(attack_name), true, attacker_position, &"physical", hit_profile_id, 0.0, source_actor)
 
 
-func receive_skill_damage(amount: float, skill_name: String, can_crit: bool, attacker_position: Vector3, damage_type: StringName = &"physical", hit_profile_id: StringName = &"basic_melee") -> void:
+func receive_skill_damage(amount: float, skill_name: String, can_crit: bool, attacker_position: Vector3, damage_type: StringName = &"physical", hit_profile_id: StringName = &"basic_melee", source_actor: Node = null) -> void:
 	skill_damage_count += 1
-	_apply_damage(amount, skill_name, can_crit, attacker_position, damage_type, hit_profile_id)
+	_apply_damage(amount, skill_name, can_crit, attacker_position, damage_type, hit_profile_id, 0.0, source_actor)
 
 
 func apply_silence(duration: float) -> void:
@@ -107,18 +107,22 @@ func get_hit_contact_point(attacker_position: Vector3) -> Vector3:
 	return global_position + contact_direction * 0.48 + Vector3.UP * 1.05
 
 
-func _apply_damage(amount: float, source_name: String, can_crit: bool, attacker_position: Vector3, damage_type: StringName, hit_profile_id: StringName) -> void:
+func _apply_damage(amount: float, source_name: String, can_crit: bool, attacker_position: Vector3, damage_type: StringName, hit_profile_id: StringName, flat_post_crit_bonus: float = 0.0, source_actor: Node = null) -> void:
 	hit_count += 1
 	var hit_profile := combat_database.get_hit_profile(hit_profile_id) if combat_database != null else null
 	hit_timer = hit_profile.hitstun if hit_profile != null else 0.24
 	var critical := can_crit and random.randf() < critical_chance
-	var raw_damage := amount * (critical_multiplier if critical else 1.0)
+	var raw_damage := amount * (critical_multiplier if critical else 1.0) + flat_post_crit_bonus
 	var resolved_damage := CombatMath.resolve_damage(raw_damage, damage_type, armor, magic_resistance, combat_database) if combat_database != null else raw_damage
 	var minimum_damage := float(combat_database.get_rule(&"damage.minimum_damage", 1.0)) if combat_database != null else 1.0
 	resolved_damage = maxf(minimum_damage, resolved_damage)
 	present_resolved_damage(resolved_damage, damage_type, critical)
 	var health_floor := 1.0 if unit_definition != null and unit_definition.unit_type == "training_dummy" else 0.0
 	current_health = maxf(health_floor, current_health - resolved_damage)
+	if source_actor != null and resolved_damage > 0.0:
+		var stats := get_node_or_null("/root/CombatStats")
+		if stats != null:
+			stats.call("record_damage", source_actor, self, resolved_damage, source_name, damage_type)
 	var away := global_position - attacker_position
 	away.y = 0.0
 	var knockback_speed := hit_profile.knockback_speed if hit_profile != null else 2.8

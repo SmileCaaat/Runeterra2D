@@ -39,8 +39,8 @@ Never edit `data/generated/combat_database.tres` by hand. Runtime timers, cooldo
 - `buffs.csv`: lifetime, stacking, refresh, dispel, visibility, nonlethal and VFX lifecycle semantics.
 - `buff_modifiers.csv`: stat modifiers with explicit operation, phase and priority.
 - `hit_profiles.csv`: shape, size, depth tolerance, active window, hitstop, hitstun, poise damage, knockback and impact presentation.
-- `animation_events.csv`: frame/normalized/seconds events for hits, audio, VFX, movement, cancel and invulnerability windows.
-- `asset_manifest.csv`: SpriteFrames, animations, audio, scale, origin, shader, layer, depth and lifecycle binding.
+- `animation_events.csv`: seconds/normalized events for hits, audio, VFX, movement, cancel and invulnerability windows; `frame` timing remains a compatibility option but is unused by current heroes.
+- `asset_manifest.csv`: GLB 角色模型、SpriteFrames 技能/VFX、音频、缩放、原点、Shader、层级、深度和生命周期绑定；它描述表现资产，不替代运行时 3D 状态机的语义动画映射。
 - `particle_profiles.csv`: hit-particle simulation and visual parameters.
 - `hero_classes.csv`: broad hero combat taxonomies; does not contain live balance values.
 - `hero_subclasses.csv`: branch identity and its reusable AI archetype binding.

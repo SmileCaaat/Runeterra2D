@@ -5,21 +5,21 @@ signal attack_landed(animation_name: StringName)
 enum CombatState { IDLE, CHASE, ATTACK }
 
 const ATTACK_COMBO: Array[StringName] = [&"attack1", &"attack2", &"attack3"]
-const CHARACTER_ANCHOR_JSON := "res://assets/characters/rogue_admiral_garen/idle1/spritesheet.json"
+const HERO_HIT_FEEDBACK := preload("res://scripts/presentation/hero_hit_feedback_3d.gd")
 const SKILL_Q := 1
 const SKILL_W := 2
 const SKILL_E := 3
 const SKILL_R := 4
 const SKILL_T := 5
 
-@export_node_path("CharacterBody3D") var target_path := NodePath("../EnemyTargetDummy1")
+@export_node_path("CharacterBody3D") var target_path := NodePath()
 @export_range(0.1, 10.0, 0.1) var move_speed := 3.4
 @export_range(0.5, 4.0, 0.05) var attack_range := 1.5
 @export_range(0.0, 20.0, 0.1) var acceleration := 14.0
 @export_enum("friendly", "enemy") var team := "friendly"
 @export var level := 1
 
-@onready var character_frames: AnimatedSprite3D = $CharacterFrames
+@onready var character_model: GarenModelAnimator = $GarenModel
 @onready var state_label: Label3D = $AIStateLabel
 @onready var attack_audio: AudioStreamPlayer3D = $AttackAudio
 @onready var skill_controller: Node3D = $SkillController
@@ -30,7 +30,6 @@ var combo_index := -1
 var attack_hit_sent := false
 var attack_audio_events_sent: Dictionary[StringName, bool] = {}
 var attack_sound_count := 0
-var unflipped_sprite_offset := Vector2.ZERO
 var current_attack_name: StringName = &"attack1"
 var current_attack_is_breaker := false
 var attack_combo: Array[StringName] = ATTACK_COMBO.duplicate()
@@ -45,20 +44,22 @@ var arena_max := Vector2(14.5, 4.3)
 var external_move_speed_modifiers: Dictionary = {}
 var attack_pitches: Array[float] = [1.08, 1.0, 0.88]
 var breaker_lunge_pending := false
+var is_dead := false
+var hit_feedback: HeroHitFeedback3D
 
 
 func _ready() -> void:
 	_apply_combat_data()
 	bind_hero_instance(combat_database, garen_definition)
+	_build_hit_feedback()
 	add_to_group(&"combat_target")
 	_configure_team_groups()
-	target = get_node_or_null(target_path) as CharacterBody3D
-	if not _is_target_available(target):
-		target = _find_closest_target()
+	# Training dummies are optional debugging targets, never a forced default.
+	# Selection starts from the same hostile-priority query used at runtime.
+	target = _find_closest_target()
+	_set_target_outline(target, true)
 	skill_controller.call("set_target", target)
-	_apply_sprite_canvas_anchor()
-	unflipped_sprite_offset = character_frames.offset
-	character_frames.animation_finished.connect(_on_animation_finished)
+	character_model.animation_finished.connect(_on_animation_finished)
 	_set_state(CombatState.CHASE if is_instance_valid(target) else CombatState.IDLE)
 
 
@@ -72,37 +73,26 @@ func _configure_team_groups() -> void:
 	var readability := get_node_or_null("UnitReadability")
 	if readability != null and readability.has_method("refresh_team_visuals"):
 		readability.call("refresh_team_visuals")
+	set_outline_selected(is_in_group(&"player_actor"))
 
 
-func _apply_sprite_canvas_anchor() -> void:
-	var file := FileAccess.open(CHARACTER_ANCHOR_JSON, FileAccess.READ)
-	if file == null:
-		push_warning("Could not read character anchor metadata: %s" % CHARACTER_ANCHOR_JSON)
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if not parsed is Dictionary:
-		push_warning("Invalid character anchor metadata: %s" % CHARACTER_ANCHOR_JSON)
-		return
-	var meta: Dictionary = (parsed as Dictionary).get("meta", {})
-	var canvas: Dictionary = meta.get("canvas", {})
-	var canvas_width := float(canvas.get("width", 0.0))
-	var canvas_height := float(canvas.get("height", 0.0))
-	if canvas_width <= 0.0 or canvas_height <= 0.0:
-		push_warning("Missing character canvas dimensions: %s" % CHARACTER_ANCHOR_JSON)
-		return
-	var origin_x := float(canvas.get("originPixelX", canvas_width * 0.5))
-	var origin_y := float(canvas.get("originPixelY", canvas_height))
-	character_frames.offset = Vector2(
-		canvas_width * 0.5 - origin_x,
-		origin_y - canvas_height * 0.5,
-	)
+func get_skill_cooldown_state(slot: StringName) -> Dictionary:
+	var skill_index := [&"q", &"w", &"e", &"r", &"t"].find(slot)
+	if skill_index < 0 or not is_instance_valid(skill_controller):
+		return {"remaining": 0.0, "total": 0.0}
+	return skill_controller.call("get_skill_cooldown_state", skill_index + 1)
 
 
 func _physics_process(delta: float) -> void:
+	if is_dead:
+		velocity = Vector3.ZERO
+		return
 	_refresh_target()
 	if state == CombatState.ATTACK:
 		_check_attack_audio()
 	if not _is_target_available(target):
+		if bool(skill_controller.call("allows_movement_while_casting")):
+			skill_controller.call("cancel_ocean_storm")
 		_set_state(CombatState.IDLE)
 		_slow_down(delta)
 		_apply_gravity(delta)
@@ -161,17 +151,15 @@ func _start_next_attack() -> void:
 		breaker_lunge_pending = true
 		await _perform_breaker_lunge()
 		breaker_lunge_pending = false
-	character_frames.play(current_attack_name)
+	character_model.play_semantic(current_attack_name)
 
 
 func _check_attack_hit(distance: float) -> void:
 	if attack_hit_sent or breaker_lunge_pending:
 		return
-	var frame_count := character_frames.sprite_frames.get_frame_count(character_frames.animation)
-	var hit_event := combat_database.get_animation_event(&"garen", character_frames.animation, "hit") if combat_database != null else null
+	var hit_event := combat_database.get_animation_event(&"garen", character_model.current_animation, "hit") if combat_database != null else null
 	var impact_normalized := hit_event.timing_value if hit_event != null and hit_event.timing_mode == "normalized" else 0.55
-	var impact_frame := maxi(1, int(frame_count * impact_normalized))
-	if character_frames.frame < impact_frame:
+	if character_model.get_normalized_progress() < impact_normalized:
 		return
 	attack_hit_sent = true
 	if not _is_target_available(target):
@@ -186,16 +174,16 @@ func _check_attack_hit(distance: float) -> void:
 			var damage := garen_definition.attack_damage if garen_definition != null else 69.0
 			var hit_profile_id: StringName = hit_event.payload_id if hit_event != null else &"basic_melee"
 			if target.has_method("receive_hit"):
-				target.call("receive_hit", global_position, character_frames.animation, damage)
+				target.call("receive_hit", global_position, character_model.current_animation, damage, self)
 			elif target.has_method("receive_skill_damage"):
-				target.call("receive_skill_damage", damage, String(character_frames.animation), true, global_position, &"physical", hit_profile_id)
+				target.call("receive_skill_damage", damage, String(character_model.current_animation), true, global_position, &"physical", hit_profile_id, self)
 			if skill_controller != null:
 				skill_controller.call("register_courage_kill", target)
-		attack_landed.emit(character_frames.animation)
+		attack_landed.emit(character_model.current_animation)
 
 
 func _check_attack_audio() -> void:
-	var audio_events := combat_database.get_animation_events(&"garen", character_frames.animation, "audio") if combat_database != null else []
+	var audio_events := combat_database.get_animation_events(&"garen", character_model.current_animation, "audio") if combat_database != null else []
 	if audio_events.is_empty():
 		if attack_audio_events_sent.has(&"fallback") or _animation_normalized_progress() < 0.45:
 			return
@@ -222,7 +210,7 @@ func _check_attack_audio() -> void:
 func _animation_event_reached(event: AnimationEventDefinition) -> bool:
 	match event.timing_mode:
 		"frame":
-			return character_frames.frame >= roundi(event.timing_value)
+			return false
 		"seconds":
 			return _animation_elapsed_seconds() >= event.timing_value
 		_:
@@ -230,24 +218,14 @@ func _animation_event_reached(event: AnimationEventDefinition) -> bool:
 
 
 func _animation_normalized_progress() -> float:
-	var frame_count := character_frames.sprite_frames.get_frame_count(character_frames.animation)
-	if frame_count <= 1:
-		return 1.0
-	return clampf((float(character_frames.frame) + character_frames.frame_progress) / float(frame_count - 1), 0.0, 1.0)
+	return character_model.get_normalized_progress()
 
 
 func _animation_elapsed_seconds() -> float:
-	var frames := character_frames.sprite_frames
-	var animation := character_frames.animation
-	var speed := maxf(frames.get_animation_speed(animation) * character_frames.speed_scale, 0.001)
-	var elapsed := 0.0
-	for frame_index: int in range(character_frames.frame):
-		elapsed += frames.get_frame_duration(animation, frame_index) / speed
-	elapsed += frames.get_frame_duration(animation, character_frames.frame) * character_frames.frame_progress / speed
-	return elapsed
+	return character_model.get_elapsed_seconds()
 
 
-func _on_animation_finished() -> void:
+func _on_animation_finished(_animation_name: StringName) -> void:
 	if state != CombatState.ATTACK or not _is_target_available(target):
 		return
 	state = CombatState.CHASE
@@ -363,15 +341,15 @@ func _set_state(next_state: CombatState) -> void:
 	var expected_animation := &"idle1"
 	if next_state == CombatState.CHASE:
 		expected_animation = skill_controller.call("get_run_animation") as StringName
-	if state == next_state and character_frames.is_playing() and character_frames.animation == expected_animation:
+	if state == next_state and character_model.is_playing() and character_model.current_animation == expected_animation:
 		return
 	state = next_state
 	match state:
 		CombatState.IDLE:
-			character_frames.play(&"idle1")
+			character_model.play_semantic(&"idle1")
 			state_label.text = "AI · IDLE"
 		CombatState.CHASE:
-			character_frames.play(skill_controller.call("get_run_animation") as StringName)
+			character_model.play_semantic(skill_controller.call("get_run_animation") as StringName)
 			state_label.text = "AI · CHASE"
 		CombatState.ATTACK:
 			pass
@@ -379,12 +357,7 @@ func _set_state(next_state: CombatState) -> void:
 
 func _face_direction(direction: Vector3) -> void:
 	if absf(direction.x) > 0.05:
-		var faces_left := direction.x < 0.0
-		character_frames.flip_h = faces_left
-		character_frames.offset = Vector2(
-			-unflipped_sprite_offset.x if faces_left else unflipped_sprite_offset.x,
-			unflipped_sprite_offset.y,
-		)
+		character_model.set_facing(direction)
 
 
 func _slow_down(delta: float) -> void:
@@ -440,8 +413,13 @@ func receive_knockback(direction: Vector3, speed: float) -> bool:
 
 
 func _refresh_target() -> void:
+	if is_dead:
+		return
+	if target != null and not is_instance_valid(target):
+		target = null
 	var preferred := _find_closest_target()
 	if preferred == null:
+		_set_target_outline(target, false)
 		target = null
 		skill_controller.call("set_target", target)
 		return
@@ -450,18 +428,36 @@ func _refresh_target() -> void:
 		should_switch = true
 	if not should_switch:
 		return
+	_set_target_outline(target, false)
 	target = preferred
+	_set_target_outline(target, true)
 	skill_controller.call("set_target", target)
 	_set_state(CombatState.CHASE)
 
 
+func _set_target_outline(candidate: Node, active: bool) -> void:
+	if candidate == null or not is_instance_valid(candidate) or not candidate.has_method("set_outline_targeted"):
+		return
+	candidate.call("set_outline_targeted", active)
+
+
 func force_retarget_hostile() -> void:
+	if is_dead:
+		return
 	target = null
 	_refresh_target()
 
 
-func _is_target_available(candidate: CharacterBody3D) -> bool:
-	if not is_instance_valid(candidate) or candidate == self:
+func _is_target_available(candidate: Node) -> bool:
+	# Freed refs are still Objects, but no longer CharacterBody3D subclasses.
+	# Accept Node so the validity check can run before any typed use.
+	if candidate == null or not is_instance_valid(candidate) or candidate == self:
+		return false
+	if not (candidate is CharacterBody3D):
+		return false
+	# The training panel removes disabled units from this group. A hidden target
+	# must become invalid immediately even if its own script is process-disabled.
+	if not candidate.is_in_group(&"combat_target"):
 		return false
 	if candidate.has_method("is_targetable"):
 		return bool(candidate.call("is_targetable"))
@@ -474,8 +470,10 @@ func _find_closest_target() -> CharacterBody3D:
 	var closest_any: CharacterBody3D
 	var closest_any_distance := INF
 	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
+		if not is_instance_valid(candidate_node):
+			continue
 		var candidate := candidate_node as CharacterBody3D
-		if candidate == self or not _is_target_available(candidate):
+		if candidate == null or candidate == self or not _is_target_available(candidate):
 			continue
 		if not _is_hostile_candidate(candidate):
 			continue
@@ -490,6 +488,8 @@ func _find_closest_target() -> CharacterBody3D:
 
 
 func _is_hostile_candidate(candidate: CharacterBody3D) -> bool:
+	if not is_instance_valid(candidate):
+		return false
 	if candidate.has_method("is_enemy_of"):
 		return bool(candidate.call("is_enemy_of", get_team()))
 	if candidate.has_method("get_team"):
@@ -498,15 +498,19 @@ func _is_hostile_candidate(candidate: CharacterBody3D) -> bool:
 
 
 func _is_hero_actor(candidate: Node) -> bool:
-	return candidate != null and candidate.is_in_group(&"hero_actor")
+	return candidate != null and is_instance_valid(candidate) and candidate.is_in_group(&"hero_actor")
 
 
 func _is_training_dummy(candidate: Node) -> bool:
-	return candidate != null and candidate.is_in_group(&"training_dummy")
+	return candidate != null and is_instance_valid(candidate) and candidate.is_in_group(&"training_dummy")
 
 
 func get_team() -> StringName:
 	return StringName(team)
+
+
+func get_display_name() -> String:
+	return "盖伦"
 
 
 func is_enemy_of(other_team: StringName) -> bool:
@@ -535,22 +539,76 @@ func get_health_ratio() -> float:
 
 
 func is_targetable() -> bool:
+	if is_dead:
+		return false
 	if skill_controller == null:
 		return true
 	return float(skill_controller.get("current_health")) > 0.0
 
 
-func receive_hit(attacker_position: Vector3, _attack_name: StringName, amount: float = -1.0) -> void:
+func receive_hit(attacker_position: Vector3, _attack_name: StringName, amount: float = -1.0, source_actor: Node = null) -> void:
 	var damage := amount if amount >= 0.0 else (garen_definition.attack_damage if garen_definition != null else 69.0)
-	receive_skill_damage(damage, "普攻", true, attacker_position, &"physical", &"basic_melee")
+	receive_skill_damage(damage, "普攻", true, attacker_position, &"physical", &"basic_melee", source_actor)
 
 
-func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, _hit_profile_id: StringName = &"breaker_hit") -> void:
-	receive_skill_damage(base_attack + bonus_damage, "破舰", true, attacker_position, &"physical", &"breaker_hit")
+func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, _hit_profile_id: StringName = &"breaker_hit", source_actor: Node = null) -> void:
+	receive_skill_damage(base_attack + bonus_damage, "破舰", true, attacker_position, &"physical", &"breaker_hit", source_actor)
 
 
-func receive_skill_damage(amount: float, _source_name: String, _can_crit: bool, _attacker_position: Vector3, damage_type: StringName = &"physical", _hit_profile_id: StringName = &"basic_melee") -> void:
-	skill_controller.call("receive_incoming_damage", amount, damage_type, _can_crit)
+func receive_skill_damage(amount: float, source_name: String, can_crit: bool, attacker_position: Vector3, damage_type: StringName = &"physical", hit_profile_id: StringName = &"basic_melee", source_actor: Node = null) -> void:
+	if is_dead or skill_controller == null or amount <= 0.0:
+		return
+	skill_controller.call("receive_incoming_damage", amount, damage_type, can_crit, source_actor, self, source_name)
+	if hit_feedback != null:
+		hit_feedback.play_hit(attacker_position, hit_profile_id, can_crit)
+	if float(skill_controller.get("current_health")) <= 0.0:
+		_die()
+
+
+func _build_hit_feedback() -> void:
+	hit_feedback = get_node_or_null("HeroHitFeedback3D") as HeroHitFeedback3D
+	if hit_feedback == null:
+		hit_feedback = HERO_HIT_FEEDBACK.new()
+		hit_feedback.name = "HeroHitFeedback3D"
+		hit_feedback.configure(combat_database, &"GarenModel")
+		add_child(hit_feedback)
+	else:
+		hit_feedback.configure(combat_database, &"GarenModel")
+
+
+func _die() -> void:
+	if is_dead:
+		return
+	is_dead = true
+	target = null
+	state = CombatState.IDLE
+	velocity = Vector3.ZERO
+	breaker_lunge_pending = false
+	if skill_controller != null:
+		skill_controller.call("set_target", null)
+		skill_controller.set("is_casting", false)
+	if is_in_group(&"combat_target"):
+		remove_from_group(&"combat_target")
+	character_model.play_semantic(&"death")
+	state_label.text = "AI · DEFEATED"
+
+
+func revive_for_training() -> void:
+	is_dead = false
+	target = null
+	state = CombatState.IDLE
+	velocity = Vector3.ZERO
+	breaker_lunge_pending = false
+	if skill_controller != null:
+		skill_controller.set("current_health", skill_controller.get("max_health"))
+		skill_controller.set("is_casting", false)
+		skill_controller.call("set_target", null)
+	if not is_in_group(&"combat_target"):
+		add_to_group(&"combat_target")
+	_configure_team_groups()
+	character_model.play_semantic(&"idle1")
+	state_label.text = "AI · IDLE"
+	force_retarget_hostile()
 
 
 func apply_silence(duration: float) -> void:

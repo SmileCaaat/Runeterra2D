@@ -11,7 +11,8 @@ func _run() -> void:
 	root.add_child(scene)
 	await process_frame
 	var player := scene.get_node("Characters/Player") as CharacterBody3D
-	var frames := player.get_node("CharacterFrames") as AnimatedSprite3D
+	var character_model := player.get_node("GarenModel") as GarenModelAnimator
+	var animation_player := character_model.animation_player
 	var attack_audio := player.get_node("AttackAudio") as AudioStreamPlayer3D
 	var skills := player.get_node("SkillController")
 	player.set_physics_process(false)
@@ -25,16 +26,16 @@ func _run() -> void:
 		&"attack3": "crit_attack_cast.ogg",
 	}
 	for animation: StringName in expected_cast_files:
-		frames.play(animation)
-		frames.pause()
-		frames.frame = 0
+		character_model.play_semantic(animation)
+		animation_player.seek(0.0, true)
+		animation_player.pause()
 		(player.get("attack_audio_events_sent") as Dictionary).clear()
 		var count_before := int(player.get("attack_sound_count"))
 		player.call("_check_attack_audio")
 		passed = passed and int(player.get("attack_sound_count")) == count_before
 		var event := database.get_animation_event(&"garen", animation, "audio")
-		var frame_count := frames.sprite_frames.get_frame_count(animation)
-		frames.frame = ceili(event.timing_value * float(frame_count - 1))
+		var clip_length := animation_player.get_current_animation_length()
+		animation_player.seek(event.timing_value * clip_length, true)
 		player.call("_check_attack_audio")
 		passed = passed and int(player.get("attack_sound_count")) == count_before + 1
 		passed = passed and attack_audio.stream != null
@@ -43,13 +44,13 @@ func _run() -> void:
 		passed = passed and attack_audio.stream.get_length() > 0.05
 		attack_audio.stop()
 
-	frames.play(&"spell1")
-	frames.pause()
-	frames.frame = 0
+	character_model.play_semantic(&"spell1")
+	animation_player.seek(0.0, true)
+	animation_player.pause()
 	(player.get("attack_audio_events_sent") as Dictionary).clear()
 	var q_count_before := int(player.get("attack_sound_count"))
 	var q_events := database.get_animation_events(&"garen", &"spell1", "audio")
-	frames.frame = ceili(q_events[0].timing_value * float(frames.sprite_frames.get_frame_count(&"spell1") - 1))
+	animation_player.seek(q_events[0].timing_value * animation_player.get_current_animation_length(), true)
 	player.call("_check_attack_audio")
 	passed = passed and int(player.get("attack_sound_count")) == q_count_before + 2
 	passed = passed and attack_audio.stream.resource_path.ends_with("q_attack_cast_1.ogg")

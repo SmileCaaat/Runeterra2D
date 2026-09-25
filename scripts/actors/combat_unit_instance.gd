@@ -2,6 +2,7 @@ class_name CombatUnitInstance
 extends CharacterBody3D
 
 const FLOATING_DAMAGE_NUMBERS := preload("res://scripts/presentation/floating_damage_numbers.gd")
+const UNIT_READABILITY := preload("res://scripts/rendering/unit_readability_layers.gd")
 
 # Shared runtime presentation contract for every combat-capable world unit.
 # Individual actors continue to own their movement, state machine and death
@@ -39,6 +40,43 @@ func bind_combat_instance(database: CombatDatabase, definition: UnitDefinition) 
 	_instance_database = database
 	_instance_definition = definition
 	_floating_damage_numbers = FLOATING_DAMAGE_NUMBERS.get_or_create(self, database)
+	_ensure_unit_readability()
+
+
+func set_outline_selected(active: bool) -> void:
+	_set_outline_state(&"set_selected", active)
+	var readability := _ensure_unit_readability()
+	if readability.has_method(&"set_selected"):
+		readability.call(&"set_selected", active)
+
+
+func set_outline_targeted(active: bool) -> void:
+	_set_outline_state(&"set_targeted", active)
+
+
+func set_outline_highlighted(active: bool) -> void:
+	_set_outline_state(&"set_highlighted", active)
+
+
+func refresh_team_visuals() -> void:
+	var readability := _ensure_unit_readability()
+	if readability.has_method(&"refresh_team_visuals"):
+		readability.call(&"refresh_team_visuals")
+
+
+func _set_outline_state(method_name: StringName, active: bool) -> void:
+	var outline := get_node_or_null("OutlineHighlight")
+	if outline != null and outline.has_method(method_name):
+		outline.call(method_name, active)
+
+
+func _ensure_unit_readability() -> Node:
+	var readability := get_node_or_null("UnitReadability")
+	if readability == null:
+		readability = UNIT_READABILITY.new()
+		readability.name = "UnitReadability"
+		add_child(readability)
+	return readability
 
 
 func present_resolved_damage(amount: float, damage_type: StringName, is_critical := false) -> void:

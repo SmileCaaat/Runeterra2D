@@ -4,9 +4,7 @@ extends "res://scripts/actors/hero_instance.gd"
 ## keeps targeting and all authored ranges in meters, so later player input can
 ## reuse the same Q/W/E/T/R calls without changing combat numbers.
 
-const FRAMES := preload("res://assets/characters/rune_mage_ryze/ryze_sprite_frames.tres")
 const VFX_FRAMES := preload("res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres")
-const CHARACTER_ANCHOR_JSON := "res://assets/characters/rune_mage_ryze/idle/spritesheet.json"
 const BASIC_PROJECTILE_ANCHOR_JSON := "res://assets/vfx/ryze_skills/projectile/spritesheet.json"
 const Q_PROJECTILE_ANCHOR_JSON := "res://assets/vfx/ryze_skills/Spell1_Q/spritesheet.json"
 const IMPACT_ANCHOR_JSON := "res://assets/vfx/ryze_skills/impact/spritesheet.json"
@@ -17,8 +15,8 @@ const DEFAULT_E_LAUNCH_Y_BIAS := 0.8
 const DEFAULT_E_HIT_X_BIAS := 0.5
 const DEFAULT_CAST_RANGE := 5.5
 const DEFAULT_WARP_RANGE := 25.0
-const SUPER_ARMOR_OUTLINE := preload("res://scripts/presentation/super_armor_outline.gd")
-const BREAKER_AFTERIMAGE_SHADER := preload("res://assets/vfx/garen_skills/garen_breaker_afterimage.gdshader")
+const MESH_AFTERIMAGE := preload("res://scripts/presentation/mesh_afterimage_3d.gd")
+const HERO_HIT_FEEDBACK := preload("res://scripts/presentation/hero_hit_feedback_3d.gd")
 const ELASTIC_VOXEL_SHELL := preload("res://scripts/vfx/elastic_voxel_shell.gd")
 const ZAP_LIGHTNING := preload("res://assets/BinbunVFX_Vol2/ElectricFX/effects/zap/vfx_zap_lightning_01.tscn")
 const LIGHTNING_CHAIN := preload("res://addons/vfx_library/effects/lightning_chain.tscn")
@@ -35,6 +33,7 @@ var current_health := 620.0
 var armor := 22.0
 var magic_resistance := 32.0
 var is_dead := false
+var hit_feedback: HeroHitFeedback3D
 var silence_timer := 0.0
 var armor_shred_timer := 0.0
 var armor_shred_ratio := 0.0
@@ -56,23 +55,18 @@ var ai_archetype: Resource
 var arena_min := Vector2(-14.5, -3.4)
 var arena_max := Vector2(14.5, 3.4)
 var super_armor_timer := 0.0
-var super_armor_outline: Node3D
 var r_winddown_authored_position := Vector3.ZERO
 var r_winddown_authored_scale := Vector3.ONE
-var supercharge_afterimages: Array[Sprite3D] = []
-var supercharge_afterimage_ages: Array[float] = []
-var supercharge_afterimage_cursor := 0
-var supercharge_afterimage_lifetime := 0.28
-var supercharge_afterimage_alpha := 0.36
-var supercharge_afterimage_color := Color(0.16, 0.72, 1.0, 1.0)
+var supercharge_mesh_afterimage: Node
 var e_orb_from_center_px := Vector2(126.5, 622.5)
 var _r_landing_resolving := false
 var _r_landing_zapped: Dictionary = {}
+var _faces_left := false
 
 @export_category("Scene VFX Preview")
 @export var cast_vfx_preview_enabled := false
 
-@onready var character_frames: AnimatedSprite3D = $CharacterFrames
+@onready var character_model: Node3D = $RyzeModel
 @onready var label: Label3D = $AIStateLabel
 @onready var shield: AnimatedSprite3D = $Shield
 @onready var t_buff: AnimatedSprite3D = $TBuff
@@ -101,45 +95,21 @@ func _ready() -> void:
 		magic_resistance = definition.magic_resistance
 		base_magic_resistance = definition.magic_resistance
 	add_to_group(&"combat_target")
+	_build_hit_feedback()
 	_configure_team_groups()
-	character_frames.sprite_frames = FRAMES
-	_apply_sprite_canvas_anchor()
-	character_frames.play(&"idle")
+	character_model.call(&"play_semantic", &"idle")
+	if character_model.has_signal(&"animation_finished"):
+		character_model.connect(&"animation_finished", _on_character_model_animation_finished)
 	_bind_self_vfx_anchors()
 	_hide_self_vfx_nodes()
 	if r_winddown_template != null:
 		r_winddown_authored_position = r_winddown_template.position
 		r_winddown_authored_scale = r_winddown_template.scale
 	_configure_cast_vfx_templates()
+	_build_supercharge_mesh_afterimage()
 	_cache_e_orb_from_center()
-	_build_super_armor_outline()
-	_build_supercharge_afterimage_pool()
-	character_frames.frame_changed.connect(_capture_supercharge_afterimage)
 	_refresh_target()
 	_update_label()
-
-
-func _apply_sprite_canvas_anchor() -> void:
-	var file := FileAccess.open(CHARACTER_ANCHOR_JSON, FileAccess.READ)
-	if file == null:
-		push_warning("Ryze character anchor metadata was not found: %s" % CHARACTER_ANCHOR_JSON)
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if not parsed is Dictionary:
-		push_warning("Ryze character anchor metadata is invalid: %s" % CHARACTER_ANCHOR_JSON)
-		return
-	var canvas: Dictionary = (parsed as Dictionary).get("meta", {}).get("canvas", {})
-	var width := float(canvas.get("width", 0.0))
-	var height := float(canvas.get("height", 0.0))
-	if width <= 0.0 or height <= 0.0:
-		push_warning("Ryze character anchor metadata has no canvas dimensions")
-		return
-	var origin_x := float(canvas.get("originPixelX", width * 0.5))
-	var origin_y := float(canvas.get("originPixelY", height))
-	character_frames.offset = Vector2(width * 0.5 - origin_x, origin_y - height * 0.5)
-	# The sprite's native visual content is already scaled to the game.  Only
-	# correct its origin; scaling by full canvas height incorrectly enlarged Ryze.
-	character_frames.pixel_size = _character_pixel_size()
 
 
 func _apply_vfx_canvas_anchor(sprite: AnimatedSprite3D, json_path: String) -> void:
@@ -165,8 +135,6 @@ func _apply_vfx_canvas_anchor(sprite: AnimatedSprite3D, json_path: String) -> vo
 
 
 func _bind_self_vfx_anchors() -> void:
-	if character_frames == null:
-		character_frames = get_node_or_null("CharacterFrames") as AnimatedSprite3D
 	if shield == null:
 		shield = get_node_or_null("Shield") as AnimatedSprite3D
 	if t_buff == null:
@@ -199,7 +167,7 @@ func _hide_self_vfx_nodes() -> void:
 
 
 func _facing_left() -> bool:
-	return character_frames != null and character_frames.flip_h
+	return _faces_left
 
 
 func _sync_self_vfx_node(plus_x: AnimatedSprite3D, flip_x: AnimatedSprite3D, animation: StringName, active: bool) -> void:
@@ -236,10 +204,7 @@ func _physics_process(delta: float) -> void:
 	_update_magic_resist_shred(delta)
 	_sync_t_buff_presentation()
 	_sync_shield_presentation()
-	if super_armor_outline != null:
-		super_armor_outline.set_active(has_super_armor())
 	_update_label()
-	_update_supercharge_afterimages(delta)
 	if is_dead:
 		velocity = Vector3.ZERO
 		return
@@ -263,7 +228,7 @@ func _physics_process(delta: float) -> void:
 		_face(silence_offset)
 		if silence_distance > _cast_range():
 			velocity = silence_offset.normalized() * _move_speed()
-			character_frames.play(&"run")
+			character_model.call(&"play_semantic", &"run")
 			move_and_slide()
 		else:
 			velocity = Vector3.ZERO
@@ -284,12 +249,15 @@ func _physics_process(delta: float) -> void:
 		return
 	if distance > _cast_range():
 		velocity = to_target.normalized() * _move_speed()
-		character_frames.play(&"run")
+		character_model.call(&"play_semantic", &"run")
 		move_and_slide()
 		return
 	if distance < _preferred_distance():
 		velocity = -to_target.normalized() * _move_speed()
-		character_frames.play(&"run")
+		# Kiting changes the travel vector. Face the actual run direction instead
+		# of the target, otherwise the skeletal Run animation visibly moonwalks.
+		_face(velocity)
+		character_model.call(&"play_semantic", &"run")
 		move_and_slide()
 		return
 	velocity = Vector3.ZERO
@@ -307,7 +275,7 @@ func _basic_attack(victim: CharacterBody3D) -> void:
 	var animations: Array[StringName] = [&"attack1", &"attack2", &"attack3", &"crit"]
 	var animation := animations[attack_index]
 	attack_index = (attack_index + 1) % animations.size()
-	await _play_action_to_end(animation, _cast_frame(animation, 5), func() -> void:
+	await _play_action_to_end(animation, _cast_event_seconds(animation, 0.5), func() -> void:
 		_launch_projectile(victim, &"basic_attack", _basic_missile_speed(), &"basic")
 	)
 
@@ -315,7 +283,7 @@ func _basic_attack(victim: CharacterBody3D) -> void:
 func _cast_q(victim: CharacterBody3D) -> void:
 	cooldowns[&"q"] = _skill_cooldown(&"ryze_overload", 4.0)
 	_add_arcane_stack(true)
-	await _play_action_to_end(&"spell1", _cast_frame(&"spell1", 3), func() -> void:
+	await _play_action_to_end(&"spell1", _cast_event_seconds(&"spell1", 0.3), func() -> void:
 		_launch_projectile(victim, &"Spell1_Q", _rulef(&"ryze.q.missile_speed", 17.0), &"q")
 	)
 
@@ -323,7 +291,7 @@ func _cast_q(victim: CharacterBody3D) -> void:
 func _cast_w(victim: CharacterBody3D) -> void:
 	cooldowns[&"w"] = _skill_cooldown(&"ryze_rune_prison", 14.0)
 	_add_arcane_stack(true)
-	await _play_action_to_end(&"spell2", _cast_frame(&"spell2", 5), func() -> void:
+	await _play_action_to_end(&"spell2", _cast_event_seconds(&"spell2", 0.5), func() -> void:
 		if _valid_target(victim):
 			_play_target_vfx(victim, &"Spell2_W")
 			_damage(victim, _ranked_damage(&"ryze_w_damage", 80.0), &"magic", &"ryze_w_hit")
@@ -337,7 +305,7 @@ func _cast_w(victim: CharacterBody3D) -> void:
 func _cast_e(victim: CharacterBody3D) -> void:
 	cooldowns[&"e"] = _skill_cooldown(&"ryze_spell_flux", 7.0)
 	_add_arcane_stack(true)
-	await _play_action_to_end(&"spell3", _cast_frame(&"spell3", 6), func() -> void:
+	await _play_action_to_end(&"spell3", _cast_event_seconds(&"spell3", 0.6), func() -> void:
 		_launch_projectile(victim, &"Spell3_E", _rulef(&"ryze.e.missile_speed", 15.0), &"e")
 	)
 
@@ -346,7 +314,7 @@ func cast_desperate_power() -> void:
 	if cooldowns[&"t"] > 0.0:
 		return
 	cooldowns[&"t"] = _skill_cooldown(&"ryze_desperate_power", 50.0)
-	character_frames.play(&"taunt")
+	character_model.call(&"play_semantic", &"taunt")
 	var channel := _rulef(&"ryze.t.channel_duration", 0.8)
 	action_lock = channel
 	super_armor_timer = channel
@@ -373,7 +341,7 @@ func cast_realm_warp(destination: Vector3) -> void:
 	if cooldowns[&"r"] > 0.0:
 		return
 	cooldowns[&"r"] = _skill_cooldown(&"ryze_realm_warp", 180.0)
-	character_frames.play(&"spell4")
+	character_model.call(&"play_semantic", &"spell4")
 	var channel := _skill_cast_time(&"ryze_realm_warp", 2.0)
 	action_lock = channel
 	await get_tree().create_timer(channel).timeout
@@ -387,8 +355,11 @@ func cast_realm_warp(destination: Vector3) -> void:
 	_teleport_actor(self, origin + delta)
 	for ally: CharacterBody3D in allies:
 		_teleport_actor(ally, ally.global_position + delta)
-	character_frames.play(&"spell4_winddown")
-	action_lock = _sprite_animation_duration(character_frames, &"spell4_winddown")
+	character_model.call(&"play_semantic", &"spell4_winddown")
+	# Query the requested semantic clip directly. Reading the player's current
+	# length during a blend can still return the prior 2.333s Spell4_Idle clip.
+	# The completion signal below remains the authoritative early release.
+	action_lock = float(character_model.call(&"get_semantic_animation_length", &"spell4_winddown"))
 	_play_r_winddown()
 	_r_landing_resolving = true
 	_r_landing_zapped.clear()
@@ -403,6 +374,11 @@ func cast_realm_warp(destination: Vector3) -> void:
 	_r_landing_resolving = false
 	_r_landing_zapped.clear()
 	_add_arcane_stack(true)
+
+
+func _on_character_model_animation_finished(animation_name: StringName) -> void:
+	if animation_name == &"spell4_winddown":
+		action_lock = 0.0
 
 
 func _collect_warp_allies(radius: float) -> Array[CharacterBody3D]:
@@ -453,6 +429,10 @@ func get_team() -> StringName:
 	return StringName(team)
 
 
+func get_display_name() -> String:
+	return "瑞兹"
+
+
 func is_enemy_of(other_team: StringName) -> bool:
 	return StringName(team) != other_team
 
@@ -465,24 +445,42 @@ func get_health_ratio() -> float:
 	return current_health / maxf(max_health, 1.0)
 
 
-func receive_hit(attacker_position: Vector3, _attack_name: StringName, amount: float = -1.0) -> void:
+func receive_hit(attacker_position: Vector3, _attack_name: StringName, amount: float = -1.0, source_actor: Node = null) -> void:
 	var damage := amount if amount >= 0.0 else (definition.attack_damage if definition != null else 55.0)
-	receive_skill_damage(damage, "普攻", true, attacker_position, &"physical", &"basic_melee")
+	receive_skill_damage(damage, "普攻", true, attacker_position, &"physical", &"basic_melee", source_actor)
 
 
-func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, hit_profile_id: StringName = &"breaker_hit") -> void:
-	receive_skill_damage(base_attack + bonus_damage, "破舰", true, attacker_position, &"physical", hit_profile_id)
+func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, hit_profile_id: StringName = &"breaker_hit", source_actor: Node = null) -> void:
+	receive_skill_damage(base_attack + bonus_damage, "破舰", true, attacker_position, &"physical", hit_profile_id, source_actor)
 
 
-func receive_skill_damage(amount: float, _source: String, is_critical: bool, _position: Vector3, damage_type: StringName = &"magic", _profile: StringName = &"ryze_e_hit") -> void:
+func receive_skill_damage(amount: float, source_name: String, is_critical: bool, attacker_position: Vector3, damage_type: StringName = &"magic", hit_profile_id: StringName = &"ryze_e_hit", source_actor: Node = null) -> void:
 	if is_dead or amount <= 0.0:
 		return
 	var resolved := CombatMath.resolve_damage(amount, damage_type, armor, magic_resistance, database)
+	var applied_damage := minf(current_health, resolved)
 	current_health = maxf(0.0, current_health - resolved)
+	if source_actor != null and applied_damage > 0.0:
+		var stats := get_node_or_null("/root/CombatStats")
+		if stats != null:
+			stats.call("record_damage", source_actor, self, applied_damage, source_name, damage_type)
 	if resolved > 0.0:
 		present_resolved_damage(resolved, damage_type, is_critical)
+		if hit_feedback != null:
+			hit_feedback.play_hit(attacker_position, hit_profile_id, is_critical)
 	if current_health <= 0.0:
 		_die()
+
+
+func _build_hit_feedback() -> void:
+	hit_feedback = get_node_or_null("HeroHitFeedback3D") as HeroHitFeedback3D
+	if hit_feedback == null:
+		hit_feedback = HERO_HIT_FEEDBACK.new()
+		hit_feedback.name = "HeroHitFeedback3D"
+		hit_feedback.configure(database, &"RyzeModel")
+		add_child(hit_feedback)
+	else:
+		hit_feedback.configure(database, &"RyzeModel")
 
 
 func apply_silence(duration: float) -> void:
@@ -520,9 +518,7 @@ func _die() -> void:
 	target = null
 	velocity = Vector3.ZERO
 	remove_from_group(&"combat_target")
-	character_frames.modulate = Color(0.55, 0.55, 0.55, 0.85)
-	character_frames.play(&"idle")
-	character_frames.pause()
+	character_model.call(&"play_semantic", &"death")
 	_update_label()
 
 
@@ -538,8 +534,7 @@ func revive_for_training() -> void:
 	silence_timer = 0.0
 	if not is_in_group(&"combat_target"):
 		add_to_group(&"combat_target")
-	character_frames.modulate = Color.WHITE
-	character_frames.play(&"idle")
+	character_model.call(&"play_semantic", &"idle")
 	_configure_team_groups()
 	_update_label()
 
@@ -561,22 +556,25 @@ func _update_magic_resist_shred(delta: float) -> void:
 		magic_resistance = base_magic_resistance
 
 
-func _play_action_to_end(animation: StringName, cast_frame: int, event: Callable) -> void:
-	# Keep the authored frames. Unlock after the cast event plus a tabled
-	# minimum lock so the next Q/W/E/AA can interrupt leftover recovery.
+func _play_action_to_end(animation: StringName, cast_event_seconds: float, event: Callable) -> void:
+	# Event times are authored directly in seconds and remain independent of the GLB clip name.
 	action_lock = INF
 	var supercharged := _is_supercharged() and _is_supercharge_cast_animation(animation)
-	character_frames.speed_scale = _supercharge_cast_speed() if supercharged else _cast_speed()
-	character_frames.play(animation)
+	var speed := _supercharge_cast_speed() if supercharged else _cast_speed()
+	character_model.call(&"set_animation_speed", speed)
+	character_model.call(&"play_semantic", animation)
 	var event_sent := false
 	var event_elapsed := -1.0
+	var event_time := cast_event_seconds / speed
 	var recovery := _rulef(&"ryze.cast.recovery_seconds", 0.35)
 	var min_lock := _rulef(&"ryze.supercharge.min_lock_seconds", 0.70) if supercharged else _rulef(&"ryze.cast.min_lock_seconds", 0.90)
-	while character_frames.animation == animation and character_frames.is_playing():
+	while StringName(character_model.get(&"current_animation")) == animation and bool(character_model.call(&"is_playing")):
 		var elapsed := _animation_elapsed_seconds()
-		if not event_sent and character_frames.frame >= cast_frame:
+		if not event_sent and elapsed >= event_time:
 			event_sent = true
 			event_elapsed = elapsed
+			if supercharged and supercharge_mesh_afterimage != null:
+				supercharge_mesh_afterimage.capture(character_model)
 			event.call()
 		var unlock_at := min_lock
 		if event_sent:
@@ -585,6 +583,8 @@ func _play_action_to_end(animation: StringName, cast_frame: int, event: Callable
 			break
 		await get_tree().process_frame
 	if not event_sent:
+		if supercharged and supercharge_mesh_afterimage != null:
+			supercharge_mesh_afterimage.capture(character_model)
 		event.call()
 	action_lock = 0.0
 
@@ -678,7 +678,7 @@ func _projectile_origin(payload: StringName) -> Vector3:
 	if template == null:
 		return global_position + Vector3.UP * _rulef(&"ryze.hit.fallback_height", 1.15)
 	var local := template.position
-	if character_frames.flip_h:
+	if _facing_left():
 		local.x = -local.x
 	if payload == &"e":
 		local.y += _rulef(&"ryze.e.launch_y_bias", DEFAULT_E_LAUNCH_Y_BIAS)
@@ -750,15 +750,17 @@ func _play_r_landing_zap(victim: CharacterBody3D) -> void:
 func _play_r_winddown() -> void:
 	if r_winddown_template == null:
 		return
-	var duration := _sprite_animation_duration(character_frames, &"spell4_winddown")
+	# The lightning/portal sequence is presentation only.  It intentionally
+	# uses its own SpriteFrames duration and does not participate in action_lock.
+	var duration := _sprite_animation_duration(r_winddown_template, &"Spell4_R_winddown")
 	r_winddown_template.visible = true
 	r_winddown_template.position = Vector3(
-		r_winddown_authored_position.x * (-1.0 if character_frames.flip_h else 1.0),
+		r_winddown_authored_position.x * (-1.0 if _facing_left() else 1.0),
 		r_winddown_authored_position.y,
 		r_winddown_authored_position.z
 	)
 	r_winddown_template.scale = r_winddown_authored_scale
-	r_winddown_template.flip_h = character_frames.flip_h
+	r_winddown_template.flip_h = _facing_left()
 	r_winddown_template.frame = 0
 	r_winddown_template.play(&"Spell4_R_winddown")
 	await get_tree().create_timer(duration).timeout
@@ -982,7 +984,7 @@ func _deal_hit(victim: CharacterBody3D, amount: float, type: StringName, hit_pro
 	if not _can_harm(victim):
 		return
 	if victim.has_method("receive_skill_damage"):
-		victim.call("receive_skill_damage", amount, "瑞兹", false, global_position, type, hit_profile)
+		victim.call("receive_skill_damage", amount, "瑞兹", false, global_position, type, hit_profile, self)
 	_play_impact(victim)
 
 
@@ -1090,25 +1092,41 @@ func _ranked_control(effect: StringName, fallback: float) -> float:
 	return row.control_duration if row != null else fallback
 
 
-func _cast_frame(animation: StringName, fallback: int) -> int:
+func _cast_event_seconds(animation: StringName, fallback: float) -> float:
 	if database == null:
 		return fallback
 	var event := database.get_animation_event(&"ryze", animation, "hit")
-	if event == null or event.timing_mode != "frame":
+	if event == null or event.timing_mode != "seconds":
 		return fallback
-	return roundi(event.timing_value)
+	return event.timing_value
 
 
 func _refresh_target() -> void:
+	if target != null and not is_instance_valid(target):
+		target = null
 	var preferred := _find_preferred_hostile()
 	if preferred == null:
+		_set_target_outline(target, false)
 		target = null
 		return
 	var should_switch := not _valid_target(target)
-	if not should_switch and target != null and target.is_in_group(&"training_dummy") and preferred.is_in_group(&"hero_actor"):
+	if (
+		not should_switch
+		and is_instance_valid(target)
+		and target.is_in_group(&"training_dummy")
+		and preferred.is_in_group(&"hero_actor")
+	):
 		should_switch = true
 	if should_switch:
+		_set_target_outline(target, false)
 		target = preferred
+		_set_target_outline(target, true)
+
+
+func _set_target_outline(candidate: Node, active: bool) -> void:
+	if candidate == null or not is_instance_valid(candidate) or not candidate.has_method("set_outline_targeted"):
+		return
+	candidate.call("set_outline_targeted", active)
 
 
 func _find_preferred_hostile() -> CharacterBody3D:
@@ -1117,6 +1135,8 @@ func _find_preferred_hostile() -> CharacterBody3D:
 	var closest_any: CharacterBody3D
 	var closest_any_distance := INF
 	for node: Node in get_tree().get_nodes_in_group(&"combat_target"):
+		if not is_instance_valid(node):
+			continue
 		var candidate := node as CharacterBody3D
 		if candidate == null or candidate == self or not _can_harm(candidate):
 			continue
@@ -1130,13 +1150,18 @@ func _find_preferred_hostile() -> CharacterBody3D:
 	return closest_hero if closest_hero != null else closest_any
 
 
-func _valid_target(candidate: CharacterBody3D) -> bool:
-	return is_instance_valid(candidate) and (not candidate.has_method("is_targetable") or bool(candidate.call("is_targetable")))
+func _valid_target(candidate: Node) -> bool:
+	if candidate == null or not is_instance_valid(candidate):
+		return false
+	if not (candidate is CharacterBody3D):
+		return false
+	return not candidate.has_method("is_targetable") or bool(candidate.call("is_targetable"))
 
 
 func _face(direction: Vector3) -> void:
 	if absf(direction.x) > 0.02:
-		character_frames.flip_h = direction.x < 0.0
+		_faces_left = direction.x < 0.0
+		character_model.call(&"set_facing", direction)
 
 
 func _configure_team_groups() -> void:
@@ -1149,6 +1174,7 @@ func _configure_team_groups() -> void:
 	var readability := get_node_or_null("UnitReadability")
 	if readability != null and readability.has_method("refresh_team_visuals"):
 		readability.call("refresh_team_visuals")
+	set_outline_selected(is_in_group(&"player_actor"))
 
 
 func _bind_ai_profile() -> void:
@@ -1205,35 +1231,6 @@ func _sync_shield_presentation() -> void:
 	_sync_self_vfx_node(shield, shield_flip, &"Ryze_Shield", supercharged_casts > 0 and supercharged_timer > 0.0)
 
 
-func _build_super_armor_outline() -> void:
-	super_armor_outline = SUPER_ARMOR_OUTLINE.new()
-	super_armor_outline.name = "SuperArmorOutline"
-	add_child(super_armor_outline)
-	var profile := database.get_asset_profile(&"super_armor_outline_glow") if database != null else null
-	var red := Color.from_string(
-		String(database.get_rule(&"presentation.super_armor_outline_red", "ff3020ff")) if database != null else "ff3020ff",
-		Color(1.0, 0.19, 0.13, 1.0)
-	)
-	var gold := Color.from_string(
-		String(database.get_rule(&"presentation.super_armor_outline_gold", "ffd45cff")) if database != null else "ffd45cff",
-		Color(1.0, 0.83, 0.36, 1.0)
-	)
-	var width := float(database.get_rule(&"presentation.super_armor_outline_width", 2.5)) if database != null else 2.5
-	var glow := float(database.get_rule(&"presentation.super_armor_outline_glow", 1.4)) if database != null else 1.4
-	var alpha_threshold := float(database.get_rule(&"presentation.outline_alpha_threshold", 0.35)) if database != null else 0.35
-	super_armor_outline.configure(
-		character_frames,
-		profile,
-		red,
-		gold,
-		width,
-		glow,
-		-1.0,
-		Vector2.ZERO,
-		alpha_threshold
-	)
-
-
 func _is_supercharged() -> bool:
 	return supercharged_casts > 0 and supercharged_timer > 0.0
 
@@ -1260,110 +1257,19 @@ func _supercharge_cast_speed() -> float:
 
 
 func _animation_elapsed_seconds() -> float:
-	var frames := character_frames.sprite_frames
-	if frames == null or not frames.has_animation(character_frames.animation):
-		return 0.0
-	var animation := character_frames.animation
-	var speed := maxf(frames.get_animation_speed(animation) * character_frames.speed_scale, 0.001)
-	var elapsed := 0.0
-	for frame_index: int in range(character_frames.frame):
-		elapsed += frames.get_frame_duration(animation, frame_index) / speed
-	elapsed += frames.get_frame_duration(animation, character_frames.frame) * character_frames.frame_progress / speed
-	return elapsed
+	return float(character_model.call(&"get_elapsed_seconds"))
 
 
-func _build_supercharge_afterimage_pool() -> void:
-	var count := 3
-	if database != null:
-		count = clampi(int(database.get_rule(&"presentation.breaker_afterimage_count", 3)), 2, 3)
-		supercharge_afterimage_lifetime = float(database.get_rule(&"presentation.breaker_afterimage_lifetime", 0.28))
-		supercharge_afterimage_alpha = float(database.get_rule(&"presentation.breaker_afterimage_alpha", 0.36))
-		supercharge_afterimage_color = Color.from_string(
-			String(database.get_rule(&"presentation.breaker_afterimage_color", "29b8ffff")),
-			supercharge_afterimage_color
-		)
-	for index in count:
-		var afterimage := Sprite3D.new()
-		afterimage.name = "SuperchargeAfterimage%d" % index
-		afterimage.visible = false
-		afterimage.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		afterimage.transparent = true
-		afterimage.shaded = false
-		afterimage.render_priority = maxi(-128, character_frames.render_priority - 1)
-		var material := ShaderMaterial.new()
-		material.shader = BREAKER_AFTERIMAGE_SHADER
-		material.set_shader_parameter(&"ocean_tint", Color(
-			supercharge_afterimage_color.r,
-			supercharge_afterimage_color.g,
-			supercharge_afterimage_color.b,
-			supercharge_afterimage_alpha
-		))
-		afterimage.material_override = material
-		add_child(afterimage)
-		afterimage.top_level = true
-		supercharge_afterimages.append(afterimage)
-		supercharge_afterimage_ages.append(supercharge_afterimage_lifetime)
-
-
-func _capture_supercharge_afterimage() -> void:
-	if not _is_supercharged() or supercharge_afterimages.is_empty() or character_frames.sprite_frames == null:
-		return
-	if not _is_supercharge_cast_animation(character_frames.animation):
-		return
-	var frame_texture := character_frames.sprite_frames.get_frame_texture(character_frames.animation, character_frames.frame)
-	if frame_texture == null:
-		return
-	var afterimage := supercharge_afterimages[supercharge_afterimage_cursor]
-	afterimage.texture = frame_texture
-	var material := afterimage.material_override as ShaderMaterial
-	if material != null:
-		material.set_shader_parameter(&"frame_texture", frame_texture)
-		material.set_shader_parameter(&"ocean_tint", Color(
-			supercharge_afterimage_color.r,
-			supercharge_afterimage_color.g,
-			supercharge_afterimage_color.b,
-			supercharge_afterimage_alpha
-		))
-	afterimage.global_transform = character_frames.global_transform
-	afterimage.offset = character_frames.offset
-	afterimage.pixel_size = character_frames.pixel_size
-	afterimage.axis = character_frames.axis
-	afterimage.billboard = character_frames.billboard
-	afterimage.fixed_size = character_frames.fixed_size
-	afterimage.centered = character_frames.centered
-	afterimage.double_sided = character_frames.double_sided
-	afterimage.no_depth_test = character_frames.no_depth_test
-	afterimage.texture_filter = character_frames.texture_filter
-	afterimage.flip_h = character_frames.flip_h
-	afterimage.flip_v = character_frames.flip_v
-	afterimage.layers = character_frames.layers
-	afterimage.modulate = Color.WHITE
-	afterimage.visible = true
-	supercharge_afterimage_ages[supercharge_afterimage_cursor] = 0.0
-	supercharge_afterimage_cursor = (supercharge_afterimage_cursor + 1) % supercharge_afterimages.size()
-
-
-func _update_supercharge_afterimages(delta: float) -> void:
-	var lifetime := maxf(supercharge_afterimage_lifetime, 0.01)
-	for index: int in range(supercharge_afterimages.size()):
-		var afterimage := supercharge_afterimages[index]
-		if not afterimage.visible:
-			continue
-		supercharge_afterimage_ages[index] += delta
-		var progress := clampf(supercharge_afterimage_ages[index] / lifetime, 0.0, 1.0)
-		if progress >= 1.0:
-			afterimage.visible = false
-			afterimage.texture = null
-			continue
-		var fade := 1.0 - progress
-		var material := afterimage.material_override as ShaderMaterial
-		if material != null:
-			material.set_shader_parameter(&"ocean_tint", Color(
-				supercharge_afterimage_color.r,
-				supercharge_afterimage_color.g,
-				supercharge_afterimage_color.b,
-				supercharge_afterimage_alpha * fade * fade
-			))
+func _build_supercharge_mesh_afterimage() -> void:
+	supercharge_mesh_afterimage = MESH_AFTERIMAGE.new()
+	supercharge_mesh_afterimage.name = "SuperchargeMeshAfterimage"
+	supercharge_mesh_afterimage.lifetime = _rulef(&"presentation.breaker_afterimage_lifetime", 0.22)
+	supercharge_mesh_afterimage.color = Color.from_string(
+		String(database.get_rule(&"presentation.breaker_afterimage_color", "29b8ffff")) if database != null else "29b8ffff",
+		Color(0.16, 0.72, 1.0, 0.32)
+	)
+	supercharge_mesh_afterimage.color.a = _rulef(&"presentation.breaker_afterimage_alpha", 0.32)
+	add_child(supercharge_mesh_afterimage)
 
 
 func _should_burst_t(_distance: float) -> bool:
@@ -1404,7 +1310,7 @@ func _standoff_from(anchor: Vector3, hold: float) -> Vector3:
 	var planar := anchor - global_position
 	planar.y = 0.0
 	if planar.length_squared() <= 0.0001:
-		planar = Vector3.LEFT if character_frames.flip_h else Vector3.RIGHT
+		planar = Vector3.LEFT if _facing_left() else Vector3.RIGHT
 	var landing := anchor - planar.normalized() * hold
 	landing.y = global_position.y
 	return _clamp_to_arena(landing)
@@ -1428,7 +1334,7 @@ func _escape_destination(away_from_target: Vector3) -> Vector3:
 	var planar := away_from_target
 	planar.y = 0.0
 	if planar.length_squared() <= 0.0001:
-		planar = Vector3.LEFT if character_frames.flip_h else Vector3.RIGHT
+		planar = Vector3.LEFT if _facing_left() else Vector3.RIGHT
 	return _clamp_to_arena(global_position - planar.normalized() * _rulef(&"ryze.r.escape_distance", 8.0))
 
 
@@ -1509,6 +1415,23 @@ func _skill_cooldown(skill_id: StringName, fallback: float) -> float:
 		return rank.cooldown
 	var skill := database.get_skill(skill_id)
 	return skill.cooldown if skill != null and skill.cooldown > 0.0 else fallback
+
+
+func get_skill_cooldown_state(slot: StringName) -> Dictionary:
+	var cooldown_data: Dictionary = {
+		&"q": [&"ryze_overload", 4.0],
+		&"w": [&"ryze_rune_prison", 14.0],
+		&"e": [&"ryze_spell_flux", 7.0],
+		&"r": [&"ryze_realm_warp", 180.0],
+		&"t": [&"ryze_desperate_power", 50.0],
+	}
+	if not cooldown_data.has(slot):
+		return {"remaining": 0.0, "total": 0.0}
+	var skill_data: Array = cooldown_data[slot]
+	return {
+		"remaining": float(cooldowns.get(slot, 0.0)),
+		"total": _skill_cooldown(skill_data[0], float(skill_data[1])),
+	}
 
 
 func _skill_range(skill_id: StringName, fallback: float) -> float:

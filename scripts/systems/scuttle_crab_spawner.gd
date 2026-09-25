@@ -52,6 +52,25 @@ func _process(delta: float) -> void:
 	if is_instance_valid(active_crab): return
 	if spawn_timer <= 0.0: _spawn_crab()
 
+
+func set_training_enabled(enabled: bool) -> void:
+	if enabled:
+		var was_enabled := enabled_modes.has(scene_mode)
+		scene_mode = "training"
+		respawn_counting = false
+		if not was_enabled and not is_instance_valid(active_crab):
+			spawn_timer = 0.0
+			_spawn_crab()
+		return
+	scene_mode = "disabled"
+	respawn_counting = false
+	spawn_timer = first_spawn_delay
+	if is_instance_valid(active_crab):
+		active_crab.queue_free()
+	active_crab = null
+	for zone: Node in get_tree().get_nodes_in_group(&"scuttle_speed_zone"):
+		zone.queue_free()
+
 func _spawn_crab() -> void:
 	if crab_scene == null: return
 	active_crab = crab_scene.instantiate() as CharacterBody3D

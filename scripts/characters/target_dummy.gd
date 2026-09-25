@@ -23,7 +23,7 @@ const ARMOR_SHRED_BURST := preload("res://scripts/presentation/status_debuff_bur
 @export var critical_multiplier := 1.75
 
 @onready var collision_shape: CollisionShape3D = $EnemyCollision
-@onready var character_frames: AnimatedSprite3D = $EnemyFrames
+@onready var character_model: Node = $ModelPresenter
 @onready var editor_placeholder: MeshInstance3D = $EnemyEditorPlaceholder
 @onready var ground_shadow: Sprite3D = $GroundShadow
 @onready var state_label: Label3D = $DummyStateLabel
@@ -62,7 +62,6 @@ var armor_shred_timer := 0.0
 var armor_shred_ratio := 0.0
 var status_icon_slots: StatusIconSlots
 var armor_shred_burst: StatusDebuffBurst
-var unflipped_offset := Vector2.ZERO
 var random := RandomNumberGenerator.new()
 var combat_database: CombatDatabase
 var unit_definition: UnitDefinition
@@ -80,12 +79,11 @@ func _ready() -> void:
 	random.seed = 20260824 + get_instance_id()
 	current_health = max_health
 	home_position = global_position
-	unflipped_offset = character_frames.offset
 	_configure_team_groups()
 	_configure_visual_feedback()
-	editor_placeholder.visible = character_frames.sprite_frames == null
-	character_frames.animation_finished.connect(_on_animation_finished)
-	character_frames.play(&"spawn")
+	editor_placeholder.visible = false
+	character_model.connect(&"animation_finished", _on_animation_finished)
+	character_model.call(&"play_semantic", &"spawn")
 	_update_label()
 
 
@@ -112,11 +110,11 @@ func _physics_process(delta: float) -> void:
 	_update_label()
 
 
-func receive_hit(attacker_position: Vector3, attack_name: StringName, amount: float = -1.0) -> void:
+func receive_hit(attacker_position: Vector3, attack_name: StringName, amount: float = -1.0, source_actor: Node = null) -> void:
 	var damage := amount if amount >= 0.0 else (attacker_definition.attack_damage if attacker_definition != null else 58.0)
 	var event := combat_database.get_animation_event(&"garen", attack_name, "hit") if combat_database != null else null
 	var hit_profile_id: StringName = event.payload_id if event != null else &"basic_melee"
-	_apply_damage(damage, String(attack_name), true, attacker_position, &"physical", hit_profile_id)
+	_apply_damage(damage, String(attack_name), true, attacker_position, &"physical", hit_profile_id, 0.0, source_actor)
 
 
 func receive_skill_damage(
@@ -125,16 +123,17 @@ func receive_skill_damage(
 	can_crit: bool,
 	attacker_position: Vector3,
 	damage_type: StringName = &"physical",
-	hit_profile_id: StringName = &"basic_melee"
+	hit_profile_id: StringName = &"basic_melee",
+	source_actor: Node = null
 ) -> void:
 	skill_damage_count += 1
-	_apply_damage(amount, skill_name, can_crit, attacker_position, damage_type, hit_profile_id)
+	_apply_damage(amount, skill_name, can_crit, attacker_position, damage_type, hit_profile_id, 0.0, source_actor)
 
 
-func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, hit_profile_id: StringName = &"breaker_hit") -> void:
+func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, hit_profile_id: StringName = &"breaker_hit", source_actor: Node = null) -> void:
 	# Q keeps one impact while only its base attack portion can critically strike.
 	skill_damage_count += 1
-	_apply_damage(base_attack, "破舰", true, attacker_position, &"physical", hit_profile_id, bonus_damage)
+	_apply_damage(base_attack, "破舰", true, attacker_position, &"physical", hit_profile_id, bonus_damage, source_actor)
 
 
 func apply_silence(duration: float) -> void:
@@ -232,7 +231,8 @@ func _apply_damage(
 	attacker_position: Vector3,
 	damage_type: StringName,
 	hit_profile_id: StringName,
-	flat_post_crit_bonus: float = 0.0
+	flat_post_crit_bonus: float = 0.0,
+	source_actor: Node = null
 ) -> void:
 	if is_dead:
 		return
@@ -252,6 +252,10 @@ func _apply_damage(
 	var applied_damage := minf(current_health, health_damage)
 	current_health = maxf(0.0, current_health - health_damage)
 	_record_damage(applied_damage)
+	if applied_damage > 0.0 and source_actor != null:
+		var stats := get_node_or_null("/root/CombatStats")
+		if stats != null:
+			stats.call("record_damage", source_actor, self, applied_damage, source_name, damage_type)
 	_face_attacker(attacker_position)
 
 	var away := global_position - attacker_position
@@ -273,7 +277,7 @@ func _apply_damage(
 	if current_health <= 0.0:
 		_die()
 	else:
-		character_frames.play(&"hurt")
+		character_model.call(&"play_semantic", &"hurt")
 		_update_label("CRIT %s" % source_name if critical else source_name)
 
 
@@ -323,8 +327,7 @@ func _die() -> void:
 	remove_from_group(&"combat_target")
 	state_label.visible = false
 	ground_shadow.visible = false
-	character_frames.modulate = Color.WHITE
-	character_frames.play(&"death")
+	character_model.call(&"play_semantic", &"death")
 	_update_label("DEAD · %.1fs" % death_timer)
 
 
@@ -342,8 +345,7 @@ func _respawn() -> void:
 	ground_shadow.visible = true
 	_reset_training_session(false)
 	respawn_count += 1
-	character_frames.modulate = Color.WHITE
-	character_frames.play(&"spawn")
+	character_model.call(&"play_semantic", &"spawn")
 	_update_label("RESPAWN")
 
 
@@ -373,12 +375,10 @@ func _update_passive_movement(delta: float) -> void:
 			velocity.z = 0.0
 
 
-func _on_animation_finished() -> void:
+func _on_animation_finished(_animation_name: StringName) -> void:
 	if is_dead:
-		character_frames.pause()
 		return
-	if character_frames.animation == &"hurt" or character_frames.animation == &"spawn":
-		character_frames.play(&"idle")
+	character_model.call(&"play_semantic", &"idle")
 
 
 func _configure_team_groups() -> void:
@@ -392,6 +392,7 @@ func _configure_team_groups() -> void:
 		add_to_group(&"enemy_actor")
 		remove_from_group(&"friendly_actor")
 		state_label.modulate = Color(1.0, 0.56, 0.56, 1.0)
+	character_model.call(&"configure_team", StringName(team))
 	var readability := get_node_or_null("UnitReadability")
 	if readability != null and readability.has_method("refresh_team_visuals"):
 		readability.call("refresh_team_visuals")
@@ -412,18 +413,13 @@ func _apply_facing() -> void:
 	var horizontal_offset := last_attacker_position.x - global_position.x
 	if absf(horizontal_offset) <= 0.02:
 		return
-	var attacker_is_right := horizontal_offset > 0.0
-	var flip := attacker_is_right if source_faces_left else not attacker_is_right
-	character_frames.flip_h = flip
-	var anchored_x := -unflipped_offset.x if flip else unflipped_offset.x
-	character_frames.offset.x = anchored_x
+	character_model.call(&"set_facing", last_attacker_position - global_position)
 
 
 func _start_hit_reaction() -> void:
 	reaction_scale = Vector2(0.82, 1.12)
 	reaction_velocity = Vector2(1.8, -1.2)
 	reaction_flash_timer = 0.24
-	character_frames.modulate = Color(1.0, 0.88, 0.52, 1.0)
 
 
 func _update_visual_feedback(delta: float) -> void:
@@ -438,14 +434,8 @@ func _update_visual_feedback(delta: float) -> void:
 	if reaction_scale.distance_to(Vector2.ONE) < 0.001 and reaction_velocity.length() < 0.01:
 		reaction_scale = Vector2.ONE
 		reaction_velocity = Vector2.ZERO
-	character_frames.scale = Vector3(reaction_scale.x, reaction_scale.y, 1.0)
-
-	if reaction_flash_timer > 0.0:
-		reaction_flash_timer = maxf(0.0, reaction_flash_timer - delta)
-		var flash_ratio := reaction_flash_timer / 0.24
-		character_frames.modulate = Color.WHITE.lerp(Color(1.0, 0.82, 0.42, 1.0), flash_ratio)
-	else:
-		character_frames.modulate = character_frames.modulate.lerp(Color.WHITE, minf(delta * 18.0, 1.0))
+	character_model.call(&"set_reaction_scale", reaction_scale)
+	reaction_flash_timer = maxf(0.0, reaction_flash_timer - delta)
 func _update_label(status := "") -> void:
 	var side_label := "友方" if team == "friendly" else "敌方"
 	if is_dead:

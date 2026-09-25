@@ -2,7 +2,7 @@ extends Node3D
 
 const BREAKER_AFTERIMAGE_SHADER := preload("res://assets/vfx/garen_skills/garen_breaker_afterimage.gdshader")
 const SUPER_ARMOR_AFTERIMAGE := preload("res://scripts/presentation/super_armor_afterimage.gd")
-const SUPER_ARMOR_OUTLINE := preload("res://scripts/presentation/super_armor_outline.gd")
+const MESH_AFTERIMAGE := preload("res://scripts/presentation/mesh_afterimage_3d.gd")
 const IMPACT_SHOCKWAVE_SHADER := preload("res://assets/vfx/garen_skills/garen_impact_shockwave.gdshader")
 const WATER_VAPOR_BURST_SHADER := preload("res://assets/vfx/garen_skills/garen_water_vapor_burst.gdshader")
 const SKILL_BREAKER := 1
@@ -94,7 +94,7 @@ const SKILL_SEVEN_SEAS := 5
 @export var passive_late_level_increment := 0.004
 
 @onready var fighter: CharacterBody3D = get_parent() as CharacterBody3D
-@onready var character_frames: AnimatedSprite3D = fighter.get_node("CharacterFrames") as AnimatedSprite3D
+@onready var character_model: GarenModelAnimator = fighter.get_node("GarenModel") as GarenModelAnimator
 @onready var jolly_roger: AnimatedSprite3D = $JollyRoger
 @onready var ocean_storm: AnimatedSprite3D = $OceanStorm
 @onready var anchor_effect: AnimatedSprite3D = $Anchor
@@ -109,13 +109,22 @@ const SKILL_SEVEN_SEAS := 5
 var target: CharacterBody3D
 var is_casting := false
 var current_skill := 0
+var _cast_generation := 0
 var breaker_timer := 0.0
 var breaker_empowered_attack := false
 var breaker_afterimages: Array[Sprite3D] = []
 var breaker_afterimage_ages: Array[float] = []
 var breaker_afterimage_cursor := 0
 var breaker_afterimage_capture_count := 0
-var super_armor_outline: Node3D
+var breaker_mesh_afterimage: Node
+var super_armor_mesh_afterimage: Node
+var rum_mesh_afterimage: Node
+var breaker_afterimage_interval := 0.09
+var super_armor_afterimage_interval := 0.10
+var rum_afterimage_interval := 0.20
+var breaker_afterimage_elapsed := 0.0
+var super_armor_afterimage_elapsed := 0.0
+var rum_afterimage_elapsed := 0.0
 var impact_shockwaves: Array[MeshInstance3D] = []
 var impact_shockwave_ages: Array[float] = []
 var impact_shockwave_lifetimes: Array[float] = []
@@ -198,15 +207,15 @@ var silence_timer := 0.0
 
 func _ready() -> void:
 	_apply_combat_data()
-	_build_breaker_afterimage_pool()
-	_build_super_armor_outline()
+	# The skeletal model no longer has a current sprite-frame texture. Dedicated
+	# mesh-material afterimages/outlines will replace those presentation layers.
+	_build_mesh_afterimages()
 	_build_impact_shockwave_pool()
 	_build_impact_debris()
 	_build_ghostship_impact_bursts()
 	_build_water_vapor_burst()
 	_build_rum_visuals()
 	_build_perseverance_motes()
-	character_frames.frame_changed.connect(_capture_breaker_afterimage)
 	for effect: AnimatedSprite3D in [jolly_roger, ocean_storm, anchor_effect, ghostship]:
 		if effect.material_override != null:
 			effect.material_override = effect.material_override.duplicate()
@@ -234,9 +243,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_update_breaker_afterimages(delta)
+	_update_mesh_afterimages(delta)
 	_update_ocean_storm_animation_loop(delta)
-	if super_armor_outline != null:
-		super_armor_outline.set_active(has_super_armor())
 	_update_impact_shockwaves(delta)
 	_update_impact_camera_shake(delta)
 	_update_anchor_tail_dissolve(delta)
@@ -285,9 +293,10 @@ func begin_skill(skill_index: int, skill_target: CharacterBody3D) -> bool:
 		return false
 	is_casting = true
 	current_skill = skill_index
+	_cast_generation += 1
 	cast_counts[skill_index] += 1
 	cooldowns[skill_index] = _get_cooldown(skill_index)
-	_cast_skill_async(skill_index)
+	_cast_skill_async(skill_index, _cast_generation)
 	return true
 
 
@@ -419,13 +428,13 @@ func resolve_breaker_attack(skill_target: CharacterBody3D) -> void:
 	var attack_damage := garen_definition.attack_damage if garen_definition != null else 69.0
 	var bonus_damage := breaker_damage + attack_damage * breaker_damage_coefficient
 	if skill_target.has_method("receive_breaker_attack"):
-		skill_target.call("receive_breaker_attack", attack_damage, bonus_damage, fighter.global_position, &"breaker_hit")
+		skill_target.call("receive_breaker_attack", attack_damage, bonus_damage, fighter.global_position, &"breaker_hit", fighter)
 	elif skill_target.has_method("receive_hit"):
-		skill_target.call("receive_hit", fighter.global_position, &"spell1", attack_damage)
+		skill_target.call("receive_hit", fighter.global_position, &"spell1", attack_damage, fighter)
 		if skill_target.has_method("receive_skill_damage"):
-			skill_target.call("receive_skill_damage", bonus_damage, "破舰额外伤害", false, fighter.global_position, &"physical", &"breaker_hit")
+			skill_target.call("receive_skill_damage", bonus_damage, "破舰额外伤害", false, fighter.global_position, &"physical", &"breaker_hit", fighter)
 	elif skill_target.has_method("receive_skill_damage"):
-		skill_target.call("receive_skill_damage", attack_damage + bonus_damage, "破舰", true, fighter.global_position, &"physical", &"breaker_hit")
+		skill_target.call("receive_skill_damage", attack_damage + bonus_damage, "破舰", true, fighter.global_position, &"physical", &"breaker_hit", fighter)
 	if skill_target.has_method("apply_silence"):
 		skill_target.call("apply_silence", breaker_silence_duration)
 	register_courage_kill(skill_target)
@@ -433,102 +442,62 @@ func resolve_breaker_attack(skill_target: CharacterBody3D) -> void:
 
 
 func _build_breaker_afterimage_pool() -> void:
-	var pool_size := clampi(breaker_afterimage_count, 2, 3)
-	for index: int in range(pool_size):
-		var afterimage := Sprite3D.new()
-		afterimage.name = "BreakerAfterimage%d" % index
-		afterimage.visible = false
-		afterimage.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		afterimage.transparent = true
-		afterimage.shaded = false
-		afterimage.render_priority = maxi(-128, character_frames.render_priority - 1)
-		var afterimage_material := ShaderMaterial.new()
-		afterimage_material.shader = BREAKER_AFTERIMAGE_SHADER
-		afterimage_material.set_shader_parameter(&"ocean_tint", Color(
-			breaker_afterimage_color.r,
-			breaker_afterimage_color.g,
-			breaker_afterimage_color.b,
-			breaker_afterimage_alpha
-		))
-		afterimage.material_override = afterimage_material
-		add_child(afterimage)
-		afterimage.top_level = true
-		breaker_afterimages.append(afterimage)
-		breaker_afterimage_ages.append(breaker_afterimage_lifetime)
+	return
 
 
-func _build_super_armor_outline() -> void:
-	super_armor_outline = SUPER_ARMOR_OUTLINE.new()
-	super_armor_outline.name = "SuperArmorOutline"
-	add_child(super_armor_outline)
-	var profile := combat_database.get_asset_profile(&"super_armor_outline_glow") if combat_database != null else null
-	var red := Color.from_string(
-		String(combat_database.get_rule(&"presentation.super_armor_outline_red", "ff3020ff")) if combat_database != null else "ff3020ff",
-		Color(1.0, 0.19, 0.13, 1.0)
-	)
-	var gold := Color.from_string(
-		String(combat_database.get_rule(&"presentation.super_armor_outline_gold", "ffd45cff")) if combat_database != null else "ffd45cff",
-		Color(1.0, 0.83, 0.36, 1.0)
-	)
-	super_armor_outline.configure(
-		character_frames,
-		profile,
-		red,
-		gold,
-		_rule_float(&"presentation.super_armor_outline_width", 2.5),
-		_rule_float(&"presentation.super_armor_outline_glow", 1.4),
-		-1.0,
-		Vector2.ZERO,
-		_rule_float(&"presentation.outline_alpha_threshold", 0.35)
-	)
+func _build_mesh_afterimages() -> void:
+	breaker_mesh_afterimage = MESH_AFTERIMAGE.new()
+	breaker_mesh_afterimage.name = "BreakerMeshAfterimage"
+	breaker_mesh_afterimage.lifetime = breaker_afterimage_lifetime
+	breaker_mesh_afterimage.color = Color(breaker_afterimage_color.r, breaker_afterimage_color.g, breaker_afterimage_color.b, breaker_afterimage_alpha)
+	add_child(breaker_mesh_afterimage)
+	super_armor_mesh_afterimage = MESH_AFTERIMAGE.new()
+	super_armor_mesh_afterimage.name = "SuperArmorMeshAfterimage"
+	super_armor_mesh_afterimage.lifetime = 0.28
+	super_armor_mesh_afterimage.color = Color(1.0, 0.18, 0.04, 0.46)
+	add_child(super_armor_mesh_afterimage)
+	rum_mesh_afterimage = MESH_AFTERIMAGE.new()
+	rum_mesh_afterimage.name = "RumMeshAfterimage"
+	rum_mesh_afterimage.lifetime = 0.32
+	rum_mesh_afterimage.color = Color(1.0, 0.67, 0.18, 0.28)
+	add_child(rum_mesh_afterimage)
+
+
+func _update_mesh_afterimages(delta: float) -> void:
+	if _should_capture_breaker_afterimage() and breaker_mesh_afterimage != null:
+		breaker_afterimage_elapsed += delta
+		if breaker_afterimage_elapsed >= breaker_afterimage_interval:
+			breaker_afterimage_elapsed = 0.0
+			breaker_mesh_afterimage.call(&"capture", character_model)
+	else:
+		breaker_afterimage_elapsed = breaker_afterimage_interval
+	if has_super_armor() and super_armor_mesh_afterimage != null:
+		super_armor_afterimage_elapsed += delta
+		if super_armor_afterimage_elapsed >= super_armor_afterimage_interval:
+			super_armor_afterimage_elapsed = 0.0
+			super_armor_mesh_afterimage.call(&"capture", character_model)
+	else:
+		super_armor_afterimage_elapsed = super_armor_afterimage_interval
+	if rum_timer > 0.0 and rum_mesh_afterimage != null:
+		rum_afterimage_elapsed += delta
+		if rum_afterimage_elapsed >= rum_afterimage_interval:
+			rum_afterimage_elapsed = 0.0
+			rum_mesh_afterimage.call(&"capture", character_model)
+	else:
+		rum_afterimage_elapsed = rum_afterimage_interval
 
 
 func _capture_breaker_afterimage() -> void:
-	if breaker_afterimages.is_empty() or not _should_capture_breaker_afterimage():
-		return
-	var frame_texture := character_frames.sprite_frames.get_frame_texture(
-		character_frames.animation, character_frames.frame
-	)
-	if frame_texture == null:
-		return
-	var afterimage := breaker_afterimages[breaker_afterimage_cursor]
-	afterimage.texture = frame_texture
-	var afterimage_material := afterimage.material_override as ShaderMaterial
-	if afterimage_material != null:
-		afterimage_material.set_shader_parameter(&"frame_texture", frame_texture)
-		afterimage_material.set_shader_parameter(&"ocean_tint", Color(
-			breaker_afterimage_color.r,
-			breaker_afterimage_color.g,
-			breaker_afterimage_color.b,
-			breaker_afterimage_alpha
-		))
-	afterimage.global_transform = character_frames.global_transform
-	afterimage.offset = character_frames.offset
-	afterimage.pixel_size = character_frames.pixel_size
-	afterimage.axis = character_frames.axis
-	afterimage.billboard = character_frames.billboard
-	afterimage.fixed_size = character_frames.fixed_size
-	afterimage.centered = character_frames.centered
-	afterimage.double_sided = character_frames.double_sided
-	afterimage.no_depth_test = character_frames.no_depth_test
-	afterimage.texture_filter = character_frames.texture_filter
-	afterimage.flip_h = character_frames.flip_h
-	afterimage.flip_v = character_frames.flip_v
-	afterimage.layers = character_frames.layers
-	afterimage.modulate = Color.WHITE
-	afterimage.visible = true
-	breaker_afterimage_ages[breaker_afterimage_cursor] = 0.0
-	breaker_afterimage_cursor = (breaker_afterimage_cursor + 1) % breaker_afterimages.size()
-	breaker_afterimage_capture_count += 1
+	return
 
 
 func _should_capture_breaker_afterimage() -> bool:
-	if breaker_timer <= 0.0 or character_frames.sprite_frames == null:
+	if breaker_timer <= 0.0:
 		return false
 	var definition := _definition(SKILL_BREAKER)
 	var run_animation := definition.movement_animation_name if definition != null else &"run_spell"
 	var attack_animation := definition.empowered_animation_name if definition != null else &"spell1"
-	return character_frames.animation == run_animation or character_frames.animation == attack_animation
+	return character_model.current_animation == run_animation or character_model.current_animation == attack_animation
 
 
 func _update_breaker_afterimages(delta: float) -> void:
@@ -719,14 +688,7 @@ func _build_rum_visuals() -> void:
 	triangle_mesh.material = triangle_material
 	rum_triangles.mesh = triangle_mesh
 	add_child(rum_triangles)
-	for frame_offset: int in [1, 2]:
-		var afterimage := SUPER_ARMOR_AFTERIMAGE.new()
-		afterimage.name = "RumAfterimage%d" % frame_offset
-		add_child(afterimage)
-		afterimage.configure(
-			character_frames, null, Color(0.88, 0.53, 0.16, 1.0), frame_offset, 0.018
-		)
-		rum_afterimages.append(afterimage)
+	# Rum's former sprite-frame ghosts are disabled pending a skinned-mesh trail.
 
 
 func _update_rum_visuals() -> void:
@@ -1051,7 +1013,7 @@ func _finish_anchor_tail() -> void:
 		material.set_shader_parameter(&"tail_dissolve", 0.0)
 
 
-func receive_incoming_damage(amount: float, damage_type: StringName = &"physical", is_critical := false) -> void:
+func receive_incoming_damage(amount: float, damage_type: StringName = &"physical", is_critical := false, source_actor: Node = null, target_actor: Node = null, source_name := "伤害") -> void:
 	var resolved := CombatMath.resolve_damage(amount, damage_type, get_effective_armor(), get_effective_magic_resistance(), combat_database)
 	if black_sail_timer > 0.0 and damage_type != &"true":
 		var reduction_cap := float(combat_database.get_rule(&"damage.reduction_cap", 0.90)) if combat_database != null else 0.90
@@ -1067,6 +1029,10 @@ func receive_incoming_damage(amount: float, damage_type: StringName = &"physical
 		rum_settlement_pending = delayed_damage_pool > 0.0
 	else:
 		current_health = maxf(0.0, current_health - health_damage)
+	if source_actor != null and health_damage > 0.0:
+		var stats := get_node_or_null("/root/CombatStats")
+		if stats != null:
+			stats.call("record_damage", source_actor, target_actor if target_actor != null else fighter, health_damage, source_name, damage_type)
 	if resolved > 0.0 and fighter != null and fighter.has_method("present_resolved_damage"):
 		fighter.call("present_resolved_damage", resolved, damage_type, is_critical)
 	if resolved > 0.0:
@@ -1109,7 +1075,12 @@ func _update_perseverance(delta: float) -> void:
 		play_audio_cue(&"garen_passive_recovery_activate", fighter.global_position, 1.0)
 	var period := maxf(passive_regen_period, 0.01)
 	var healed := max_health * get_perseverance_regen_ratio_per_5() * delta / period
-	current_health = minf(max_health, current_health + healed)
+	var actual_heal := minf(max_health - current_health, healed)
+	current_health += actual_heal
+	if actual_heal > 0.0 and fighter != null:
+		var stats := get_node_or_null("/root/CombatStats")
+		if stats != null:
+			stats.call("record_healing", fighter, fighter, actual_heal, "坚韧回复")
 
 
 func _update_perseverance_vfx(delta: float) -> void:
@@ -1216,6 +1187,8 @@ func get_control_duration_multiplier() -> float:
 
 
 func activate_black_sail_defenses() -> void:
+	if black_sail_timer <= 0.0:
+		_record_buff(&"black_sail", true)
 	black_sail_timer = black_sail_duration
 	black_sail_guard_timer = black_sail_guard_duration
 	black_sail_guard_shield_remaining = black_sail_shield + _bonus_health() * black_sail_shield_bonus_health_ratio
@@ -1231,6 +1204,8 @@ func _bonus_health() -> float:
 
 
 func apply_seven_seas_rum(duration: float, move_speed_bonus: float) -> void:
+	if rum_timer <= 0.0:
+		_record_buff(&"seven_seas_rum", true)
 	rum_timer = maxf(rum_timer, duration)
 	rum_speed_bonus = maxf(rum_speed_bonus, move_speed_bonus)
 
@@ -1251,29 +1226,32 @@ func prepare_ghostship_direction(destination: Vector3) -> float:
 	return horizontal_direction
 
 
-func _cast_skill_async(skill_index: int) -> void:
+func _cast_skill_async(skill_index: int, cast_generation: int) -> void:
 	match skill_index:
 		SKILL_BREAKER:
 			await _cast_breaker()
 		SKILL_BLACK_SAIL:
 			_cast_black_sail()
 		SKILL_OCEAN_STORM:
-			await _cast_ocean_storm()
+			await _cast_ocean_storm(cast_generation)
 		SKILL_TYRANT_JUDGMENT:
 			await _cast_tyrant_judgment()
 		SKILL_SEVEN_SEAS:
 			await _cast_seven_seas()
-	is_casting = false
-	current_skill = 0
-	demo_timer = demo_gap
+	if _cast_generation == cast_generation:
+		is_casting = false
+		current_skill = 0
+		demo_timer = demo_gap
 
 
 func _cast_breaker() -> void:
 	slow_multiplier = 1.0
+	if breaker_timer <= 0.0:
+		_record_buff(&"breaker_speed", true)
 	breaker_timer = breaker_duration
 	breaker_empowered_attack = true
 	play_audio_cue(_skill_audio_profile(SKILL_BREAKER, &"garen_q_cast"), fighter.global_position, 1.0)
-	character_frames.play(_skill_windup_animation(SKILL_BREAKER, &"channel_wndup"))
+	character_model.play_semantic(_skill_windup_animation(SKILL_BREAKER, &"channel_wndup"))
 	await get_tree().create_timer(_skill_float(SKILL_BREAKER, "cast_time", 0.16)).timeout
 
 
@@ -1284,11 +1262,9 @@ func _cast_black_sail() -> void:
 	activate_black_sail_defenses()
 
 
-func _cast_ocean_storm() -> void:
+func _cast_ocean_storm(cast_generation: int) -> void:
 	var animation := _skill_animation(SKILL_OCEAN_STORM, &"spell3")
-	character_frames.play(animation)
-	character_frames.pause()
-	character_frames.frame = 0
+	character_model.play_semantic(animation)
 	ocean_storm_loop_elapsed = 0.0
 	ocean_storm_loop_active = true
 	ocean_storm.visible = true
@@ -1298,32 +1274,40 @@ func _cast_ocean_storm() -> void:
 	var spins := _ocean_storm_spin_count()
 	var interval := ocean_storm_duration / maxf(float(spins), 1.0)
 	var elapsed := 0.0
-	while elapsed < ocean_storm_duration:
+	while elapsed < ocean_storm_duration and _cast_generation == cast_generation:
 		await get_tree().create_timer(interval).timeout
+		if _cast_generation != cast_generation:
+			return
 		elapsed += interval
 		resolve_ocean_storm_tick()
+	if _cast_generation != cast_generation:
+		return
 	ocean_storm_loop_active = false
-	character_frames.play(animation)
-	character_frames.frame = mini(ocean_storm_loop_frame_count, character_frames.sprite_frames.get_frame_count(animation) - 1)
+	character_model.play_semantic(animation)
 	ocean_storm.visible = false
 	ocean_storm.stop()
 	ocean_audio.stop()
 
 
-func _update_ocean_storm_animation_loop(delta: float) -> void:
-	if not ocean_storm_loop_active or character_frames.sprite_frames == null:
+func cancel_ocean_storm() -> void:
+	if not is_casting or current_skill != SKILL_OCEAN_STORM:
+		return
+	_cast_generation += 1
+	is_casting = false
+	current_skill = 0
+	demo_timer = demo_gap
+	ocean_storm_loop_active = false
+	ocean_storm.visible = false
+	ocean_storm.stop()
+	ocean_audio.stop()
+
+
+func _update_ocean_storm_animation_loop(_delta: float) -> void:
+	if not ocean_storm_loop_active:
 		return
 	var animation := _skill_animation(SKILL_OCEAN_STORM, &"spell3")
-	var available_frames := character_frames.sprite_frames.get_frame_count(animation)
-	if available_frames <= 0:
-		return
-	if character_frames.animation != animation:
-		character_frames.play(animation)
-		character_frames.pause()
-	ocean_storm_loop_elapsed += delta
-	var frame_count := mini(ocean_storm_loop_frame_count, available_frames)
-	var frame_rate := maxf(character_frames.sprite_frames.get_animation_speed(animation), 0.01)
-	character_frames.frame = posmod(floori(ocean_storm_loop_elapsed * frame_rate), frame_count)
+	if character_model.current_animation != animation:
+		character_model.play_semantic(animation)
 
 
 func _cast_tyrant_judgment() -> void:
@@ -1338,7 +1322,7 @@ func _cast_tyrant_judgment() -> void:
 	var anchor_material := anchor_effect.material_override as ShaderMaterial
 	if anchor_material != null:
 		anchor_material.set_shader_parameter(&"tail_dissolve", 0.0)
-	character_frames.play(_skill_animation(SKILL_TYRANT_JUDGMENT, &"spell4"))
+	character_model.play_semantic(_skill_animation(SKILL_TYRANT_JUDGMENT, &"spell4"))
 	anchor_effect.global_position = target.global_position
 	play_audio_cue(&"garen_r_buff_activate", target.global_position, 1.0)
 	anchor_effect.visible = true
@@ -1350,7 +1334,7 @@ func _cast_tyrant_judgment() -> void:
 		var health_ratio := float(target.call("get_health_ratio")) if target.has_method("get_health_ratio") else 1.0
 		var target_max_health := float(target.get("max_health"))
 		var damage := calculate_judgment_damage(target_max_health, health_ratio)
-		target.call("receive_skill_damage", damage, "暴君审判", false, fighter.global_position, &"true", &"judgment_hit")
+		target.call("receive_skill_damage", damage, "暴君审判", false, fighter.global_position, &"true", &"judgment_hit", fighter)
 		register_courage_kill(target)
 		damage_event_count += 1
 	await get_tree().create_timer(_skill_float(SKILL_TYRANT_JUDGMENT, "recovery_time", 0.35)).timeout
@@ -1359,7 +1343,7 @@ func _cast_tyrant_judgment() -> void:
 func _cast_seven_seas() -> void:
 	ghostship_last_impact_frame = -1
 	_request_awakening_cutin(SKILL_SEVEN_SEAS)
-	character_frames.play(_skill_animation(SKILL_SEVEN_SEAS, &"taunt"))
+	character_model.play_semantic(_skill_animation(SKILL_SEVEN_SEAS, &"taunt"))
 	# This is a ground-targeted area skill. The AI chooses the target's position
 	# at cast time, but the area does not continue tracking that character.
 	var area_center := target.global_position if is_instance_valid(target) else fighter.global_position
@@ -1419,7 +1403,7 @@ func resolve_ocean_storm_tick() -> int:
 		if enemy.has_method("receive_skill_damage"):
 			_register_damage_source(enemy)
 			var damage := base_damage * (nearest_multiplier if index == 0 else 1.0)
-			enemy.call("receive_skill_damage", damage, "翻江倒海", true, fighter.global_position, &"physical", &"ocean_hit")
+			enemy.call("receive_skill_damage", damage, "翻江倒海", true, fighter.global_position, &"physical", &"ocean_hit", fighter)
 			var target_id := enemy.get_instance_id()
 			var hit_count := int(ocean_storm_hit_counts.get(target_id, 0)) + 1
 			ocean_storm_hit_counts[target_id] = hit_count
@@ -1444,7 +1428,7 @@ func resolve_ghostship_impact(area_center: Vector3) -> int:
 	for enemy: CharacterBody3D in _get_enemy_targets_in_radius(area_center, ghostship_radius):
 		if enemy.has_method("receive_skill_damage"):
 			_register_damage_source(enemy)
-			enemy.call("receive_skill_damage", ghostship_damage, "七海霸权", false, fighter.global_position, &"magic", &"ghostship_hit")
+			enemy.call("receive_skill_damage", ghostship_damage, "七海霸权", false, fighter.global_position, &"magic", &"ghostship_hit", fighter)
 		if enemy.has_method("apply_stun"):
 			enemy.call("apply_stun", ghostship_stun_duration)
 		register_courage_kill(enemy)
@@ -1516,7 +1500,10 @@ func _register_damage_source(target_actor: CharacterBody3D) -> void:
 func _update_timers(delta: float) -> void:
 	for index: int in range(SKILL_BREAKER, SKILL_SEVEN_SEAS + 1):
 		cooldowns[index] = maxf(0.0, cooldowns[index] - delta)
+	var had_breaker := breaker_timer > 0.0
 	breaker_timer = maxf(0.0, breaker_timer - delta)
+	if had_breaker and breaker_timer <= 0.0:
+		_record_buff(&"breaker_speed", false)
 	if breaker_timer <= 0.0:
 		breaker_empowered_attack = false
 	silence_timer = maxf(0.0, silence_timer - delta)
@@ -1528,6 +1515,8 @@ func _update_timers(delta: float) -> void:
 		magic_resist_shred_multiplier = 1.0
 	var had_black_sail := black_sail_timer > 0.0
 	black_sail_timer = maxf(0.0, black_sail_timer - delta)
+	if had_black_sail and black_sail_timer <= 0.0:
+		_record_buff(&"black_sail", false)
 	black_sail_guard_timer = maxf(0.0, black_sail_guard_timer - delta)
 	if black_sail_guard_timer <= 0.0 and black_sail_guard_shield_remaining > 0.0:
 		normal_shield = maxf(0.0, normal_shield - black_sail_guard_shield_remaining)
@@ -1539,6 +1528,8 @@ func _update_timers(delta: float) -> void:
 		jolly_audio.stop()
 	var had_rum := rum_timer > 0.0
 	rum_timer = maxf(0.0, rum_timer - delta)
+	if had_rum and rum_timer <= 0.0:
+		_record_buff(&"seven_seas_rum", false)
 	if had_rum and rum_timer <= 0.0 and rum_settlement_pending:
 		# Rum's postponed half resolves only when the buff ends, and can never kill.
 		current_health = maxf(1.0, current_health - delayed_damage_pool)
@@ -1631,6 +1622,12 @@ func _get_cooldown(skill_index: int) -> float:
 	if combat_database != null and garen_definition != null:
 		return CombatMath.cooldown_with_haste(base_cooldown, garen_definition.ability_haste, combat_database)
 	return base_cooldown
+
+
+func get_skill_cooldown_state(skill_index: int) -> Dictionary:
+	if skill_index < SKILL_BREAKER or skill_index > SKILL_SEVEN_SEAS or skill_index >= cooldowns.size():
+		return {"remaining": 0.0, "total": 0.0}
+	return {"remaining": float(cooldowns[skill_index]), "total": _get_cooldown(skill_index)}
 
 
 func _apply_combat_data() -> void:
@@ -1887,3 +1884,11 @@ func _apply_sprite_asset_profile(effect: AnimatedSprite3D, asset_id: StringName)
 		effect.speed_scale = passive_vfx_frame_rate / maxf(source_frame_rate, 0.01)
 	effect.render_priority = profile.render_priority
 	effect.no_depth_test = profile.no_depth_test
+
+
+func _record_buff(buff_id: StringName, active: bool) -> void:
+	if fighter == null:
+		return
+	var stats := get_node_or_null("/root/CombatStats")
+	if stats != null:
+		stats.call("record_buff", fighter, fighter, buff_id, active)

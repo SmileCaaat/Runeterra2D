@@ -1,6 +1,6 @@
 # Ryze 参考与改编档案
 
-> 本文是瑞兹的唯一档案。前半有早期设计快照，其中“QWE 全程尾三帧取消”、护盾滤色及“尚未实现/未入表”等表述已过时，以本文后半锁定决策和文末视觉验收为准。已有 CSV、场景和脚本，不要据此从零重做；已有文件也不等于功能验收完成。普攻第 6 帧发球、Q 第 4 帧发球、W 第 6 帧结算、E 第 7 帧发球（表内零基 5/3/5/6）；普攻和 QE 在投射物接触时结算。超负荷改为施法加速 1.8 倍加盖伦 Q 残影；出手后按最短锁解锁，剩余帧可被下一动打断。T 按爆发窗开，R 按开团/切入/逃生折跃。`TBuff` 与 `RWinddown` 以当前 `ryze.tscn` 为准。工程交接见 [cursor-handoff.md](../../../docs-design/cursor-handoff.md)。
+> 本文是瑞兹的唯一档案。早期“QWE 全程尾三帧取消”、护盾滤色及“尚未实现/未入表”等设计快照已过时，以本文后半锁定决策和文末视觉验收为准。角色本体序列帧及其帧事件映射已清理；当前 `animation_events.csv` 用秒制记录普攻 `0.5s`、Q `0.3s`、W `0.5s`、E `0.6s` 的出手/结算事件。普攻与 QE 的伤害仍在投射物接触时结算。超负荷使用 1.8 倍施法速率与盖伦 Q 模型残影；出手后按最短锁解锁，剩余动作演出可被下一动打断。T 按爆发窗开，R 按开团/切入/逃生折跃。`TBuff` 与 `RWinddown` 以当前 `ryze.tscn` 为准。工程交接见 [cursor-handoff.md](../../../docs-design/cursor-handoff.md)。
 
 ## 来源快照
 
@@ -27,9 +27,9 @@
 - 瑞兹职业采用 `mage → battlemage`。基础轮盘仍是中距离 E 降抗、W 控制、Q 输出；T 与 R 是瑞兹专属决策，不套盖伦式低血觉醒或终结技。
 - T（绝望之力）是爆发强化 Buff：只在可兑现连招时开（Q/W/E 至少两个就绪，或奥术 ≥4 层，或已在超负荷）。不按自身残血开。引导 0.8 秒结束后开始 6 秒强化，并同时授予满层超负荷。
 - R（曲境折跃）是战场折跃：过近或被围时反向逃生，超出 `5.5m` 且仍在 `25m` 内、手头有技能可兑现时折跃切入/开团。切入落点停在 Battlemage 偏好距离 `3.0m`，不叠进目标碰撞体。开团与逃生落点都必须留在 `GroundMesh` 有效范围内：以地面 AABB 内缩 `0.6m` 后，再和 `ryze_demo` 档案边界取交集。训练场地砖为 `32 × 8`，纵深只有 ±4m，档案不得再写成 ±4.3。
-- 战斗站位保持中距离：进入 `5.5m` 后若近于 `3.0m` 则后撤，不贴脸输出。
+- 战斗站位保持中距离：进入 `5.5m` 后若近于 `3.0m` 则后撤，不贴脸输出。后撤时 `run` 的模型面向必须取实际移动向量（远离目标），而不是仍看向目标，避免 GLB 跑步动画出现倒着滑行。
 - E 弹射可以把瑞兹自己当作链路节点，但自身不受 E 伤害、减抗或 Impact。T 溅射只打主目标周围敌人，绝不打自己或同阵营；T 的 15% 吸血不得在瑞兹身上弹出伤害数字。
-- 超负荷窗口要让连招更强势：窗口内普攻与 Q/W/E 的施法动画速度为 `ryze.supercharge.cast_speed_scale = 1.8`（绝对值，不与常态 1.35 叠乘），并复用盖伦破舰 Q 的加速残影。图集帧不删；出手后按 `max(出手时刻 + recovery, min_lock)` 解锁，剩余演出可被下一动打断。T、R、受击与跑步不受该加速与解锁影响。
+- 超负荷窗口要让连招更强势：窗口内普攻与 Q/W/E 的 GLB 施法动画速度为 `ryze.supercharge.cast_speed_scale = 1.8`（绝对值，不与常态 1.35 叠乘），并复用盖伦破舰 Q 的模型残影。出手后按 `max(出手时刻 + recovery, min_lock)` 解锁，剩余动作演出可被下一动打断。T、R、受击与跑步不受该加速与解锁影响。
 - E 初段与弹射法球外包一层 `ElasticVoxelShell` 符文青体素（数量/尺寸/半径/颜色走 `ryze.e.voxel_*`，颜色含低透明度 `78d9ff59`）。壳跟 `Spell3_E` 作者原点，不跟画布中心，也不叠 `E_LAUNCH_Y_BIAS`。弹射额外做挤压回弹与双正弦弧，只改观感，不改命中距离、速度或伤害。
 
 ## 横版动作与表现契约
@@ -38,17 +38,17 @@
 | --- | --- | --- | --- |
 | 普攻 | 来源距离 `550 → 5.5m`；法球速度 `1300 → 13m/s`；碰撞宽度 `85 → 0.85m` | `attack1 → attack2 → attack3 → crit` 为连续四段；不可移动施放、允许转向；法球接触目标时结算伤害 | 使用 `basic_attack` 的 12 帧法球图集；命中停顿/受击硬直/击退分别为盖伦普攻的 `1/3`：`0.02s / 0.08s / 0.933m/s` |
 | Q · Overload | 方向投射物；来源距离 `550 → 5.5m`、宽 `110 → 1.1m`、速度 `1700 → 17m/s`；仅首个命中敌人受击；纵深容差 `1.1m` | 无霸体；伤害有效时点是法球接触目标，而非角色 `spell1` 的某一帧；命中反馈与盖伦普攻相同：停顿 `0.06s`、硬直 `0.24s`、击退初速 `2.8m/s`；普攻与 QWE 常态加速 1.35、超负荷 1.8，出手后按最短锁解锁 | 角色播放 `spell1`；飞行中对 `Spell1_Q` 序列帧做沿程弹性拉伸/压缩与微颤（`ryze.q.travel_*` / `launch_pulse` / `throb_*`）；命中时播放 `impact` |
-| W · Rune Prison | 锁定目标；来源距离 `550 → 5.5m`；目标指向、必中，非投射物，不做纵深容差判定 | 无霸体；角色 `spell2` 第 5 帧同步结算伤害与 `1 / 1.1 / 1.2 / 1.3 / 1.4s` 定身；无击退，受击硬直为盖伦普攻 `1/4 = 0.06s`；未指定额外命中停顿，暂定 `0s` | 目标处同步播放 `Spell2_W`；命中时播放 `impact`；定身存续期间循环 `W_loop`，结束时立即停止 |
+| W · Rune Prison | 锁定目标；来源距离 `550 → 5.5m`；目标指向、必中，非投射物，不做纵深容差判定 | 无霸体；角色 `spell2` 出手约 `0.5s` 时结算伤害与 `1 / 1.1 / 1.2 / 1.3 / 1.4s` 定身；无击退，受击硬直为盖伦普攻 `1/4 = 0.06s`；未指定额外命中停顿，暂定 `0s` | 目标处同步播放 `Spell2_W`；命中时播放 `impact`；定身存续期间循环 `W_loop`，结束时立即停止 |
 | E · Spell Flux | 锁定目标；来源距离 `550 → 5.5m`；初段投射物速度 `1500 → 15m/s`；弹射半径 `350 → 3.5m`、弹射速度 `1500 → 15m/s`；目标指向，不做纵深容差判定 | 无霸体；初段和每次弹射的伤害有效时点均为法球接触目标；命中反馈为盖伦普攻 `1/3`：停顿 `0.02s`、硬直 `0.08s`、击退初速 `0.933m/s`。链路包含主目标并将其作为后续弹射起点；无次级目标时回弹主目标；同一目标单链受伤次数不设上限。可把瑞兹自己当弹射节点，但自身不受伤害或减抗 | 初段及弹射均用 `Spell3_E`，外包 `ElasticVoxelShell` 体素壳；弹射额外挤压回弹。每次命中播放 `impact`。减抗复用盖伦破甲那套小图标弹出/晃动/回弹，贴图为 `MagicResistanceReduction.png` |
-| T · Desperate Power | 自身；基本技能外溢半径 `350 → 3.5m`；来源 `+80` 移速按既定比例换算为 `+0.8m/s` | 播放 `taunt` 后进入 6 秒觉醒强化；引导期间拥有霸体，强化持续期不默认继承霸体；引导结束授予满层超负荷且不消耗次数；保留被动冷却缩减 `10 / 20 / 30%` | 觉醒 Cut-In 使用 `assets/presentation/awakening/ryze/` 立绘与语音；`TBuff` / `Shield` 手调 +X，`TBuffFlip` / `ShieldFlip` 手调 -X，运行时按朝向选用对应节点，不改 Transform。强化 6 秒内循环 `T_Buff`；引导期复用盖伦 `SuperArmorOutline` 黄红黄轮廓。触发外溢的主目标命中叠一层 `Lightning Chain` one-shot（`vfx_library_lightning_chain`） |
-| R · Realm Warp | 友军选取来源半径 `550 → 5.5m`；最大传送来源距离 `2500 → 25m`；落点与传送路径钳在 `GroundMesh` 与 `ryze_demo` 交集内 | 2 秒引导仅能被沉默、眩晕、击飞打断；打断/主动取消后全额返还冷却。传送落地后强制进入专属 `spell4_winddown` 出生动作；以落点为中心 `5.5m` 内每个敌人承受 3 次 E 初段伤害并直接获得 3 层 5 秒乘算减魔抗，不生成 E 初段弹道、分裂或回弹 | 角色 `spell4_winddown` 与场景 `RWinddown` 同步；特效用 `ryze.tscn` 手调 Transform，时长等于落地动画，随朝向翻转 X。范围内每个受伤敌人脚底播一次 `VFXZapLightning_01`；T 外溢到的敌人同样各一次。缩放 `ryze.r.zap_scale`，不跟三次 E 重复播放 |
+| T · Desperate Power | 自身；基本技能外溢半径 `350 → 3.5m`；来源 `+80` 移速按既定比例换算为 `+0.8m/s` | 播放 `taunt` 后进入 6 秒觉醒强化；引导期间拥有霸体，强化持续期不默认继承霸体；引导结束授予满层超负荷且不消耗次数；保留被动冷却缩减 `10 / 20 / 30%` | 觉醒 Cut-In 使用 `assets/presentation/awakening/ryze/` 立绘与语音；`TBuff` / `Shield` 手调 +X，`TBuffFlip` / `ShieldFlip` 手调 -X，运行时按朝向选用对应节点，不改 Transform。强化期循环 `T_Buff`；霸体和护盾使用独立状态表现，不复用阵营 Rim 或交互描边。触发外溢的主目标命中叠一层 `Lightning Chain` one-shot（`vfx_library_lightning_chain`） |
+| R · Realm Warp | 友军选取来源半径 `550 → 5.5m`；最大传送来源距离 `2500 → 25m`；落点与传送路径钳在 `GroundMesh` 与 `ryze_demo` 交集内 | 传送前 2 秒引导播放 `spell4 → Spell4_Idle`，且仅能被沉默、眩晕、击飞打断；打断/主动取消后全额返还冷却。落地后强制进入 `spell4_winddown → Ryze_Spell4_Winddown.anm` 出生动作；该模型动作结束即解除移动锁。以落点为中心 `5.5m` 内每个敌人承受 3 次 E 初段伤害并直接获得 3 层 5 秒乘算减魔抗，不生成 E 初段弹道、分裂或回弹 | `RWinddown` 与落雷均为独立特效，按自身序列帧/粒子生命周期播放，不得延长角色 `action_lock`；特效用 `ryze.tscn` 手调 Transform，随朝向翻转 X。范围内每个受伤敌人脚底播一次 `VFXZapLightning_01`；T 外溢到的敌人同样各一次。缩放 `ryze.r.zap_scale`，不跟三次 E 重复播放 |
 
 ### 超负荷施法加速
 
-- 图集帧完整保留，不删尾帧。出手后不再用整段动画当 `action_lock`。
-- 常态普攻与 Q/W/E 的 `speed_scale` 为 `ryze.cast.speed_scale = 1.35`。超负荷窗口内改为 `ryze.supercharge.cast_speed_scale = 1.8`。命中帧序号不变，只是更快到达。
+- 本体由 GLB 动画完整表现；出手时序以秒制事件记录。出手后不再用整段动画当 `action_lock`。
+- 常态普攻与 Q/W/E 的 `speed_scale` 为 `ryze.cast.speed_scale = 1.35`。超负荷窗口内改为 `ryze.supercharge.cast_speed_scale = 1.8`。施法动画加速时，命中时刻按速率同步提前。
 - 解锁时刻为 `max(出手时刻 + ryze.cast.recovery_seconds, min_lock)`。常态最短锁 `0.90s`，超负荷最短锁 `0.70s`。下一动 `play()` 可打断剩余演出。
-- 同一窗口内，普攻与 Q/W/E 换帧时留下盖伦破舰 Q 同款残影（数量、寿命、透明度和海洋蓝取 `presentation.breaker_afterimage_*`）。
+- 同一窗口内，普攻与 Q/W/E 切换动作时留下盖伦破舰 Q 同款模型残影（数量、寿命、透明度和海洋蓝取 `presentation.breaker_afterimage_*`）。
 - T、R、跑步、受击不受该加速、最短锁与残影影响。
 
 ### R 落地 Spell Flux 规则
@@ -60,11 +60,12 @@
 
 ## 已接入美术资源
 
-- 角色序列帧已复制到 `res://assets/characters/rune_mage_ryze/`，并由 `build_ryze_sprite_frames.gd` 生成 `ryze_sprite_frames.tres`：共 21 个状态、501 帧。`taunt` 是预留给项目 T 槽位的角色动画；它不是对当前 PC 技能组存在 T 技能的声明。
+- 角色本体当前使用 `res://assets/characters/rune_mage_ryze_3d/rune_mage_ryze.glb`，由 `RyzeModel` 的语义状态机驱动；`idle → Idle1`、`run → Run_Normal`、`attack1/2/3 → Attack1/2/3`、`crit → Crit`、`spell1/2/3 → Spell1/2/3`、`spell4 → Spell4_Idle`、`spell4_winddown → Ryze_Spell4_Winddown.anm`、`taunt → Taunt`、`death → Death`。`taunt` 是预留给项目 T 槽位的角色动画；它不是对当前 PC 技能组存在 T 技能的声明。
+- 瑞兹角色本体序列帧（原 21 个状态、501 帧）及其生成工具已在无引用审计后删除；本体动画由 `RyzeModel` 的 GLB 状态机驱动，普攻与 Q/W/E 事件直接使用秒制时序。
 - 技能序列帧、普攻法球、护盾、图标、觉醒语音和原画已复制到 `res://assets/vfx/ryze_skills/`，并由 `build_ryze_skill_vfx.gd` 生成 `ryze_skill_vfx_frames.tres`：`basic_attack`（12 帧）、`Ryze_Shield`（32 帧循环，Screen/滤色材质）、`Spell1_Q`、`Spell2_W`、`Spell3_E`、`Spell4_R_winddown`、`W_loop`、`T_Buff` 与 `impact`。
 - `W_loop` 是当前唯一预设循环的技能表现；它仅表达资源播放方式，尚不等价于 W 的最终机制。觉醒 Cut-In 已接入 `awakening_cutin_profiles.csv` 的 `ryze_desperate_power_awaken`。
 - 瑞兹体型与盖伦相同；角色 `pixel_size`、逻辑脚底锚点与受击高度将复用盖伦的同量级标尺，不能仅按瑞兹图集的像素尺寸自动放大或缩小。
-- 普攻动作固定采用 `attack1 → attack2 → attack3 → crit` 四段连续序列；法球使用 `basic_attack`，其射程、速度、碰撞宽度与命中时机仍须通过基础攻击 hit profile 接线。
+- 普攻动作的语义连段固定为 `attack1 → attack2 → attack3 → crit`；当前 GLB 本体分别映射为 `Attack1/2/3/Crit`。法球仍使用 `basic_attack`，其射程、速度、碰撞宽度与命中时机仍须通过基础攻击 hit profile 接线。
 
 ## 当前基础与成长属性
 
@@ -121,7 +122,7 @@
 ## 横版动作化待决项
 
 - 法力值目前只是属性契约，尚无通用消耗/回复/额外法力缩放运行时管线；P 与 Q/W/E 伤害不能在该能力补齐前假称已完成。
-- 普攻 / Q/E 接触结算、W 第 5 帧、hit profile 与 animation_events 已入表。Q 用 `1.1m` 纵深容差，W/E 锁定不做纵深判定。
+- 普攻 / Q/E 接触结算、W `0.5s` 秒制事件、hit profile 与 animation_events 已入表。Q 用 `1.1m` 纵深容差，W/E 锁定不做纵深判定。
 - R 落点已钳在 `GroundMesh` 与 `ryze_demo` 档案边界；引导结束后于原点 `5.5m` 内捕获同队友军，与瑞兹共用同一平面位移（各自再钳边界）。
 - T 的法术吸血必须以通用“技能伤害治疗”能力实现；不能在瑞兹控制器中硬编码。
 - 觉醒 Cut-In 与技能音频已有档案行和资源路径，明天再接线。
@@ -182,7 +183,7 @@ ryze.e.hit_x_bias = 0.5   # 世界坐标 +X，不随朝向翻转
 
 普攻 / Q 的 `offset = (-126.5, 622.5)` 来自 `Vector2(width/2 - originX, originY - height/2)`，画布 `1439×1653`、`originPixel (846, 1449)`。`_ready()` 会按 JSON 重写这两项 offset，不要顺带改 position / scale / 透明度。
 
-`TBuff` / `Shield` 只负责朝 +X。朝 -X 用 2026-09-06 用户手调的 `TBuffFlip (1.280, 5.239, 1.812)` 与 `ShieldFlip (0.746, 0.910, 0)`，不是 +X 的 X 镜像。运行时按 `CharacterFrames.flip_h` 选用，不改节点 Transform，也不写 `originPixel` offset。编辑器里 Flip 节点默认可见。
+`TBuff` / `Shield` 只负责朝 +X。朝 -X 用 2026-09-06 用户手调的 `TBuffFlip (1.280, 5.239, 1.812)` 与 `ShieldFlip (0.746, 0.910, 0)`，不是 +X 的 X 镜像。运行时按 `RyzeCombatAI._faces_left` 选用，不改节点 Transform，也不写 `originPixel` offset。编辑器里 Flip 节点默认可见。
 
 ## 脱手法球约定（取代画布中心锚点）
 

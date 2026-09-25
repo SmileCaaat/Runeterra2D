@@ -24,7 +24,7 @@ signal defeated(killer_team: StringName)
 @export var hurt_visual_duration := 0.12
 
 @onready var collision_shape: CollisionShape3D = $Collision
-@onready var frames: AnimatedSprite3D = $Frames
+@onready var model: Node3D = $Model
 @onready var shadow: Sprite3D = $GroundShadow
 @onready var label: Label3D = $StateLabel
 @onready var hit_particles: CPUParticles3D = $HitSparkParticles
@@ -72,7 +72,7 @@ func _ready() -> void:
 	add_to_group(&"neutral_actor")
 	add_to_group(&"monster_actor")
 	add_to_group(&"combat_target")
-	frames.play(&"spawn")
+	model.call(&"play_semantic", &"spawn")
 	_update_label()
 
 func configure_route(points: PackedVector3Array, arena_center: Vector3) -> void:
@@ -84,7 +84,6 @@ func configure_route(points: PackedVector3Array, arena_center: Vector3) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_armor_shred(delta)
-	_sync_frame_material()
 	if dissolving:
 		velocity = Vector3.ZERO
 		return
@@ -113,19 +112,19 @@ func _physics_process(delta: float) -> void:
 		_begin_navigation_return()
 	_update_label()
 
-func receive_hit(attacker_position: Vector3, attack_name: StringName, amount: float = -1.0) -> void:
+func receive_hit(attacker_position: Vector3, attack_name: StringName, amount: float = -1.0, source_actor: Node = null) -> void:
 	var damage := amount if amount >= 0.0 else (attacker_definition.attack_damage if attacker_definition != null else 69.0)
 	var event := combat_database.get_animation_event(&"garen", attack_name, "hit") if combat_database != null else null
 	var hit_profile_id: StringName = event.payload_id if event != null else &"basic_melee"
-	_apply_damage(damage, attacker_position, &"physical", true, hit_profile_id)
+	_apply_damage(damage, attacker_position, &"physical", true, hit_profile_id, 0.0, source_actor)
 
-func receive_skill_damage(amount: float, _skill_name: String, _can_crit: bool, attacker_position: Vector3, damage_type: StringName = &"physical", _hit_profile_id: StringName = &"basic_melee") -> void:
-	_apply_damage(amount, attacker_position, damage_type, _can_crit, _hit_profile_id)
+func receive_skill_damage(amount: float, skill_name: String, _can_crit: bool, attacker_position: Vector3, damage_type: StringName = &"physical", hit_profile_id: StringName = &"basic_melee", source_actor: Node = null) -> void:
+	_apply_damage(amount, attacker_position, damage_type, _can_crit, hit_profile_id, 0.0, source_actor, skill_name)
 
 
-func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, hit_profile_id: StringName = &"breaker_hit") -> void:
+func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_position: Vector3, hit_profile_id: StringName = &"breaker_hit", source_actor: Node = null) -> void:
 	# Keep Q's base attack crit separate from its non-crit bonus, but emit one hit reaction.
-	_apply_damage(base_attack, attacker_position, &"physical", true, hit_profile_id, bonus_damage)
+	_apply_damage(base_attack, attacker_position, &"physical", true, hit_profile_id, bonus_damage, source_actor, "破舰")
 
 func register_damage_source(attacker_position: Vector3, source_team: StringName) -> void:
 	last_threat_position = attacker_position
@@ -176,7 +175,7 @@ func apply_normal_shield(amount: float) -> void:
 func get_normal_shield() -> float:
 	return normal_shield
 
-func _apply_damage(amount: float, attacker_position: Vector3, damage_type: StringName, can_crit: bool, hit_profile_id: StringName, flat_post_crit_bonus: float = 0.0) -> void:
+func _apply_damage(amount: float, attacker_position: Vector3, damage_type: StringName, can_crit: bool, hit_profile_id: StringName, flat_post_crit_bonus: float = 0.0, source_actor: Node = null, action_name := "技能") -> void:
 	if not is_targetable(): return
 	last_threat_position = attacker_position
 	var critical_chance := attacker_definition.critical_chance if attacker_definition != null else 0.0
@@ -191,14 +190,19 @@ func _apply_damage(amount: float, attacker_position: Vector3, damage_type: Strin
 	present_resolved_damage(damage, damage_type, critical)
 	var health_damage := maxf(0.0, damage - normal_shield)
 	normal_shield = maxf(0.0, normal_shield - damage)
+	var applied_damage := minf(current_health, health_damage)
 	current_health = maxf(0.0, current_health - health_damage)
+	if source_actor != null and applied_damage > 0.0:
+		var stats := get_node_or_null("/root/CombatStats")
+		if stats != null:
+			stats.call("record_damage", source_actor, self, applied_damage, action_name, damage_type)
 	_trigger_flee(attacker_position)
 	if returning_to_navigation_origin:
 		hurt_timer = 0.0
-		frames.play(&"dash")
+		model.call(&"play_semantic", &"dash")
 	else:
 		hurt_timer = hurt_visual_duration
-		frames.play(&"hurt")
+		model.call(&"play_semantic", &"hurt")
 	var away := global_position - attacker_position
 	away.y = 0.0
 	if away.is_zero_approx(): away = Vector3.RIGHT
@@ -220,7 +224,7 @@ func _begin_navigation_return() -> void:
 	flee_timer = 0.0
 	hurt_timer = 0.0
 	set_ghost_collision_active(true)
-	frames.play(&"dash")
+	model.call(&"play_semantic", &"dash")
 
 func _update_navigation_return(delta: float) -> void:
 	if _horizontal_distance(global_position, center_position) > waypoint_tolerance:
@@ -233,7 +237,7 @@ func _update_navigation_return(delta: float) -> void:
 	flee_timer = 0.0
 	returning_to_navigation_origin = false
 	set_ghost_collision_active(false)
-	frames.play(&"run" if not path_points.is_empty() else &"idle")
+	model.call(&"play_semantic", &"run" if not path_points.is_empty() else &"idle")
 
 func _collided_with_stage_boundary() -> bool:
 	for index: int in range(get_slide_collision_count()):
@@ -249,8 +253,7 @@ func _begin_death_return() -> void:
 	remove_from_group(&"combat_target")
 	collision_shape.set_deferred(&"disabled", true)
 	label.visible = false
-	frames.modulate = Color(0.78, 0.95, 1.0, 1.0)
-	frames.play(&"dash")
+	model.call(&"play_semantic", &"dash")
 	defeated.emit(killer_team)
 
 func _update_death_return(delta: float) -> void:
@@ -259,7 +262,7 @@ func _update_death_return(delta: float) -> void:
 		var destination := Vector3(spawn_position.x, global_position.y, spawn_position.z)
 		var direction := (destination - global_position).normalized()
 		_face_direction(direction)
-		frames.play(&"dash")
+		model.call(&"play_semantic", &"dash")
 		global_position = global_position.move_toward(destination, dash_move_speed * delta)
 		velocity = direction * dash_move_speed
 		return
@@ -271,23 +274,11 @@ func _update_death_return(delta: float) -> void:
 func _start_dissolve() -> void:
 	if dissolving: return
 	dissolving = true
-	frames.pause()
-	var material := frames.material_override as ShaderMaterial
-	if material != null:
-		material = material.duplicate() as ShaderMaterial
-		frames.material_override = material
-		material.set_shader_parameter(&"dissolve_amount", 0.0)
-		material.set_shader_parameter(&"tint", Color.WHITE)
-		var tween := create_tween()
-		tween.set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)
-		tween.tween_method(
-			func(value: float) -> void: material.set_shader_parameter(&"tint", Color(1.0, 1.0, 1.0, value)),
-			1.0, 0.0, death_fade_duration
-		)
-		tween.parallel().tween_property(shadow, "modulate:a", 0.0, death_fade_duration)
-		tween.finished.connect(_finish_death)
-	else:
-		_finish_death()
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(model, "scale", Vector3.ZERO, death_fade_duration)
+	tween.parallel().tween_property(shadow, "modulate:a", 0.0, death_fade_duration)
+	tween.finished.connect(_finish_death)
 
 func _finish_death() -> void:
 	return_completed.emit(killer_team)
@@ -297,7 +288,7 @@ func _patrol(delta: float) -> void:
 	if path_points.is_empty():
 		velocity.x = move_toward(velocity.x, 0.0, 10.0 * delta)
 		velocity.z = move_toward(velocity.z, 0.0, 10.0 * delta)
-		if hurt_timer <= 0.0: frames.play(&"idle")
+		if hurt_timer <= 0.0: model.call(&"play_semantic", &"idle")
 		return
 	var destination := path_points[waypoint_index]
 	if _horizontal_distance(global_position, destination) <= waypoint_tolerance:
@@ -314,12 +305,11 @@ func _move_direction(direction: Vector3, speed: float, delta: float, animation: 
 	velocity.x = move_toward(velocity.x, direction.x * speed, acceleration * delta)
 	velocity.z = move_toward(velocity.z, direction.z * speed, acceleration * delta)
 	_face_direction(direction)
-	if hurt_timer <= 0.0 and frames.animation != animation: frames.play(animation)
+	if hurt_timer <= 0.0 and StringName(model.get(&"current_animation")) != animation: model.call(&"play_semantic", animation)
 
 func _face_direction(direction: Vector3) -> void:
 	if absf(direction.x) < 0.02: return
-	var flip := direction.x < 0.0 if source_faces_right else direction.x > 0.0
-	frames.flip_h = flip
+	model.call(&"set_facing", direction if source_faces_right else -direction)
 
 func _nearest_path_point() -> Vector3:
 	if path_points.is_empty(): return center_position
@@ -396,15 +386,5 @@ func _apply_combat_data() -> void:
 func _rule_float(rule_id: StringName, fallback: float) -> float:
 	return float(combat_database.get_rule(rule_id, fallback)) if combat_database != null else fallback
 
-func _sync_frame_material() -> void:
-	var material := frames.material_override as ShaderMaterial
-	if material != null and frames.sprite_frames != null:
-		var frame_texture := frames.sprite_frames.get_frame_texture(frames.animation, frames.frame)
-		material.set_shader_parameter(&"texture_albedo", frame_texture)
-
 func _update_label() -> void:
 	label.text = "峡谷迅捷蟹 · LV%d  HP %.0f/%.0f" % [level, current_health, max_health]
-
-func _on_animation_finished() -> void:
-	if frames.animation == &"spawn" or frames.animation == &"hurt":
-		frames.play(&"run" if not path_points.is_empty() else &"idle")

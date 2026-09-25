@@ -31,12 +31,14 @@ Rogue Admiral 主题可以改变名称、美术和额外技能，但不能让这
 - 配表链：`units.garen(class_id=fighter, subclass_id=juggernaut) → hero_subclasses.juggernaut(ai_archetype_id=juggernaut_pressure) → ai_profiles.garen_demo`。职业和分支只表达身份；具体距离和阈值存于 `ai_archetypes.csv`，场地边界等英雄/场景微调存于 `ai_profiles.csv`。
 - `juggernaut_pressure` 的项目化语义：主动接近但不使用远程风筝；贴身后优先维持 E 的持续压制；低血时开 W；R 仅在真实伤害可终结或目标低于处决阈值时使用；T 只对多目标或低血收束目标使用。Q 负责进入其 `2.4m` 接战窗并交给强化普攻的横版冲刺。
 - 这不是 LoL 原版机器人逻辑。距离、血线阈值、AOE 人数、决策间隔均是 Gemheart 的横版项目数值，位于 `ai_archetypes.csv`，以后英雄默认复用同分支范式，再通过独立 `ai_profiles.csv` 或英雄选择器补充专属规则。
+- 索敌从 `combat_target` 中选择敌对单位，敌方英雄优先于中立单位和训练木桩；同一优先级内选择最近者。训练木桩不再是场景硬编码的默认目标，因此关闭训练目标后英雄会保持待机，而不是追逐不可见对象。
+- 盖伦死亡时立即退出 `combat_target`、清空目标与施法状态，并播放 GLB 的 `death → Death`。训练面板重新启用该英雄时通过 `revive_for_training()` 恢复满血、阵营分组、可选中状态与 `idle1`，而不是让 0 血角色留在场内。
 
 ## 当前基础属性
 
 ## 实例模板绑定
 
-- 盖伦的 `units.csv.instance_template_id=hero`，运行时继承 `HeroInstance`。该模板统一接入伤害数字和英雄受伤展示入口；盖伦专有的 AI、序列帧状态机、P/Q/W/E/R/T 仍保留在派生脚本。
+- 盖伦的 `units.csv.instance_template_id=hero`，运行时继承 `HeroInstance`。该模板统一接入伤害数字和英雄受伤展示入口；盖伦专有的 AI、GLB 语义动画状态机、P/Q/W/E/R/T 仍保留在派生脚本。
 - 训练假人和峡谷迅捷蟹使用 `instance_template_id=monster`，继承同一怪物模板；因此物理、魔法、真实伤害和 `MISS` 的数字显示不再由各怪物重复创建。
 
 | 属性 | 1 级值 | 成长 | 运行时换算 | 来源字段 |
@@ -52,6 +54,15 @@ Rogue Admiral 主题可以改变名称、美术和额外技能，但不能让这
 | 攻击距离 | 175 | 0 | 1.75 m | `range` |
 
 选取、玩法、寻路、索敌半径和基础攻击前摇也保存在 `unit_stats.csv`。霸体、纵深、加速度和击退抗性是 Gemheart 项目值，不属于 Wiki 原始属性。
+
+## 3D 角色表现状态（2026-09-22）
+
+- 盖伦本体的运行时资产是 `assets/characters/rogue_admiral_garen_3d/rogue_admiral_garen.glb`；场景节点为 `Characters/Player/GarenModel`，状态机实现为 `garen_model_animator.gd`。
+- 语义状态映射为：`idle1 → Idle1_Base`、`run → Run`、`run_spell → Run_Spell1`、`attack1 → Attack1`、`attack2 → Attack2`、`attack3 → Crit`、`spell1 → Spell1`、`spell3 → Spell3_0`、`spell4 → Spell4_Base`、`taunt → Taunt_Base`、`death → Death`。战斗逻辑仍只依赖语义名与 `animation_events.csv`，不能把 GLB 原始名称写进伤害逻辑。
+- 逻辑面向仍是左右轴；模型在该轴上翻转，并允许最多 `18°` 的视觉纵深偏航。偏航只改变观感，不改变命中范围、目标选择或伤害朝向。
+- GLB 的 `Attack1`、`Attack2`、`Crit` 原长均为 `2.00s`。`GarenModel.semantic_speed_scales` 为三段普攻设为 `2.5×`，因此完整时长约 `0.80s`，55% 归一化命中事件约在 `0.44s` 触发；不改伤害、命中事件或取消窗口。
+- `UnitReadability` 提供低透明度脚底阵营环和 Toon Shader 弱阵营 Rim；`OutlineHighlight` 默认隐藏，只在英雄选中或目标状态显示细描边。训练场启用方向主光与环境补光；正交相机并不禁用真实 3D 光照。
+- 盖伦本体序列帧及其生成工具已在无引用审计后删除；角色动画仅由 GLB 状态机驱动。盖伦技能、被动、命中和 UI 的独立 SpriteFrames 资产继续保留并按各自生命周期使用。
 
 ## 技能映射
 
@@ -82,7 +93,7 @@ Rogue Admiral 主题可以改变名称、美术和额外技能，但不能让这
 - Q 的技能等级独立于英雄等级，当前运行时默认 Q=1 级；本次没有实现加点或升级 UI。强化攻击发起时，若目标在普通攻击距离外但不超过 Q 的 `2.4m` 追击阈值，则以 `0.12s` 冲到目标前约 `0.85m`；目标已经贴身时原地攻击。强化攻击有效帧独立使用 `breaker_hit.size_x=2.5m` 作为命中确认距离，普通攻击仍是 `basic_melee.size_x=1.95m`；这不会扩大索敌或冲刺起手窗。这是保留追击手感、避免横版场地“瞬移”的项目化改编。
 - 黑帆表现绑定 Buff 生命周期，Jolly Roger 与 4 秒 Buff 同步；护盾余额已进入运行时结算并为未来血条 UI 暴露，不额外生成世界护盾模型或粒子。
 - 翻江倒海允许移动，效果位于角色前景并以 `3.8m` 半径持续 3 秒。E 持续期间由技能状态锁定 `spell3` 动画；当前目标死亡后，AI 可以重新索敌并向新目标移动，但移动状态不得将旋转覆盖为 `run`。
-- E 的命中改用可复用 `slash` 程序化物理斩击反馈，而非此前偏魔法的 `elemental` 反馈。Buff/Debuff 槽保留给未来 UI；场内破甲不再显示常驻图标。`vajra_break` 六帧特效以 `0.015m/px` 正常播放；其上叠加可复用于 UI 的 `Keyword_Overwhelm_HD` 图标，图标负责中心弹出、左右晃动、回弹和渐隐，并以 3 倍速播放金属冲击音。E 的霸体接入公共 `SuperArmorOutline`：它只描绘当前角色帧的轮廓，以黄→红→黄发光渐变表示霸体；该组件和配表不绑定 E，后续技能或 Buff 只需驱动同一激活状态即可复用。
+- E 的命中改用可复用 `slash` 程序化物理斩击反馈，而非此前偏魔法的 `elemental` 反馈。Buff/Debuff 槽保留给未来 UI；场内破甲不再显示常驻图标。`vajra_break` 六帧特效以 `0.015m/px` 正常播放；其上叠加可复用于 UI 的 `Keyword_Overwhelm_HD` 图标，图标负责中心弹出、左右晃动、回弹和渐隐，并以 3 倍速播放金属冲击音。霸体和护盾使用独立状态表现，不能借用阵营 Rim 或目标描边。
 - 暴君审判锁定目标当前位置并将 Anchor 放在目标处；命中使用白色高速定向斩击火花叠加白色爆发、冲击波的 `true_damage` 程序化反馈。
 - 七海霸权快照半径 5.2 米的地面区域，Ghostship 根据区域相对方向翻转，不继续追踪目标；判定直径按当前视觉画布约 10.5 米的横向覆盖对齐。撞击是魔法伤害 `350/475/600` 并眩晕 `1.2s`；路径判定每 0.08 秒采样，覆盖到的同阵营英雄获得朗姆酒。朗姆酒承伤先扣除结算后伤害的一半，另一半进入延迟池并在 Buff 结束时一次结算；清算不能将生命降到 `1` 以下，黑帆仍可消解当前池中伤害的 30%。表现为蓝白两层撞击爆发，且友军获得琥珀色三角粒子与两帧残影。
 - 命中停顿、硬直、削韧、击退和粒子来自 `hit_profiles`，不从 Wiki 数值推导。
@@ -108,4 +119,4 @@ Rogue Admiral 主题可以改变名称、美术和额外技能，但不能让这
 
 ## 验收基线
 
-当前自动验证覆盖：基础/成长属性、单位换算、攻击前摇、五技能规则、翻江倒海移动施法、VFX 层级和 Shader、左右朝向、AI 追击、木桩移动、普通/暴击命中序列帧与音效。新增上述补项时必须添加对应公式和状态测试。
+当前自动验证覆盖：基础/成长属性、单位换算、攻击前摇、五技能规则、翻江倒海移动施法、VFX 层级和 Shader、左右朝向、AI 追击、木桩移动、GLB 普通/暴击语义动画、普攻 `2.5×` 时序校准与音效，以及英雄优先索敌、训练目标开关和盖伦死亡/复活周期。新增上述补项时必须添加对应公式和状态测试。

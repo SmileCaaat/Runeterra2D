@@ -23,6 +23,7 @@ AwakeningCutIn="*res://scenes/ui/awakening_cutin/awakening_cutin_layer.tscn"
 VFX="*uid://ecyiymmaj3jv"
 EnvVFX="*uid://qomyut16hnoi"
 DisplayAspectLock="*res://scripts/systems/display_aspect_lock.gd"
+CombatStats="*res://scripts/combat/combat_stats.gd"
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]
@@ -32,7 +33,6 @@ window/size/viewport_height=1080
 window/size/window_width_override=1920
 window/size/window_height_override=1080
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
 
 [editor_plugins]
 

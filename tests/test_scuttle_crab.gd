@@ -43,8 +43,12 @@ func _run() -> void:
 		func(_team: StringName) -> void: death_arrival_positions.append(crab.global_position)
 	)
 	var readability := crab.get_node("UnitReadability")
-	_assert(not (crab.get_node("Frames") as AnimatedSprite3D).no_depth_test, "unit body respects ground depth")
+	var model := crab.get_node("Model") as Node3D
+	_assert(model != null and model.is_in_group(&"depth_sort_body") and is_equal_approx(model.scale.x, 0.5), "crab uses the 50 percent 3D body model")
+	_assert(StringName(model.get("current_animation")) != &"", "crab semantic animation is initialized")
 	_assert(not readability.has_node("MaskOutline") and not readability.has_node("OutlineGlow"), "neutral unit has no faction outline")
+	var outline_highlight := crab.get_node("OutlineHighlight") as Node3D
+	_assert(outline_highlight != null and not bool(outline_highlight.call("is_highlighted")), "neutral crab does not show an interaction outline by default")
 	readability.call("refresh_team_visuals")
 	var ring := readability.get_node_or_null("TeamGroundRing") as Sprite3D
 	_assert(ring != null and not ring.visible, "neutral unit hides foot ring")

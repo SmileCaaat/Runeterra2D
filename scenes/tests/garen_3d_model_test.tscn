@@ -1,0 +1,77 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/characters/rogue_admiral_garen_3d/rogue_admiral_garen.glb" id="1_model"]
+[ext_resource type="Script" path="res://scenes/tests/garen_3d_model_test.gd" id="2_script"]
+
+[sub_resource type="Environment" id="Environment_test"]
+background_mode = 1
+background_color = Color(0.025, 0.045, 0.08, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.36, 0.47, 0.68, 1)
+ambient_light_energy = 0.75
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="StandardMaterial3D" id="Material_floor"]
+albedo_color = Color(0.045, 0.1, 0.16, 1)
+metallic = 0.35
+roughness = 0.62
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+material = SubResource("Material_floor")
+size = Vector2(25, 25)
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_panel"]
+bg_color = Color(0.015, 0.025, 0.05, 0.82)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 18.0
+content_margin_top = 14.0
+content_margin_right = 18.0
+content_margin_bottom = 14.0
+
+[node name="Garen3DModelTest" type="Node3D"]
+script = ExtResource("2_script")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_test")
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-52, -32, 0)
+light_color = Color(1, 0.82, 0.61, 1)
+light_energy = 2.1
+shadow_enabled = true
+
+[node name="FillLight" type="OmniLight3D" parent="."]
+position = Vector3(-4, 3, 3)
+light_color = Color(0.3, 0.58, 1, 1)
+light_energy = 5.0
+omni_range = 16.0
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_floor")
+
+[node name="GarenModel" parent="." instance=ExtResource("1_model")]
+position = Vector3(0, 0, 0)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.92, 0.39, 0, -0.39, 0.92, 0, 4.6, 11.5)
+current = true
+fov = 42.0
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="PanelContainer" parent="CanvasLayer"]
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 710.0
+offset_bottom = 128.0
+theme_override_styles/panel = SubResource("StyleBox_panel")
+
+[node name="Status" type="Label" parent="CanvasLayer/Panel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.93, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Loading Garen 3D model..."

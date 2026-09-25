@@ -2,7 +2,7 @@ class_name AssetProfileDefinition
 extends Resource
 
 @export var id: StringName
-@export_enum("character_animation", "skill_vfx", "passive_vfx", "particle_vfx", "hit_vfx", "combat_text_font", "skill_icon", "status_icon", "audio") var asset_type := "skill_vfx"
+@export_enum("character_model", "character_animation", "skill_vfx", "passive_vfx", "particle_vfx", "hit_vfx", "combat_text_font", "skill_icon", "status_icon", "audio") var asset_type := "skill_vfx"
 @export var resource_file := ""
 @export var node_path := ""
 @export var animation_name: StringName

@@ -1,11 +1,15 @@
 [gd_scene format=3 uid="uid://b6aty4b8c1cpm"]
 
 [ext_resource type="Script" uid="uid://n6mee5gbk7v3" path="res://scripts/characters/target_dummy.gd" id="1_dummy"]
-[ext_resource type="SpriteFrames" uid="uid://b5w3ybh50vv04" path="res://assets/monsters/target_dummy/target_dummy_sprite_frames.tres" id="2_frames"]
+[ext_resource type="PackedScene" path="res://assets/monsters/target_dummy_3d/target_dummy_blue.glb" id="2_blue_model"]
+[ext_resource type="PackedScene" path="res://assets/monsters/target_dummy_3d/target_dummy_red.glb" id="7_red_model"]
 [ext_resource type="Script" uid="uid://ctyfh8i6tgqch" path="res://scripts/vfx/hit_spark_particles.gd" id="3_hit_spark"]
 [ext_resource type="AudioStream" uid="uid://dttc66fkvo0g" path="res://assets/audio/combat/training_dummy_hit.wav" id="4_hit_audio"]
 [ext_resource type="Texture2D" uid="uid://s6tqtqunb51r" path="res://assets/fx/soft_ground_shadow.svg" id="5_shadow"]
 [ext_resource type="Script" uid="uid://m8t41bkjgfud" path="res://scripts/rendering/unit_readability_layers.gd" id="6_readability"]
+[ext_resource type="Script" path="res://scripts/characters/target_dummy_model_presenter.gd" id="7_presenter"]
+[ext_resource type="Script" path="res://scripts/characters/actor_model_animator.gd" id="8_model_animator"]
+[ext_resource type="Script" path="res://scripts/presentation/mesh_outline_highlight_3d.gd" id="9_outline"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape_dummy"]
 radius = 0.3
@@ -41,18 +45,29 @@ texture_filter = 1
 render_priority = -10
 texture = ExtResource("5_shadow")
 
-[node name="EnemyFrames" type="AnimatedSprite3D" parent="." unique_id=2138532033 groups=["depth_sort_body"]]
-sorting_use_aabb_center = false
-cast_shadow = 0
-offset = Vector2(29, 800.5)
-pixel_size = 0.00135
-billboard = 1
-sprite_frames = ExtResource("2_frames")
-animation = &"idle"
+[node name="ModelPresenter" type="Node3D" parent="." unique_id=2138532033 groups=["depth_sort_body"]]
+script = ExtResource("7_presenter")
+
+[node name="BlueModel" type="Node3D" parent="ModelPresenter"]
+visible = false
+script = ExtResource("8_model_animator")
+animation_map = {&"death": &"Death", &"hurt": &"Hit", &"idle": &"Idle1_Base", &"spawn": &"Spawn"}
+looping_states = [&"idle"]
+
+[node name="Model" parent="ModelPresenter/BlueModel" instance=ExtResource("2_blue_model")]
+
+[node name="RedModel" type="Node3D" parent="ModelPresenter"]
+script = ExtResource("8_model_animator")
+animation_map = {&"death": &"Death", &"hurt": &"Hit", &"idle": &"Idle1_Base", &"spawn": &"Spawn"}
+looping_states = [&"idle"]
+
+[node name="Model" parent="ModelPresenter/RedModel" instance=ExtResource("7_red_model")]
+
+[node name="OutlineHighlight" type="Node3D" parent="."]
+script = ExtResource("9_outline")
 
 [node name="UnitReadability" type="Node3D" parent="." unique_id=160470533]
 script = ExtResource("6_readability")
-source_sprite_path = NodePath("../EnemyFrames")
 
 [node name="EnemyEditorPlaceholder" type="MeshInstance3D" parent="." unique_id=1265198131]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)

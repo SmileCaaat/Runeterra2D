@@ -4,7 +4,6 @@ damage_numbers_brush_colored,combat_text_font,res://assets/ui/combat/brush_damag
 garen_courage_icon,skill_icon,res://assets/icons/garen/courage.webp,UI/Skills/W,,,,1,1,20,1,1,1,0,0,0,0,true,,manual,0,false,0,0,0,1
 garen_ghostship_icon,skill_icon,res://assets/icons/garen/ghostship.png,UI/Skills/T,,,,1,1,20,1,1,1,0,0,0,0,true,,manual,0,false,0,0,0,1
 seven_seas_rum_icon,status_icon,res://assets/icons/status/rum_buff.png,UI/Buffs/Rum,,,,1,1,20,1,1,1,0,0,0,0,true,,manual,0,false,0,0,0,1
-garen_character,character_animation,res://assets/characters/rogue_admiral_garen/garen_sprite_frames.tres,CharacterFrames,,,0,1,1,20,1,1,1,245,861.5,0.004,0,false,,manual,0,true
 jolly_roger,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/JollyRoger,spell2_JollyRoger,,0,1,1,20,1,1,1,-102,429,0.004,-1,true,res://assets/vfx/garen_skills/jolly_roger_screen_material.tres,buff,4.0,false
 ocean_storm,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/OceanStorm,spell3_OceanStorm,,0,1,1,20,1.4,1.4,1.4,-102,429,0.0045,1,false,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,duration,3.0,false
 anchor,skill_vfx,res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres,SkillController/Anchor,spell4_Anchor,,0,1,1,20,1,1,1,-33.5,556,0.005,2,true,res://assets/vfx/garen_skills/skill_vfx_soft_material.tres,animation,0.63,false
@@ -48,7 +47,7 @@ vfx_library_water_splash,particle_vfx,res://addons/vfx_library/effects/water_spl
 vfx_library_lightning_chain,particle_vfx,res://addons/vfx_library/effects/lightning_chain.tscn,,,,0,1,1,20,1,1,1,0,0,0,42,true,,one_shot,0.4,false,0,0,0,1
 training_dummy_hit_audio,audio,,,,res://assets/audio/combat/training_dummy_hit.wav,-1,0.94,1.06,40,1,1,1,0,0,0,0,false,,manual,0,false
 ghostship_audio,audio,,,,res://assets/audio/skills/garen/spell_Ghost ship.mp3,5,1,1,44,1,1,1,0,0,0,0,false,,animation,1.70,false
-ryze_character,character_animation,res://assets/characters/rune_mage_ryze/ryze_sprite_frames.tres,CharacterFrames,,,0,1,1,20,1,1,1,95,468.5,0.004,0,false,,manual,0,true,0,0,0,1
+ryze_character,character_model,res://assets/characters/rune_mage_ryze_3d/rune_mage_ryze.glb,RyzeModel,,,0,1,1,20,1,1,1,0,0,0.004,0,false,,manual,0,true,0,0,0,1
 ryze_arcane_mastery_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Arcane_Mastery_old2_P.webp,UI/Skills/P,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false,0,0,0,1
 ryze_overload_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Overload_Q.webp,UI/Skills/Q,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false,0,0,0,1
 ryze_rune_prison_icon,skill_icon,res://assets/vfx/ryze_skills/icons/Ryze_Rune_Prison_W.webp,UI/Skills/W,,,0,1,1,0,1,1,1,0,0,0,0,false,,manual,0,false,0,0,0,1
