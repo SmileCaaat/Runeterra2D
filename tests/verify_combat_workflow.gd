@@ -53,6 +53,7 @@ func _process(delta: float) -> bool:
 		highlight_ok = highlight_ok and default_outline_hidden and target_color.is_equal_approx(outline_highlight.get("targeted_color"))
 		outline_highlight.call("set_targeted", false)
 	var toon_ok := toon_material != null and toon_material.shader.resource_path.ends_with("character_toon_3d.gdshader")
+	toon_ok = toon_ok and toon_material.shader.code.contains("render_mode unshaded") and not toon_material.shader.code.contains("diffuse_toon")
 	var hit_count := int(dummy.get("hit_count"))
 	var skill_casts: Array = skill_controller.get("cast_counts") as Array
 	model.set_facing(Vector3(1.0, 0.0, 8.0))
@@ -64,7 +65,8 @@ func _process(delta: float) -> bool:
 	var left_depth_yaw_ok := absf(model.get_visual_depth_yaw()) <= depth_yaw_limit + 0.0001
 	var passed := player.get_node_or_null("CharacterFrames") == null
 	passed = passed and model_animations.size() == 33
-	passed = passed and observed.has("run") and observed.has("attack1") and observed.has("attack2")
+	# Utility AI can spend this window casting instead of reaching the second combo swing.
+	passed = passed and observed.has("run") and observed.has("attack1") and observed.has("spell1") and observed.has("spell3")
 	passed = passed and hit_count >= 3 and start_player.distance_to(player.global_position) > 0.5
 	passed = passed and int(skill_casts[1]) > 0 and int(skill_casts[3]) > 0
 	passed = passed and right_axis_ok and left_axis_ok and right_depth_yaw_ok and left_depth_yaw_ok

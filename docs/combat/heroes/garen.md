@@ -30,6 +30,8 @@ Rogue Admiral 主题可以改变名称、美术和额外技能，但不能让这
 - 分类来源快照：2026-08-26，LoL 的英雄分类将 Fighter 划分为 Diver 与 Juggernaut；Garen 属于 Juggernaut。参考：[Champion classes](https://wiki.leagueoflegends.com/en-us/Champion_classes)、[Juggernaut champion](https://wiki.leagueoflegends.com/en-us/Category:Juggernaut_champion)。
 - 配表链：`units.garen(class_id=fighter, subclass_id=juggernaut) → hero_subclasses.juggernaut(ai_archetype_id=juggernaut_pressure) → ai_profiles.garen_demo`。职业和分支只表达身份；具体距离和阈值存于 `ai_archetypes.csv`，场地边界等英雄/场景微调存于 `ai_profiles.csv`。
 - `juggernaut_pressure` 的项目化语义：主动接近但不使用远程风筝；贴身后优先维持 E 的持续压制；低血时开 W；R 仅在真实伤害可终结或目标低于处决阈值时使用；T 只对多目标或低血收束目标使用。Q 负责进入其 `2.4m` 接战窗并交给强化普攻的横版冲刺。
+- 当前训练 AI 使用共享 `HeroBrain`、`JuggernautPressureEvaluator` 与 `GarenAIKit`。职业层给接近/保持位置评分，英雄层把普攻与 Q/W/E/R/T 放入同一候选池；R 读取当前目标生命和实际处决公式，W 随生命压力及最近实际损血升分，Q 更偏向追击，Q 强化普攻会优先兑现。候选每 `ai_archetypes.decision_interval` 重新计算，并通过持续分差与最短保持时间控制切换。
+- `SkillController.begin_skill()` 仍执行技能。盖伦的 `automatic_demo` 在训练面板启用或重建英雄时保持关闭，避免第二套自动施法决策。E 的持续移动和动画所有权不变；E 中先过滤不可执行技能，W 可通过统一的一次性执行门瞬发。目标切换、死亡、复活和攻击动作结束会清除旧意图。
 - 这不是 LoL 原版机器人逻辑。距离、血线阈值、AOE 人数、决策间隔均是 Gemheart 的横版项目数值，位于 `ai_archetypes.csv`，以后英雄默认复用同分支范式，再通过独立 `ai_profiles.csv` 或英雄选择器补充专属规则。
 - 索敌从 `combat_target` 中选择敌对单位，敌方英雄优先于中立单位和训练木桩；同一优先级内选择最近者。训练木桩不再是场景硬编码的默认目标，因此关闭训练目标后英雄会保持待机，而不是追逐不可见对象。
 - 盖伦死亡时立即退出 `combat_target`、清空目标与施法状态，并播放 GLB 的 `death → Death`。训练面板重新启用该英雄时通过 `revive_for_training()` 恢复满血、阵营分组、可选中状态与 `idle1`，而不是让 0 血角色留在场内。

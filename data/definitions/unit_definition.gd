@@ -43,4 +43,5 @@ extends Resource
 @export var move_speed_growth := 0.0
 @export var ai_profile_id: StringName
 @export var skill_ids: Array[StringName] = []
+@export var portrait_profile_id: StringName
 @export var courage_stack_eligible := false

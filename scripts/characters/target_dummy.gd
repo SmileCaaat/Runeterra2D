@@ -99,6 +99,7 @@ func _physics_process(delta: float) -> void:
 
 	silence_timer = maxf(0.0, silence_timer - delta)
 	stun_timer = maxf(0.0, stun_timer - delta)
+	tick_root(delta)
 	_update_damage_session(delta)
 	_update_passive_movement(delta)
 	if not is_on_floor():
@@ -184,11 +185,6 @@ func get_team() -> StringName:
 
 func is_enemy_of(other_team: StringName) -> bool:
 	return StringName(team) != other_team
-
-
-func apply_root(duration: float) -> void:
-	# Targeted roots stop autonomous return movement but retain ground collision.
-	hit_timer = maxf(hit_timer, duration)
 
 
 func get_hit_contact_point(attacker_position: Vector3) -> Vector3:
@@ -350,6 +346,12 @@ func _respawn() -> void:
 
 
 func _update_passive_movement(delta: float) -> void:
+	if is_rooted():
+		hit_timer = maxf(0.0, hit_timer - delta)
+		knockback = Vector3.ZERO
+		velocity.x = 0.0
+		velocity.z = 0.0
+		return
 	if hit_timer > 0.0:
 		hit_timer = maxf(0.0, hit_timer - delta)
 		velocity.x = knockback.x

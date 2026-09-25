@@ -17,6 +17,12 @@
 
 ## 已锁定项目决策
 
+### 训练场战斗 AI
+
+训练 AI 使用共享 `HeroBrain`、`BattlemageZoneEvaluator` 与 `RyzeAIKit`。职业层对接近、后撤、保持施法距离连续评分；英雄层让普攻、Q/W/E/T，以及 R 的逃生、切入、换位三个用途参与同一候选竞争。贴脸时 W、后撤与 R 逃生都可能胜出；远距离 T 分数降低，通常先接近或用 R 切入。英雄专属奥术层数、超负荷与技能就绪状态只保存在瑞兹 Context extras 中。
+
+决策按 `ai_archetypes.decision_interval` 更新，执行前再次校验目标、冷却、禁锢、沉默、动作锁和传送落点。普攻与技能属于一次性意图，同一个 generation 只启动一次；现有异步施法、弹道、伤害和 VFX 入口继续负责动作。最后一次受伤后保持 1 秒的实际 HP 损失累计值用于防御评分，这不是精确滚动时间窗口。
+
 - P 对每一次主动技能施放完成叠加 1 层奥术精通；所有层数统一刷新为 6 秒、最多 5 层。T 引导结束后直接授予满层超负荷（刷新 5 次强化与 2.5 秒窗口并清空奥术层），绝不消耗超负荷次数。
 - 满层 P 立即获得来源护盾 `25–110（随英雄等级）+ 0.08 × 最大法力`，并进入超负荷窗口。该窗口只在 Q/W/E 成功施放时消耗次数；R 与 T 不消耗该窗口。窗口双重结束条件为“至多 5 次 Q/W/E”或“按 Q 等级持续 2.5–5 秒”。
 - 每次消耗超负荷次数的 Q/W/E 施放完成后，将瑞兹所有正在冷却的技能减少 Overload 的冷却量；本次采用 History 2nd 的 `4s` Overload 冷却量，并钳制至 `0`。这意味着 Q/W/E 消耗次数，但冷却缩减对象仍是“瑞兹所有正在冷却的技能”，包含 R/T；如后续希望排除 R/T，应单独改写此项目规则。
@@ -63,7 +69,7 @@
 - 角色本体当前使用 `res://assets/characters/rune_mage_ryze_3d/rune_mage_ryze.glb`，由 `RyzeModel` 的语义状态机驱动；`idle → Idle1`、`run → Run_Normal`、`attack1/2/3 → Attack1/2/3`、`crit → Crit`、`spell1/2/3 → Spell1/2/3`、`spell4 → Spell4_Idle`、`spell4_winddown → Ryze_Spell4_Winddown.anm`、`taunt → Taunt`、`death → Death`。`taunt` 是预留给项目 T 槽位的角色动画；它不是对当前 PC 技能组存在 T 技能的声明。
 - 瑞兹角色本体序列帧（原 21 个状态、501 帧）及其生成工具已在无引用审计后删除；本体动画由 `RyzeModel` 的 GLB 状态机驱动，普攻与 Q/W/E 事件直接使用秒制时序。
 - 技能序列帧、普攻法球、护盾、图标、觉醒语音和原画已复制到 `res://assets/vfx/ryze_skills/`，并由 `build_ryze_skill_vfx.gd` 生成 `ryze_skill_vfx_frames.tres`：`basic_attack`（12 帧）、`Ryze_Shield`（32 帧循环，Screen/滤色材质）、`Spell1_Q`、`Spell2_W`、`Spell3_E`、`Spell4_R_winddown`、`W_loop`、`T_Buff` 与 `impact`。
-- `W_loop` 是当前唯一预设循环的技能表现；它仅表达资源播放方式，尚不等价于 W 的最终机制。觉醒 Cut-In 已接入 `awakening_cutin_profiles.csv` 的 `ryze_desperate_power_awaken`。
+- `W_loop` 在命中后随通用禁锢计时器播放，到时立即停止；禁锢状态由 `CombatUnitInstance.apply_root()` 统一记录，所有继承该战斗单位基类且在移动循环读取 `tick_root()` 的英雄、怪物与训练目标均会停止移动。禁锢不禁止普攻或施法。W 的控制时长位于 `ryze_w_root` 独立等级数据，不再和伤害行耦合。觉醒 Cut-In 已接入 `awakening_cutin_profiles.csv` 的 `ryze_desperate_power_awaken`。
 - 瑞兹体型与盖伦相同；角色 `pixel_size`、逻辑脚底锚点与受击高度将复用盖伦的同量级标尺，不能仅按瑞兹图集的像素尺寸自动放大或缩小。
 - 普攻动作的语义连段固定为 `attack1 → attack2 → attack3 → crit`；当前 GLB 本体分别映射为 `Attack1/2/3/Crit`。法球仍使用 `basic_attack`，其射程、速度、碰撞宽度与命中时机仍须通过基础攻击 hit profile 接线。
 
@@ -101,7 +107,7 @@
 | --- | --- | --- | --- | --- |
 | Arcane Mastery（History 2nd） | P | `adapted` | 使用统一刷新 6 秒、5 层、超负荷护盾/施法次数/冷却缩减结构；任意主动施法叠层 | 需先接入法力缩放与通用护盾；Q 等级决定超负荷持续时间；Q/W/E 消耗超负荷次数并使所有冷却减少 4 秒 |
 | Overload（History 2nd） | Q | `adapted` | 方向首中投射物：`5.5m`、宽 `1.1m`、速度 `17m/s` | 使用 `spell1` 与 `impact`；强化状态只延长持续时间 |
-| Rune Prison（History 2nd） | W | `adapted` | `5.5m` 的锁定必中、直接定身 | 目标处 `Spell2_W`，定身期间 `W_loop`；仍需接入通用控制状态 |
+| Rune Prison（History 2nd） | W | `adapted` | `5.5m` 的锁定必中、直接禁锢 | 命中事件结算伤害并通过通用 `apply_root()` 禁锢；目标处 `Spell2_W`，禁锢期间 `W_loop` |
 | Spell Flux（History 2nd） | E | `adapted` | `5.5m` 锁定；初段/弹射速度 `15m/s`、弹射半径 `3.5m`，保留 3 层乘算减魔抗、6 敌人分裂及半额回弹 | 同目标命中不设上限；无次级目标时回弹主目标 |
 | Realm Warp（Current） | R | `adapted` | 使用当前 2 秒引导、Q-Flux 增幅和受边界钳制的 `25m` 短距离友军传送；落地 `5.5m` 直接施加 3 次 E 初段效果及 3 层减抗 | 落地同步角色 `spell4_winddown` 与 `Spell4_R_winddown`；沉默、眩晕、击飞才能打断，打断返还冷却 |
 | Desperate Power（History 2nd） | T | `adapted` | 使用 6 秒法术吸血、移速与基本技能半额范围外溢；引导结束授予满层超负荷 | 作为觉醒技能保留且不消耗超负荷次数；法术吸血和范围外溢需扩展当前伤害管线 |
@@ -113,7 +119,7 @@
 | `RYZE-CURRENT-STATS` | 当前基础值与成长值 | `reference` | `unit_stats.csv` 的 `ryze` 行 | 已入表 |
 | `RYZE-HISTORY2-P` | `stacks=5`，每层持续 `6s`；满层超负荷，持续 `2.5s` 或至多 5 次基本施法；护盾 `25–110(level)+0.08×最大法力` | `reference` | `buffs.csv` / `ryze.supercharge.*` / `ryze_p_shield` | 已入表；超负荷时长当前固定 2.5s |
 | `RYZE-HISTORY2-Q` | `damage(rank)=60/90/120/150/180 + 0.55×AP + [0.02,0.025,0.03,0.035,0.04]×最大法力` | `reference` | `skill_effect_ranks.csv` 的 `ryze_q_damage` | 已入表；法力系数运行时尚未接通用管线 |
-| `RYZE-HISTORY2-W` | `damage(rank)=80/100/120/140/160 + 0.40×AP + 0.025×最大法力`；`root=1/1.1/1.2/1.3/1.4s` | `reference` | `skill_effect_ranks.csv` 的 `ryze_w_damage` | 已入表 |
+| `RYZE-HISTORY2-W` | `damage(rank)=80/100/120/140/160 + 0.40×AP + 0.025×最大法力`；`root=1/1.1/1.2/1.3/1.4s` | `reference` | `skill_effect_ranks.csv` 的 `ryze_w_damage` 与 `ryze_w_root` | 已入表并接入运行时 |
 | `RYZE-HISTORY2-E` | `damage(rank)=36/52/68/84/100 + 0.20×AP + 0.02×最大法力`；减魔抗每层剩余 `0.92`，持续 `5s`，最多 3 层且逐层乘算；回弹伤害为初始伤害 `0.5` | `reference + project` | `ryze_flux` / `ryze_flux_magic_resistance` / `ryze.e.bounce_damage_ratio` | 已入表；运行时读剩余倍率 `0.92`，不再写死 `0.08` |
 | `RYZE-HISTORY2-T` | 被动冷却缩减 `0.10/0.20/0.30`；主动 `6s`、法术吸血 `0.15/0.20/0.25`、`+80` 移速，基本技能对主目标周围敌人造成 `0.5` 倍伤害 | `reference` | `ryze_desperate_power` / `ryze.t.spill_damage_ratio` | 已入表；被动急速与通用吸血管线仍待接 |
 | `RYZE-CURRENT-R` | Q 对 Flux 目标增伤 `0.50/0.75/1.00`；2 秒引导传送门、R CD `180/160/140s` | `reference` | `skill_ranks.csv` 的 `ryze_realm_warp` | 已入表；Q-Flux 增伤尚未接线 |
@@ -183,7 +189,9 @@ ryze.e.hit_x_bias = 0.5   # 世界坐标 +X，不随朝向翻转
 
 普攻 / Q 的 `offset = (-126.5, 622.5)` 来自 `Vector2(width/2 - originX, originY - height/2)`，画布 `1439×1653`、`originPixel (846, 1449)`。`_ready()` 会按 JSON 重写这两项 offset，不要顺带改 position / scale / 透明度。
 
-`TBuff` / `Shield` 只负责朝 +X。朝 -X 用 2026-09-06 用户手调的 `TBuffFlip (1.280, 5.239, 1.812)` 与 `ShieldFlip (0.746, 0.910, 0)`，不是 +X 的 X 镜像。运行时按 `RyzeCombatAI._faces_left` 选用，不改节点 Transform，也不写 `originPixel` offset。编辑器里 Flip 节点默认可见。
+`TBuff` 仍使用 `TBuff` / `TBuffFlip` 两套朝向节点；朝 -X 的 `TBuffFlip (1.280, 5.239, 1.812)` 是手调锚点，不是 +X 的 X 镜像。护盾不再使用朝向切换节点，详见下文。编辑器里 Flip 节点仍保留可供调试。
+
+护盾始终使用同一个 `Shield` Sprite 和 actor-local 锚点；Ryze 左右转只旋转 `RyzeModel`，不切换 `ShieldFlip` 的旧手调位置。`ShieldFlip` 保留在场景供历史参考，但运行时保持隐藏。
 
 ## 脱手法球约定（取代画布中心锚点）
 

@@ -17,6 +17,8 @@ Project design policy, formula provenance and per-hero fidelity records live in 
 4. The builder writes `data/generated/combat_database.tres`.
 5. Run `tests/verify_combat_database.gd`, `tests/verify_garen_skill_rules.gd` and `tests/verify_combat_workflow.gd`.
 
+英雄 HUD 头像通过 `scripts/tools/sync_communitydragon_assets.py` 在开发期同步；英雄来源/皮肤选择配置位于 `data/external/communitydragon_sources.json`，校验锁位于 `data/external/communitydragon.lock.json`。执行 `py scripts/tools/sync_communitydragon_assets.py --dry-run` 预览，省略参数则下载并更新 `asset_manifest.csv`，`--verify` 只检查本地文件与锁中的大小/SHA-256。游戏运行时只从本地资源清单加载，不请求 CommunityDragon。完整说明见 [`docs/assets/communitydragon-sync.md`](../docs/assets/communitydragon-sync.md)。
+
 Never edit `data/generated/combat_database.tres` by hand. Runtime timers, cooldowns, current health, buff stacks and targets must not be written into Resources because Resources are shared definitions.
 
 ## Override order
@@ -29,7 +31,7 @@ Never edit `data/generated/combat_database.tres` by hand. Runtime timers, cooldo
 
 - `combat_rules.csv`: global constants, progression coefficients and policy enums. Formula code lives in typed scripts; arbitrary code is never evaluated from a cell.
 - `stats.csv`: canonical stat IDs, units, valid ranges and default modifier operation.
-- `units.csv`: hero, monster, summon and training-dummy identity, reusable `instance_template_id`（当前为 `hero` 或 `monster`）, role, resource type, skill and AI references.
+- `units.csv`: hero, monster, summon and training-dummy identity, reusable `instance_template_id`（当前为 `hero` 或 `monster`）, role, resource type, skill, AI and optional `portrait_profile_id` references (required for heroes).
 - `unit_stats.csv`: level-1 values, growth coefficients, growth formula, auditable source values and world-unit conversion.
 - `skills.csv`: targeting, cast model, cooldown, range, radius, duration, movement/facing policy and animation/presentation references.
 - `skill_effects.csv`: ordered damage, buff, control, cleanse, delayed-damage and shield operations.
@@ -40,7 +42,7 @@ Never edit `data/generated/combat_database.tres` by hand. Runtime timers, cooldo
 - `buff_modifiers.csv`: stat modifiers with explicit operation, phase and priority.
 - `hit_profiles.csv`: shape, size, depth tolerance, active window, hitstop, hitstun, poise damage, knockback and impact presentation.
 - `animation_events.csv`: seconds/normalized events for hits, audio, VFX, movement, cancel and invulnerability windows; `frame` timing remains a compatibility option but is unused by current heroes.
-- `asset_manifest.csv`: GLB 角色模型、SpriteFrames 技能/VFX、音频、缩放、原点、Shader、层级、深度和生命周期绑定；它描述表现资产，不替代运行时 3D 状态机的语义动画映射。
+- `asset_manifest.csv`: GLB 角色模型、英雄 HUD 头像、SpriteFrames 技能/VFX、音频、缩放、原点、Shader、层级、深度和生命周期绑定；它描述表现资产，不替代运行时 3D 状态机的语义动画映射。
 - `particle_profiles.csv`: hit-particle simulation and visual parameters.
 - `hero_classes.csv`: broad hero combat taxonomies; does not contain live balance values.
 - `hero_subclasses.csv`: branch identity and its reusable AI archetype binding.

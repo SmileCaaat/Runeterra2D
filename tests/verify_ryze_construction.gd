@@ -8,6 +8,7 @@ func _init() -> void:
 	var q_event := database.get_animation_event(&"ryze", &"spell1", "hit") if database != null else null
 	var w_event := database.get_animation_event(&"ryze", &"spell2", "hit") if database != null else null
 	var e_event := database.get_animation_event(&"ryze", &"spell3", "hit") if database != null else null
+	var w_root_rank := database.get_skill_effect_rank(&"ryze_w_root", 1) if database != null else null
 	var scene := load("res://scenes/units/ryze.tscn") as PackedScene
 	var roster_script := load("res://scripts/ui/training_roster_panel.gd")
 	var valid := ryze != null and ryze.class_id == &"mage" and ryze.subclass_id == &"battlemage" \
@@ -16,13 +17,18 @@ func _init() -> void:
 		and q_event.timing_mode == "seconds" and is_equal_approx(q_event.timing_value, 0.3) \
 		and w_event.timing_mode == "seconds" and is_equal_approx(w_event.timing_value, 0.5) \
 		and e_event.timing_mode == "seconds" and is_equal_approx(e_event.timing_value, 0.6) \
-		and scene != null and roster_script != null
+		and scene != null and roster_script != null \
+		and w_root_rank != null and is_equal_approx(w_root_rank.control_duration, 1.0)
 	print("RYZE_CONSTRUCTION data=%s q=%s r=%s scene=%s roster=%s" % [
 		str(ryze != null), str(q != null), str(r != null), str(scene != null), str(roster_script != null),
 	])
 	if scene != null:
 		var instance := scene.instantiate()
 		root.add_child(instance)
+		instance.call("apply_root", 0.5)
+		valid = valid and bool(instance.call("is_rooted"))
+		instance.call("tick_root", 0.6)
+		valid = valid and not bool(instance.call("is_rooted"))
 		var model := instance.get_node_or_null("RyzeModel") as Node3D
 		var basic_preview := instance.get_node_or_null("CastVFXPreview/BasicProjectile") as AnimatedSprite3D
 		var q_preview := instance.get_node_or_null("CastVFXPreview/QProjectile") as AnimatedSprite3D
@@ -37,6 +43,22 @@ func _init() -> void:
 		var shield_flip := instance.get_node_or_null("ShieldFlip") as AnimatedSprite3D
 		var outline_highlight := instance.get_node_or_null("OutlineHighlight") as Node3D
 		valid = valid and model != null and outline_highlight != null and basic_preview != null and q_preview != null and w_preview != null and e_preview != null and r_winddown_preview != null and w_loop_preview != null and impact_preview != null
+		var ryze_unshaded_material := false
+		var readability := instance.get_node_or_null("UnitReadability")
+		if model != null and readability != null and readability.has_method("_apply_toon_team_rim"):
+			readability.call("_apply_toon_team_rim")
+			var saw_surface := false
+			var all_surfaces_unshaded := true
+			for mesh_node: Node in model.find_children("*", "MeshInstance3D", true, false):
+				var mesh := mesh_node as MeshInstance3D
+				if mesh == null or mesh.mesh == null:
+					continue
+				for surface_index in mesh.mesh.get_surface_count():
+					saw_surface = true
+					var material := mesh.get_surface_override_material(surface_index) as ShaderMaterial
+					all_surfaces_unshaded = all_surfaces_unshaded and material != null and material.shader != null and material.shader.code.contains("render_mode unshaded")
+			ryze_unshaded_material = saw_surface and all_surfaces_unshaded
+		valid = valid and ryze_unshaded_material
 		valid = valid and StringName(model.get("current_animation")) == &"idle"
 		var animation_map := model.get("animation_map") as Dictionary
 		valid = valid and animation_map.get(&"spell4", &"") == &"Spell4_Idle" and animation_map.get(&"spell4_winddown", &"") == &"Ryze_Spell4_Winddown.anm"
@@ -66,12 +88,25 @@ func _init() -> void:
 			instance.call("_sync_t_buff_presentation")
 			instance.call("_sync_shield_presentation")
 			valid = valid and t_buff_flip.visible and not t_buff.visible
-			valid = valid and shield_flip.visible and not shield.visible
+			valid = valid and shield.visible and not shield_flip.visible
+			shield.frame = mini(shield.sprite_frames.get_frame_count(&"Ryze_Shield") - 1, 12)
+			shield.frame_progress = 0.4
+			var shield_anchor := shield.position
+			var shield_frame := shield.frame
+			var shield_frame_progress := shield.frame_progress
 			instance.set("_faces_left", false)
 			instance.call("_sync_t_buff_presentation")
 			instance.call("_sync_shield_presentation")
 			valid = valid and t_buff.visible and not t_buff_flip.visible
 			valid = valid and shield.visible and not shield_flip.visible
+			valid = valid and shield.position.is_equal_approx(shield_anchor) and shield.frame == shield_frame
+			valid = valid and is_equal_approx(shield.frame_progress, shield_frame_progress)
+			instance.set("_faces_left", true)
+			instance.call("_sync_t_buff_presentation")
+			instance.call("_sync_shield_presentation")
+			valid = valid and shield.visible and not shield_flip.visible
+			valid = valid and shield.position.is_equal_approx(shield_anchor) and shield.frame == shield_frame
+			valid = valid and is_equal_approx(shield.frame_progress, shield_frame_progress)
 			instance.desperate_timer = 0.0
 			instance.supercharged_casts = 0
 			instance.supercharged_timer = 0.0
@@ -109,4 +144,17 @@ func _init() -> void:
 			var flux := database.get_buff_modifier(&"ryze_flux", &"magic_resistance")
 			valid = valid and flux != null and is_equal_approx(flux.value, 0.92)
 		instance.queue_free()
+	for script_path: String in [
+		"res://scripts/characters/garen_combat_ai.gd",
+		"res://scripts/characters/target_dummy.gd",
+		"res://scripts/characters/moving_training_dummy.gd",
+		"res://scripts/characters/scuttle_crab.gd",
+	]:
+		var actor_script := load(script_path) as Script
+		var actor: Node = actor_script.new() if actor_script != null else null
+		valid = valid and actor != null and actor.has_method("apply_root") and actor.has_method("is_rooted") and actor.has_method("tick_root")
+		if actor != null:
+			actor.call("apply_root", 0.5)
+			valid = valid and bool(actor.call("is_rooted"))
+			actor.free()
 	quit(0 if valid else 1)

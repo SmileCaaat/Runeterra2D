@@ -64,3 +64,5 @@ ryze_t_buff,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ry
 ryze_shield_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,SkillController/Shield,Ryze_Shield,,0,1,1,20,1.915,2.74,1,0,0,0.004,1,true,,buff,5,false,-0.04285323,0.91,0,0.407843
 ryze_impact_vfx,skill_vfx,res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres,Ryze/CastVFXPreview/Impact,impact,,0,1,1,20,1,1,1,-126.5,622.5,0.004,41,true,,animation,0,false,0,-0.8,0,1
 ryze_r_landing_zap,particle_vfx,res://assets/BinbunVFX_Vol2/ElectricFX/effects/zap/vfx_zap_lightning_01.tscn,,,,0,1,1,20,0.5,0.5,0.5,0,0,0,3,false,,one_shot,0.6,false,0,0,0,1
+garen_hud_portrait,hero_portrait,res://assets/external/communitydragon/champions/garen/portrait_hud.jpg,,,,,,,,,,,,,,,,,,,,,,,
+ryze_hud_portrait,hero_portrait,res://assets/external/communitydragon/champions/ryze/portrait_hud.jpg,,,,,,,,,,,,,,,,,,,,,,,

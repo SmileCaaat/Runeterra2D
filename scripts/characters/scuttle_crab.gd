@@ -90,6 +90,13 @@ func _physics_process(delta: float) -> void:
 	if returning_on_death:
 		_update_death_return(delta)
 		return
+	if tick_root(delta):
+		velocity.x = 0.0
+		velocity.z = 0.0
+		_apply_gravity(delta)
+		move_and_slide()
+		_update_label()
+		return
 	flee_timer = maxf(0.0, flee_timer - delta)
 	hurt_timer = maxf(0.0, hurt_timer - delta)
 	var nearest := _nearest_path_point()

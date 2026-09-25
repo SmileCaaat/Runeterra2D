@@ -1,0 +1,3 @@
+[submodule "assets/GODOT-VFX-LIBRARY"]
+	path = assets/GODOT-VFX-LIBRARY
+	url = https://github.com/haowg/GODOT-VFX-LIBRARY.git

@@ -159,7 +159,6 @@ func _apply_toon_team_rim() -> void:
 						material.set_shader_parameter(&"base_color", base_material.albedo_color)
 						material.set_shader_parameter(&"albedo_texture", base_material.albedo_texture)
 						material.set_shader_parameter(&"use_albedo_texture", base_material.albedo_texture != null)
-						material.set_shader_parameter(&"roughness", base_material.roughness)
 					mesh.set_surface_override_material(surface_index, material)
 				material.set_shader_parameter(&"team_color", tint)
 				material.set_shader_parameter(&"team_rim_strength", strength)

@@ -16,12 +16,15 @@ func _initialize() -> void:
 	var generated_ok := generated_database != null and generated_database.source_digest == database.source_digest
 	var editor_plugin_ok := load("res://addons/combat_data/editor_plugin.gd") != null
 
-	var counts_ok := database.rules.size() == 177 and database.stats.size() == 62
+	var counts_ok := database.rules.size() == 181 and database.stats.size() == 62
+	counts_ok = counts_ok and is_equal_approx(float(database.get_rule(&"ai.intent.min_commit_seconds", 0.0)), 0.22)
+	counts_ok = counts_ok and is_equal_approx(float(database.get_rule(&"ai.intent.switch_margin", 0.0)), 8.0)
+	counts_ok = counts_ok and is_equal_approx(float(database.get_rule(&"ai.intent.emergency_switch_margin", 0.0)), 20.0)
 	counts_ok = counts_ok and database.hero_classes.size() == 7 and database.hero_subclasses.size() == 13 and database.ai_archetypes.size() == 13
 	counts_ok = counts_ok and database.units.size() == 4 and database.unit_stats.size() == 145
 	counts_ok = counts_ok and database.skills.size() == 12
 	counts_ok = counts_ok and database.skill_effects.size() == 25 and database.skill_ranks.size() == 44
-	counts_ok = counts_ok and database.skill_effect_ranks.size() == 53 and database.unit_mode_modifiers.is_empty() and database.buffs.size() == 11
+	counts_ok = counts_ok and database.skill_effect_ranks.size() == 58 and database.unit_mode_modifiers.is_empty() and database.buffs.size() == 11
 	counts_ok = counts_ok and database.buff_modifiers.size() == 8 and database.ai_profiles.size() == 5
 	counts_ok = counts_ok and database.hit_profiles.size() == 10 and database.animation_events.size() == 24
 	counts_ok = counts_ok and database.asset_profiles.size() == 67 and database.particle_profiles.size() == 9
@@ -32,8 +35,19 @@ func _initialize() -> void:
 	armor_ok = armor_ok and is_equal_approx(CombatMath.resolve_damage(250.0, &"true", 100.0, 100.0, database), 250.0)
 	var haste_ok := is_equal_approx(CombatMath.cooldown_with_haste(10.0, 100.0, database), 5.0)
 	var tenacity_ok := is_equal_approx(CombatMath.control_duration(2.0, 0.25, database), 1.5)
+	var ryze_w_root_rank_1 := database.get_skill_effect_rank(&"ryze_w_root", 1)
+	var ryze_w_root_rank_5 := database.get_skill_effect_rank(&"ryze_w_root", 5)
+	var ryze_w_root_ok := ryze_w_root_rank_1 != null and ryze_w_root_rank_5 != null
+	ryze_w_root_ok = ryze_w_root_ok and is_equal_approx(ryze_w_root_rank_1.control_duration, 1.0)
+	ryze_w_root_ok = ryze_w_root_ok and is_equal_approx(ryze_w_root_rank_5.control_duration, 1.4)
 
 	var garen := database.get_unit(&"garen")
+	var ryze := database.get_unit(&"ryze")
+	var garen_portrait := database.get_asset_profile(garen.portrait_profile_id) if garen != null else null
+	var ryze_portrait := database.get_asset_profile(ryze.portrait_profile_id) if ryze != null else null
+	var portrait_ok := garen_portrait != null and ryze_portrait != null
+	portrait_ok = portrait_ok and garen_portrait.asset_type == "hero_portrait" and ryze_portrait.asset_type == "hero_portrait"
+	portrait_ok = portrait_ok and ResourceLoader.exists(garen_portrait.resource_file) and ResourceLoader.exists(ryze_portrait.resource_file)
 	var identity_ok := garen != null and garen.role == &"juggernaut"
 	identity_ok = identity_ok and garen.resource_type == &"none" and garen.range_type == &"melee"
 	identity_ok = identity_ok and garen.class_id == &"fighter" and garen.subclass_id == &"juggernaut"
@@ -238,12 +252,12 @@ func _initialize() -> void:
 	audio_ok = audio_ok and ghostship_audio.max_distance >= 44.0
 	audio_ok = audio_ok and is_equal_approx(float(database.get_rule(&"presentation.seven_seas_buff_audio_delay", 0.0)), 0.15)
 
-	print("COMBAT_DATABASE build=%s generated=%s plugin=%s counts=%s identity=%s base=%s source=%s growth=%s world_units=%s timing=%s ranks=%s armor=%s haste=%s tenacity=%s semantic=%s lifecycle=%s action=%s audio=%s digest=%s" % [
-		build_ok, generated_ok, editor_plugin_ok, counts_ok, identity_ok, base_stats_ok, source_ok, growth_ok, world_units_ok, timing_ok,
+	print("COMBAT_DATABASE build=%s generated=%s plugin=%s counts=%s portraits=%s identity=%s base=%s source=%s growth=%s world_units=%s timing=%s ranks=%s armor=%s haste=%s tenacity=%s semantic=%s lifecycle=%s action=%s audio=%s digest=%s" % [
+		build_ok, generated_ok, editor_plugin_ok, counts_ok, portrait_ok, identity_ok, base_stats_ok, source_ok, growth_ok, world_units_ok, timing_ok,
 		rank_schema_ok, armor_ok, haste_ok, tenacity_ok, semantic_ok, lifecycle_ok, action_ok, audio_ok,
 		database.source_digest.left(12),
 	])
-	var passed: bool = build_ok and generated_ok and editor_plugin_ok and counts_ok and armor_ok and haste_ok and tenacity_ok
+	var passed: bool = build_ok and generated_ok and editor_plugin_ok and counts_ok and portrait_ok and armor_ok and haste_ok and tenacity_ok and ryze_w_root_ok
 	passed = passed and identity_ok and base_stats_ok and source_ok and growth_ok and world_units_ok and timing_ok and rank_schema_ok
 	passed = passed and semantic_ok and lifecycle_ok and action_ok and audio_ok
 	if not passed:

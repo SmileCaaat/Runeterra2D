@@ -56,7 +56,12 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	silence_timer = maxf(0.0, silence_timer - delta)
 	stun_timer = maxf(0.0, stun_timer - delta)
-	if hit_timer > 0.0:
+	if tick_root(delta):
+		hit_timer = maxf(0.0, hit_timer - delta)
+		knockback = Vector3.ZERO
+		velocity.x = 0.0
+		velocity.z = 0.0
+	elif hit_timer > 0.0:
 		_update_hit_reaction(delta)
 	elif stun_timer > 0.0:
 		velocity.x = move_toward(velocity.x, 0.0, 8.0 * delta)

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "assets": {
+    "garen_hud_portrait": {
+      "unit_id": "garen",
+      "asset_id": "garen_hud_portrait",
+      "champion_id": 86,
+      "skin_id": 86010,
+      "skin_name": "Rogue Admiral Garen",
+      "kind": "hud_portrait",
+      "source_path": "/lol-game-data/assets/ASSETS/Characters/Garen/Skins/Skin10/Images/garen_splash_tile_10.jpg",
+      "source_url": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/characters/garen/skins/skin10/images/garen_splash_tile_10.jpg",
+      "local_path": "assets/external/communitydragon/champions/garen/portrait_hud.jpg",
+      "sha256": "dd8465d88b83be3f647dbfaf128f34c9f5caca46d48e23d0875fe1f512e04396",
+      "size": 48939,
+      "synced_at_utc": "2026-09-25T09:49:36Z"
+    },
+    "ryze_hud_portrait": {
+      "unit_id": "ryze",
+      "asset_id": "ryze_hud_portrait",
+      "champion_id": 13,
+      "skin_id": 13000,
+      "skin_name": "Ryze",
+      "kind": "hud_portrait",
+      "source_path": "/lol-game-data/assets/ASSETS/Characters/Ryze/Skins/Base/Images/ryze_splash_tile_0.jpg",
+      "source_url": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/characters/ryze/skins/base/images/ryze_splash_tile_0.jpg",
+      "local_path": "assets/external/communitydragon/champions/ryze/portrait_hud.jpg",
+      "sha256": "84193fb27ce662e1c83c9b5bba76cc2aba924458b0a33c0654605a12378efdb9",
+      "size": 53058,
+      "synced_at_utc": "2026-09-25T09:49:37Z"
+    }
+  }
+}

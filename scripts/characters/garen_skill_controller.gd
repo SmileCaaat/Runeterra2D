@@ -1014,6 +1014,7 @@ func _finish_anchor_tail() -> void:
 
 
 func receive_incoming_damage(amount: float, damage_type: StringName = &"physical", is_critical := false, source_actor: Node = null, target_actor: Node = null, source_name := "伤害") -> void:
+	var health_before := current_health
 	var resolved := CombatMath.resolve_damage(amount, damage_type, get_effective_armor(), get_effective_magic_resistance(), combat_database)
 	if black_sail_timer > 0.0 and damage_type != &"true":
 		var reduction_cap := float(combat_database.get_rule(&"damage.reduction_cap", 0.90)) if combat_database != null else 0.90
@@ -1029,6 +1030,9 @@ func receive_incoming_damage(amount: float, damage_type: StringName = &"physical
 		rum_settlement_pending = delayed_damage_pool > 0.0
 	else:
 		current_health = maxf(0.0, current_health - health_damage)
+	var actual_health_loss := maxf(0.0, health_before - current_health)
+	if actual_health_loss > 0.0 and fighter != null and fighter.has_method("record_ai_damage_taken"):
+		fighter.call("record_ai_damage_taken", actual_health_loss)
 	if source_actor != null and health_damage > 0.0:
 		var stats := get_node_or_null("/root/CombatStats")
 		if stats != null:
@@ -1532,7 +1536,11 @@ func _update_timers(delta: float) -> void:
 		_record_buff(&"seven_seas_rum", false)
 	if had_rum and rum_timer <= 0.0 and rum_settlement_pending:
 		# Rum's postponed half resolves only when the buff ends, and can never kill.
+		var health_before := current_health
 		current_health = maxf(1.0, current_health - delayed_damage_pool)
+		var actual_delayed_loss := maxf(0.0, health_before - current_health)
+		if actual_delayed_loss > 0.0 and fighter != null and fighter.has_method("record_ai_damage_taken"):
+			fighter.call("record_ai_damage_taken", actual_delayed_loss)
 		delayed_damage_pool = 0.0
 		rum_settlement_pending = false
 	for target_id: int in courage_kill_ledger.keys():

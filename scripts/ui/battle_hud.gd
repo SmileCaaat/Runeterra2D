@@ -14,35 +14,6 @@ const SKILL_KEYS: Array[String] = ["Q", "W", "E", "R", "T"]
 const EQUIP_SLOT_COUNT := 6
 const SLOT_GAP := 4 ## Match QWERT skill spacing; keep C cluster compact.
 const EQUIP_SLOT_PX := 36
-## Dedicated square hero portraits are not currently in the project. Use the
-## existing hero awakening artwork as a temporary crop until portrait icons land.
-const HERO_PROFILES := {
-	"盖伦": {
-		"role": "前排 / 战士",
-		"portrait": preload("res://assets/presentation/awakening/garen/rogue_admiral_cutin.jpg"),
-		"skill_names": ["破舰", "黑帆", "翻江倒海", "暴君审判", "七海霸权"],
-		"skill_icons": [
-			preload("res://assets/icons/garen/decisive_strike.webp"),
-			preload("res://assets/icons/garen/courage.webp"),
-			preload("res://assets/icons/garen/judgment.png"),
-			preload("res://assets/icons/garen/demacian_justice.png"),
-			preload("res://assets/icons/garen/ghostship.png"),
-		],
-	},
-	"瑞兹": {
-		"role": "法术 / 控制",
-		"portrait": preload("res://assets/presentation/awakening/ryze/desperate_power_cutin.jpg"),
-		"skill_names": ["超负荷", "符文禁锢", "法术涌动", "曲境折跃", "绝望之力"],
-		"skill_icons": [
-			preload("res://assets/vfx/ryze_skills/icons/Ryze_Overload_Q.webp"),
-			preload("res://assets/vfx/ryze_skills/icons/Ryze_Rune_Prison_W.webp"),
-			preload("res://assets/vfx/ryze_skills/icons/Ryze_Spell_Flux_E.webp"),
-			preload("res://assets/vfx/ryze_skills/icons/Ryze_Realm_Warp_R.webp"),
-			preload("res://assets/vfx/ryze_skills/icons/Ryze_Desperate_Power_P.webp"),
-		],
-	},
-}
-
 var _selected_index := 0
 var _selected_hero: Node3D
 var _team_slots: Array[Control] = []
@@ -63,6 +34,7 @@ var _skill_icons: Array[TextureRect] = []
 var _skill_glyphs: Array[Label] = []
 var _skill_cooldown_masks: Array[ColorRect] = []
 var _skill_cooldown_labels: Array[Label] = []
+var _portrait_texture_cache: Dictionary = {}
 var _roster_panel: TrainingRosterPanel
 var _source_camera: Camera3D
 var _proxy_camera: Camera3D
@@ -330,7 +302,6 @@ func _build_team_slots(parent: VBoxContainer) -> void:
 
 
 func _make_team_slot(hero: Node3D, index: int, seat: Control) -> PanelContainer:
-	var profile := _hero_profile(hero)
 	var frame := AspectRatioContainer.new()
 	frame.name = "HeroSlotFrame%d" % (index + 1)
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -366,12 +337,12 @@ func _make_team_slot(hero: Node3D, index: int, seat: Control) -> PanelContainer:
 	top.add_child(key)
 	var avatar := TextureRect.new()
 	avatar.name = "HeroAvatar"
-	avatar.custom_minimum_size = Vector2(34, 34)
+	avatar.custom_minimum_size = Vector2(52, 52)
 	avatar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	avatar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	avatar.clip_contents = true
-	avatar.texture = profile.get("portrait") as Texture2D
+	avatar.texture = _hero_portrait(hero)
 	inner.add_child(avatar)
 	var name_label := Label.new()
 	name_label.text = _hero_display_name(hero)
@@ -982,12 +953,13 @@ func _get_friendly_roster_heroes() -> Array[Node3D]:
 		return result
 	var roster_ids: Array = _roster_panel.roster.get(&"friendly", [])
 	for hero_id: StringName in roster_ids:
-		var node_name := "Player" if hero_id == &"garen" else ("RosterRyzeBlue" if hero_id == &"ryze" else "")
-		if node_name.is_empty():
-			continue
-		var hero := characters.get_node_or_null(node_name) as Node3D
-		if hero != null and hero.is_inside_tree() and not hero.is_queued_for_deletion():
-			result.append(hero)
+		for candidate: Node in characters.get_children():
+			if not candidate is Node3D or not candidate.has_method("get_combat_unit_definition"):
+				continue
+			var definition := candidate.call("get_combat_unit_definition") as UnitDefinition
+			if definition != null and definition.id == hero_id and candidate.is_inside_tree() and not candidate.is_queued_for_deletion():
+				result.append(candidate as Node3D)
+				break
 	return result
 
 
@@ -1008,17 +980,16 @@ func _update_current_hero_data() -> void:
 		_portrait_fallback_label.text = "—"
 		_name_label.text = "无出战英雄"
 		_level_label.text = ""
-		_role_label.text = "请在训练编队中启用盖伦或瑞兹"
+		_role_label.text = "请在训练编队中启用英雄"
 		_hp_fill.get_parent().visible = false
 		_mp_fill.get_parent().visible = false
 		_update_skill_bar()
 		return
-	var profile := _hero_profile(_selected_hero)
-	var portrait := profile.get("portrait") as Texture2D
+	var portrait := _hero_portrait(_selected_hero)
 	_portrait_texture.texture = portrait
 	_portrait_fallback_label.text = "" if portrait != null else _hero_short_name(_selected_hero)
 	_name_label.text = _hero_display_name(_selected_hero)
-	_role_label.text = String(profile.get("role", "英雄"))
+	_role_label.text = _hero_role_text(_selected_hero)
 	var level := 1
 	if _has_property(_selected_hero, &"level"):
 		level = int(_selected_hero.get("level"))
@@ -1044,16 +1015,27 @@ func _update_current_hero_data() -> void:
 
 
 func _update_skill_bar() -> void:
-	var profile := _hero_profile(_selected_hero) if is_instance_valid(_selected_hero) else {}
-	var icons: Array = profile.get("skill_icons", [])
-	var names: Array = profile.get("skill_names", [])
+	var database := CombatData.database()
+	var unit_definition := _hero_unit_definition(_selected_hero)
 	for index in _skill_icons.size():
-		var icon: Texture2D = icons[index] if index < icons.size() else null
+		var skill_slot := StringName(SKILL_KEYS[index].to_lower())
+		var skill: SkillDefinition
+		if database != null and unit_definition != null:
+			for skill_id: StringName in unit_definition.skill_ids:
+				var candidate := database.get_skill(skill_id)
+				if candidate != null and candidate.source_slot == skill_slot:
+					skill = candidate
+					break
+		var icon: Texture2D
+		if database != null and skill != null and not skill.icon_profile_id.is_empty():
+			var icon_profile := database.get_asset_profile(skill.icon_profile_id)
+			if icon_profile != null and icon_profile.asset_type == "skill_icon" and ResourceLoader.exists(icon_profile.resource_file):
+				icon = load(icon_profile.resource_file) as Texture2D
 		_skill_icons[index].texture = icon
 		_skill_icons[index].visible = icon != null
 		_skill_glyphs[index].visible = icon == null
-		var skill_name := String(names[index]) if index < names.size() else SKILL_KEYS[index]
-		var cooldown: Dictionary = _selected_hero.call("get_skill_cooldown_state", StringName(SKILL_KEYS[index].to_lower())) if is_instance_valid(_selected_hero) and _selected_hero.has_method("get_skill_cooldown_state") else {}
+		var skill_name := skill.display_name if skill != null else SKILL_KEYS[index]
+		var cooldown: Dictionary = _selected_hero.call("get_skill_cooldown_state", skill_slot) if is_instance_valid(_selected_hero) and _selected_hero.has_method("get_skill_cooldown_state") else {}
 		var remaining := maxf(float(cooldown.get("remaining", 0.0)), 0.0)
 		var total := maxf(float(cooldown.get("total", 0.0)), 0.0)
 		var cooling := remaining > 0.05
@@ -1084,8 +1066,41 @@ func _health_ratio(hero: Node) -> float:
 	return clampf(float(hero.get("current_health")) / maxf(maximum, 1.0), 0.0, 1.0)
 
 
-func _hero_profile(hero: Node) -> Dictionary:
-	return HERO_PROFILES.get(_hero_display_name(hero), {})
+func _hero_unit_definition(hero: Node) -> UnitDefinition:
+	if not is_instance_valid(hero) or not hero.has_method("get_combat_unit_definition"):
+		return null
+	return hero.call("get_combat_unit_definition") as UnitDefinition
+
+
+func _hero_portrait(hero: Node) -> Texture2D:
+	var unit_definition := _hero_unit_definition(hero)
+	if unit_definition == null or unit_definition.portrait_profile_id.is_empty():
+		return null
+	if _portrait_texture_cache.has(unit_definition.portrait_profile_id):
+		return _portrait_texture_cache[unit_definition.portrait_profile_id] as Texture2D
+	var database := CombatData.database()
+	if database == null:
+		return null
+	var profile := database.get_asset_profile(unit_definition.portrait_profile_id)
+	if profile == null or profile.asset_type != "hero_portrait" or not ResourceLoader.exists(profile.resource_file):
+		return null
+	var texture := load(profile.resource_file) as Texture2D
+	if texture != null:
+		_portrait_texture_cache[unit_definition.portrait_profile_id] = texture
+	return texture
+
+
+func _hero_role_text(hero: Node) -> String:
+	var definition := _hero_unit_definition(hero)
+	if definition == null:
+		return "英雄"
+	var database := CombatData.database()
+	if database == null:
+		return String(definition.role)
+	var hero_class := database.get_hero_class(definition.class_id)
+	if hero_class != null:
+		return String(hero_class.get("display_name"))
+	return String(definition.role)
 
 
 func _hero_display_name(hero: Node) -> String:

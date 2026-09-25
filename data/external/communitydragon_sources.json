@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "source": "communitydragon",
+  "channel": "latest",
+  "base_url": "https://raw.communitydragon.org",
+  "heroes": {
+    "garen": {
+      "champion_id": 86,
+      "champion_alias": "garen",
+      "skin_selector": {
+        "type": "name",
+        "value": "Rogue Admiral Garen"
+      },
+      "assets": {
+        "hud_portrait": true
+      }
+    },
+    "ryze": {
+      "champion_id": 13,
+      "champion_alias": "ryze",
+      "skin_selector": {
+        "type": "base"
+      },
+      "assets": {
+        "hud_portrait": true
+      }
+    }
+  }
+}

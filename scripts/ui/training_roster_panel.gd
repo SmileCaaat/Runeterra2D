@@ -229,7 +229,7 @@ func _prepare_red_garen(red_garen: CharacterBody3D) -> void:
 	_set_combatant_active(red_garen, true)
 	var skill_controller := red_garen.get_node_or_null("SkillController")
 	if skill_controller != null:
-		skill_controller.set("automatic_demo", true)
+		_set_legacy_demo_ai(red_garen, true)
 		skill_controller.set("is_casting", false)
 		var max_hp := float(skill_controller.get("max_health"))
 		skill_controller.set("current_health", max_hp)
@@ -239,6 +239,14 @@ func _retarget_roster_combatants(characters: Node3D) -> void:
 	for child: Node in characters.get_children():
 		if child.has_method("force_retarget_hostile"):
 			child.call("force_retarget_hostile")
+
+func _set_legacy_demo_ai(combatant: Node3D, active: bool) -> void:
+	var skill_controller := combatant.get_node_or_null("SkillController")
+	if skill_controller == null:
+		return
+	var hero_brain_owned := combatant.has_method("uses_hero_brain") and bool(combatant.call("uses_hero_brain"))
+	skill_controller.set("automatic_demo", active and not hero_brain_owned)
+
 
 func _set_combatant_active(combatant: Node3D, active: bool) -> void:
 	combatant.visible = active
@@ -254,7 +262,7 @@ func _set_combatant_active(combatant: Node3D, active: bool) -> void:
 		combatant.remove_from_group(&"combat_target")
 	var skill_controller := combatant.get_node_or_null("SkillController")
 	if skill_controller != null:
-		skill_controller.set("automatic_demo", active)
+		_set_legacy_demo_ai(combatant, active)
 		if not active:
 			skill_controller.set("is_casting", false)
 	for child: Node in _all_descendants(combatant):

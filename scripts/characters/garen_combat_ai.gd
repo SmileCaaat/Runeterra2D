@@ -37,6 +37,13 @@ var combat_database: CombatDatabase
 var garen_definition: UnitDefinition
 var fighter_ai: AIProfileDefinition
 var ai_archetype: Resource
+var ai_brain: HeroBrain
+var ai_decision: HeroAIDecision
+var ai_decision_timer := 0.0
+var last_consumed_decision_generation := -1
+var ai_recent_damage_accumulator := 0.0
+var ai_recent_damage_hold_timer := 0.0
+@export var ai_debug := false
 var attack_hit_range := 1.95
 var breaker_hit_range := 2.5
 var arena_min := Vector2(-14.5, -4.3)
@@ -50,6 +57,8 @@ var hit_feedback: HeroHitFeedback3D
 
 func _ready() -> void:
 	_apply_combat_data()
+	skill_controller.set("automatic_demo", false)
+	_setup_ai_brain()
 	bind_hero_instance(combat_database, garen_definition)
 	_build_hit_feedback()
 	add_to_group(&"combat_target")
@@ -84,9 +93,16 @@ func get_skill_cooldown_state(slot: StringName) -> Dictionary:
 
 
 func _physics_process(delta: float) -> void:
+	ai_recent_damage_hold_timer = maxf(0.0, ai_recent_damage_hold_timer - delta)
+	if ai_recent_damage_hold_timer <= 0.0:
+		ai_recent_damage_accumulator = 0.0
 	if is_dead:
 		velocity = Vector3.ZERO
 		return
+	var rooted := tick_root(delta)
+	if rooted:
+		velocity.x = 0.0
+		velocity.z = 0.0
 	_refresh_target()
 	if state == CombatState.ATTACK:
 		_check_attack_audio()
@@ -101,7 +117,15 @@ func _physics_process(delta: float) -> void:
 	skill_controller.call("set_target", target)
 	if bool(skill_controller.get("is_casting")):
 		if bool(skill_controller.call("allows_movement_while_casting")):
-			_move_during_ocean_storm(delta)
+			_update_ai_decision(delta)
+			if ai_decision != null and ai_decision.action_id == &"skill_w":
+				_try_consume_ai_one_shot(ai_decision)
+			if rooted:
+				_slow_down(delta)
+				_apply_gravity(delta)
+				move_and_slide()
+			else:
+				_move_during_ocean_storm(delta)
 			return
 		else:
 			_slow_down(delta)
@@ -115,18 +139,12 @@ func _physics_process(delta: float) -> void:
 	var direction := offset.normalized() if distance > 0.001 else Vector3.ZERO
 	_face_direction(direction)
 
-	match state:
-		CombatState.ATTACK:
-			_slow_down(delta)
-			_check_attack_hit(distance)
-		_:
-			if distance <= attack_range or (bool(skill_controller.call("should_use_breaker_attack")) and distance <= _breaker_lunge_range()):
-				_start_next_attack()
-			else:
-				_set_state(CombatState.CHASE)
-				var speed_multiplier := float(skill_controller.call("get_move_speed_multiplier")) * _external_move_speed_multiplier()
-				velocity.x = move_toward(velocity.x, direction.x * move_speed * speed_multiplier, acceleration * delta)
-				velocity.z = move_toward(velocity.z, direction.z * move_speed * speed_multiplier, acceleration * delta)
+	if state == CombatState.ATTACK:
+		_slow_down(delta)
+		_check_attack_hit(distance)
+	else:
+		_update_ai_decision(delta)
+		_execute_ai_decision(ai_decision, delta, direction)
 
 	_apply_gravity(delta)
 	move_and_slide()
@@ -229,58 +247,203 @@ func _on_animation_finished(_animation_name: StringName) -> void:
 	if state != CombatState.ATTACK or not _is_target_available(target):
 		return
 	state = CombatState.CHASE
-	if bool(skill_controller.call("try_begin_demo_skill")):
-		return
-	var offset := target.global_position - global_position
-	offset.y = 0.0
-	if offset.length() <= attack_range + 0.25:
-		_start_next_attack()
-	else:
-		_set_state(CombatState.CHASE)
+	_invalidate_ai_decision("attack finished")
+	_set_state(CombatState.CHASE)
 
 
 func select_ai_skill() -> int:
-	# Hero-specific expression of the reusable Juggernaut pressure archetype.
-	# The profile supplies all thresholds; the order is intentionally conditional,
-	# never a blocking Q/W/E/R/T carousel.
-	if ai_archetype == null or ai_archetype.decision_mode != "melee_pressure" or not _is_target_available(target):
+	if ai_decision == null:
 		return 0
-	var distance := _target_distance()
-	var target_health_ratio := _target_health_ratio(target)
-	var nearby_enemy_count := _count_nearby_enemies(ai_archetype.engage_distance)
-	var skill_cooldowns: Array = skill_controller.get("cooldowns") as Array
-
-	# R is a true-damage finisher. Evaluate calculated damage instead of merely
-	# waiting for an arbitrary health percentage, then keep a percentage guard so
-	# future high-health targets do not get prematurely executed.
-	if _skill_ready(skill_cooldowns, SKILL_R) and distance <= _skill_range(SKILL_R):
-		var target_max_health := float(target.get("max_health"))
-		var projected_damage := float(skill_controller.call("calculate_judgment_damage", target_max_health, target_health_ratio))
-		var target_health := target_max_health * target_health_ratio
-		if target_health_ratio <= ai_archetype.execute_health_ratio or projected_damage >= target_health:
-			return SKILL_R
-
-	# T is an awakening-scale ground AOE. It is reserved for a real group hit;
-	# the low-health fallback still lets the training scene demonstrate it without
-	# turning every single-target exchange into a Ghostship cast.
-	if _skill_ready(skill_cooldowns, SKILL_T) and distance <= _skill_range(SKILL_T):
-		if nearby_enemy_count >= ai_archetype.aoe_min_targets or target_health_ratio <= ai_archetype.awakening_health_ratio:
-			return SKILL_T
-
-	# Defensive W is reactive and stays available during E by design.
-	if _skill_ready(skill_cooldowns, SKILL_W) and get_health_ratio() <= ai_archetype.defend_health_ratio:
-		return SKILL_W
-
-	# E owns close-range sustained pressure. Its self-area targeting also makes
-	# it the preferred multi-target response once the juggernaut has connected.
-	if _skill_ready(skill_cooldowns, SKILL_E) and distance <= _skill_range(SKILL_E):
-		if nearby_enemy_count >= ai_archetype.aoe_min_targets or target_health_ratio <= ai_archetype.pressure_health_ratio:
-			return SKILL_E
-
-	# Q begins the approach and hands the next attack its lunge/empower state.
-	if _skill_ready(skill_cooldowns, SKILL_Q) and distance <= ai_archetype.engage_distance:
-		return SKILL_Q
+	match ai_decision.action_id:
+		&"skill_q": return SKILL_Q
+		&"skill_w": return SKILL_W
+		&"skill_e": return SKILL_E
+		&"skill_r": return SKILL_R
+		&"skill_t": return SKILL_T
 	return 0
+
+
+func uses_hero_brain() -> bool:
+	return true
+
+
+func _setup_ai_brain() -> void:
+	ai_brain = HeroBrain.new()
+	ai_brain.configure(JuggernautPressureEvaluator.new(), GarenAIKit.new(), combat_database)
+
+
+func _build_ai_context() -> HeroAIContext:
+	var ctx := HeroAIContext.new()
+	ctx.actor = self
+	ctx.target = target if _is_target_available(target) else null
+	ctx.database = combat_database
+	ctx.archetype = ai_archetype as AIArchetypeDefinition
+	ctx.profile = fighter_ai
+	ctx.now_seconds = float(Time.get_ticks_msec()) / 1000.0
+	ctx.delta = get_physics_process_delta_time()
+	ctx.self_position = global_position
+	ctx.self_health_ratio = get_health_ratio()
+	ctx.preferred_distance = float(ai_archetype.preferred_distance) if ai_archetype != null else attack_range
+	ctx.engage_distance = float(ai_archetype.engage_distance) if ai_archetype != null else attack_range + 1.0
+	ctx.disengage_distance = float(ai_archetype.disengage_distance) if ai_archetype != null else 0.0
+	ctx.attack_range = attack_range
+	ctx.cast_range = ctx.engage_distance
+	ctx.rooted = is_rooted()
+	ctx.arena_min = arena_min
+	ctx.arena_max = arena_max
+	var skill_cooldowns: Array = skill_controller.get("cooldowns") as Array
+	ctx.q_ready = _skill_ready(skill_cooldowns, SKILL_Q)
+	ctx.w_ready = _skill_ready(skill_cooldowns, SKILL_W)
+	ctx.e_ready = _skill_ready(skill_cooldowns, SKILL_E)
+	ctx.r_ready = _skill_ready(skill_cooldowns, SKILL_R)
+	ctx.t_ready = _skill_ready(skill_cooldowns, SKILL_T)
+	ctx.extras[&"breaker_empowered"] = bool(skill_controller.call("should_use_breaker_attack"))
+	ctx.extras[&"is_casting"] = bool(skill_controller.get("is_casting"))
+	ctx.extras[&"current_skill"] = int(skill_controller.get("current_skill"))
+	ctx.extras[&"r_range"] = _skill_range(SKILL_R)
+	ctx.extras[&"e_range"] = _skill_range(SKILL_E)
+	ctx.extras[&"t_range"] = _skill_range(SKILL_T)
+	ctx.extras[&"breaker_lunge_range"] = _breaker_lunge_range()
+	ctx.extras[&"move_speed_multiplier"] = float(skill_controller.call("get_move_speed_multiplier")) * _external_move_speed_multiplier()
+	ctx.extras[&"attack_damage"] = garen_definition.attack_damage if garen_definition != null else 69.0
+	ctx.extras[&"recent_damage_ratio"] = ai_recent_damage_accumulator / maxf(float(skill_controller.get("max_health")), 1.0)
+	if ctx.target != null:
+		ctx.target_position = target.global_position
+		ctx.target_velocity = target.velocity
+		ctx.target_distance = _target_distance()
+		ctx.target_health_ratio = _target_health_ratio(target)
+		ctx.target_is_hero = target.is_in_group(&"hero_actor")
+		ctx.target_is_training_dummy = target.is_in_group(&"training_dummy")
+		var target_max_health := float(target.get("max_health"))
+		ctx.extras[&"target_health"] = target_max_health * ctx.target_health_ratio
+		ctx.extras[&"projected_execute_damage"] = float(skill_controller.call("calculate_judgment_damage", target_max_health, ctx.target_health_ratio))
+	ctx.nearby_enemy_count = _count_nearby_enemies(maxf(ctx.engage_distance, _skill_range(SKILL_E)))
+	if ctx.rooted:
+		ctx.block_action(&"approach", "rooted")
+	var casting := bool(ctx.extras[&"is_casting"])
+	if casting and int(ctx.extras[&"current_skill"]) == SKILL_E:
+		for action: StringName in [&"approach", &"retreat", &"basic_attack", &"skill_q", &"skill_e", &"skill_r", &"skill_t"]:
+			ctx.block_action(action, "ocean storm active")
+	elif casting or state == CombatState.ATTACK:
+		for action: StringName in [&"approach", &"retreat", &"basic_attack", &"skill_q", &"skill_w", &"skill_e", &"skill_r", &"skill_t"]:
+			ctx.block_action(action, "action locked")
+	return ctx
+
+
+func _update_ai_decision(delta: float) -> void:
+	if ai_brain == null:
+		return
+	ai_decision_timer -= delta
+	if ai_decision_timer > 0.0 and ai_decision != null:
+		return
+	ai_decision_timer = maxf(float(ai_archetype.decision_interval), 0.05) if ai_archetype != null else 0.15
+	ai_decision = ai_brain.think(_build_ai_context())
+	if ai_debug:
+		var parts: Array[String] = []
+		var limit := int(combat_database.get_rule(&"ai.utility.debug_top_count", 3)) if combat_database != null else 3
+		for candidate: HeroAIDecision in ai_brain.debug_top_candidates(limit):
+			parts.append("%s %.0f" % [String(candidate.action_id), candidate.score])
+		state_label.text = "AI %s\n%s" % [String(ai_decision.action_id), " | ".join(parts)]
+
+
+func _invalidate_ai_decision(_reason: String = "") -> void:
+	if ai_brain != null:
+		ai_brain.clear_intent()
+	ai_decision = null
+	ai_decision_timer = 0.0
+
+
+func _can_execute_ai_decision(decision: HeroAIDecision) -> bool:
+	if decision == null or is_dead:
+		return false
+	var action := decision.action_id
+	if action != &"hold" and not _is_target_available(target):
+		return false
+	if decision.target != null and decision.target != target:
+		return false
+	var casting := bool(skill_controller.get("is_casting"))
+	var ocean_storm := casting and int(skill_controller.get("current_skill")) == SKILL_E
+	if action == &"approach":
+		return not casting and not is_rooted() and state != CombatState.ATTACK
+	if action == &"hold":
+		return true
+	if action == &"basic_attack":
+		return not casting and state != CombatState.ATTACK and (_target_distance() <= attack_range or (bool(skill_controller.call("should_use_breaker_attack")) and _target_distance() <= _breaker_lunge_range()))
+	var skill_index := 0
+	match action:
+		&"skill_q": skill_index = SKILL_Q
+		&"skill_w": skill_index = SKILL_W
+		&"skill_e": skill_index = SKILL_E
+		&"skill_r": skill_index = SKILL_R
+		&"skill_t": skill_index = SKILL_T
+	if skill_index == 0:
+		return false
+	var skill_cooldowns: Array = skill_controller.get("cooldowns") as Array
+	if not _skill_ready(skill_cooldowns, skill_index):
+		return false
+	if skill_index == SKILL_W:
+		return state != CombatState.ATTACK and (not casting or ocean_storm)
+	if casting or not can_start_skill():
+		return false
+	if skill_index == SKILL_Q:
+		return _target_distance() <= maxf(float(ai_archetype.engage_distance), _breaker_lunge_range())
+	return _target_distance() <= _skill_range(skill_index)
+
+
+func _try_consume_ai_one_shot(decision: HeroAIDecision) -> bool:
+	if decision == null or decision.generation == last_consumed_decision_generation:
+		return false
+	if not _can_execute_ai_decision(decision):
+		_invalidate_ai_decision("one-shot rejected")
+		return false
+	var started := false
+	if decision.action_id == &"basic_attack":
+		_start_next_attack()
+		started = true
+	else:
+		var skill_index := 0
+		match decision.action_id:
+			&"skill_q": skill_index = SKILL_Q
+			&"skill_w": skill_index = SKILL_W
+			&"skill_e": skill_index = SKILL_E
+			&"skill_r": skill_index = SKILL_R
+			&"skill_t": skill_index = SKILL_T
+		if skill_index > 0:
+			started = bool(skill_controller.call("begin_skill", skill_index, target))
+	if not started:
+		_invalidate_ai_decision("one-shot start failed")
+		return false
+	last_consumed_decision_generation = decision.generation
+	_invalidate_ai_decision()
+	return true
+
+
+func _execute_ai_decision(decision: HeroAIDecision, delta: float, direction: Vector3) -> void:
+	if decision == null:
+		_slow_down(delta)
+		return
+	if decision.action_id == &"approach":
+		if not _can_execute_ai_decision(decision):
+			_invalidate_ai_decision("approach rejected")
+			_slow_down(delta)
+			return
+		_set_state(CombatState.CHASE)
+		var speed_multiplier := float(skill_controller.call("get_move_speed_multiplier")) * _external_move_speed_multiplier()
+		velocity.x = move_toward(velocity.x, direction.x * move_speed * speed_multiplier, acceleration * delta)
+		velocity.z = move_toward(velocity.z, direction.z * move_speed * speed_multiplier, acceleration * delta)
+	elif decision.action_id == &"hold":
+		_slow_down(delta)
+		_set_state(CombatState.IDLE)
+	else:
+		_slow_down(delta)
+		_try_consume_ai_one_shot(decision)
+
+
+func record_ai_damage_taken(actual_health_loss: float) -> void:
+	if actual_health_loss <= 0.0:
+		return
+	ai_recent_damage_accumulator += actual_health_loss
+	ai_recent_damage_hold_timer = 1.0
 
 
 func _skill_ready(skill_cooldowns: Array, skill_index: int) -> bool:
@@ -415,12 +578,13 @@ func receive_knockback(direction: Vector3, speed: float) -> bool:
 func _refresh_target() -> void:
 	if is_dead:
 		return
-	if target != null and not is_instance_valid(target):
+	if not is_instance_valid(target):
 		target = null
 	var preferred := _find_closest_target()
 	if preferred == null:
 		_set_target_outline(target, false)
 		target = null
+		_invalidate_ai_decision("target lost")
 		skill_controller.call("set_target", target)
 		return
 	var should_switch := not _is_target_available(target)
@@ -430,6 +594,7 @@ func _refresh_target() -> void:
 		return
 	_set_target_outline(target, false)
 	target = preferred
+	_invalidate_ai_decision("target changed")
 	_set_target_outline(target, true)
 	skill_controller.call("set_target", target)
 	_set_state(CombatState.CHASE)
@@ -445,6 +610,7 @@ func force_retarget_hostile() -> void:
 	if is_dead:
 		return
 	target = null
+	_invalidate_ai_decision("force retarget")
 	_refresh_target()
 
 
@@ -579,6 +745,7 @@ func _build_hit_feedback() -> void:
 func _die() -> void:
 	if is_dead:
 		return
+	_invalidate_ai_decision("death")
 	is_dead = true
 	target = null
 	state = CombatState.IDLE
@@ -594,6 +761,7 @@ func _die() -> void:
 
 
 func revive_for_training() -> void:
+	_invalidate_ai_decision("revive")
 	is_dead = false
 	target = null
 	state = CombatState.IDLE
@@ -646,6 +814,10 @@ func _external_move_speed_multiplier() -> float:
 	return result
 
 
+func get_control_duration_multiplier() -> float:
+	return float(skill_controller.call("get_control_duration_multiplier")) if skill_controller != null else 1.0
+
+
 func _breaker_lunge_range() -> float:
 	var breaker := combat_database.get_skill_by_slot(&"garen", 1) if combat_database != null else null
 	return breaker.cast_range if breaker != null else 2.4
@@ -664,7 +836,7 @@ func _should_lunge_to_target() -> bool:
 
 
 func _perform_breaker_lunge() -> void:
-	if not _is_target_available(target):
+	if is_rooted() or not _is_target_available(target):
 		return
 	var offset := target.global_position - global_position
 	offset.y = 0.0
@@ -681,7 +853,7 @@ func _perform_breaker_lunge() -> void:
 	var origin := global_position
 	var duration := float(combat_database.get_rule(&"garen.breaker.lunge_duration", 0.12)) if combat_database != null else 0.12
 	var elapsed := 0.0
-	while elapsed < duration and _is_target_available(target):
+	while elapsed < duration and not is_rooted() and _is_target_available(target):
 		await get_tree().process_frame
 		elapsed += get_process_delta_time()
 		global_position = origin.lerp(destination, ease(clampf(elapsed / duration, 0.0, 1.0), -1.6))

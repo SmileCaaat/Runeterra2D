@@ -4,15 +4,39 @@ extends CharacterBody3D
 const FLOATING_DAMAGE_NUMBERS := preload("res://scripts/presentation/floating_damage_numbers.gd")
 const UNIT_READABILITY := preload("res://scripts/rendering/unit_readability_layers.gd")
 
-# Shared runtime presentation contract for every combat-capable world unit.
-# Individual actors continue to own their movement, state machine and death
-# behaviour; this template owns only reusable combat-instance services.
+# Shared runtime contract for every combat-capable world unit.
+# Individual actors own their movement/state machines and must consume shared
+# control timers before applying autonomous planar movement.
 var _instance_database: CombatDatabase
 var _instance_definition: UnitDefinition
 var _floating_damage_numbers: Node3D
 var _ghost_collision_active := false
 var _normal_collision_layer := 0
 var _normal_collision_mask := 0
+var _root_timer := 0.0
+
+
+func apply_root(duration: float) -> float:
+	if duration <= 0.0:
+		return 0.0
+	var tenacity: float = _instance_definition.tenacity if _instance_definition != null else 0.0
+	var resolved: float = CombatMath.control_duration(duration, tenacity, _instance_database) if _instance_database != null else duration
+	resolved *= get_control_duration_multiplier()
+	_root_timer = maxf(_root_timer, resolved)
+	return _root_timer
+
+
+func tick_root(delta: float) -> bool:
+	_root_timer = maxf(0.0, _root_timer - delta)
+	return _root_timer > 0.0
+
+
+func is_rooted() -> bool:
+	return _root_timer > 0.0
+
+
+func get_control_duration_multiplier() -> float:
+	return 1.0
 
 
 func set_ghost_collision_active(active: bool) -> void:
@@ -41,6 +65,10 @@ func bind_combat_instance(database: CombatDatabase, definition: UnitDefinition) 
 	_instance_definition = definition
 	_floating_damage_numbers = FLOATING_DAMAGE_NUMBERS.get_or_create(self, database)
 	_ensure_unit_readability()
+
+
+func get_combat_unit_definition() -> UnitDefinition:
+	return _instance_definition
 
 
 func set_outline_selected(active: bool) -> void:

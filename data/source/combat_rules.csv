@@ -176,3 +176,7 @@ presentation.damage_number_normal_scale,presentation,float,1.0,普通物理和�
 presentation.damage_number_critical_scale,presentation,float,1.42,物理和魔法暴击伤害数字基础缩放
 presentation.damage_number_critical_punch,presentation,float,0.24,暴击伤害数字额外Scale Punch幅度
 presentation.damage_number_lateral_jitter,presentation,float,0.16,伤害数字横向随机偏移速度
+ai.intent.min_commit_seconds,ai,float,0.22,英雄AI最短意图保持时间
+ai.intent.switch_margin,ai,float,8.0,保持期结束后切换行为所需分差
+ai.intent.emergency_switch_margin,ai,float,20.0,保持期内紧急切换行为所需分差
+ai.utility.debug_top_count,ai,int,3,AI调试显示的最高候选数量

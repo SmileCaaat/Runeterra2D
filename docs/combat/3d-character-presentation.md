@@ -23,8 +23,8 @@
 
 ## 光照、Toon 与描边
 
-- `Camera3D.projection = orthogonal` 不会禁用真实 3D 光照。训练场使用方向主光和环境补光，以保证背光面不至于发黑。
-- `character_toon_3d.gdshader` 使用 `diffuse_toon` / `specular_toon`，同时保持不透明深度写入。角色 shader 不得写入透明 `ALPHA`；否则本体会进入透明队列并与外扩描边发生深度闪烁。
+- `Camera3D.projection = orthogonal` 本身不会禁用 Toon 或真实 3D 光照；但角色左右朝向会改变法线相对方向主光的夹角。本项目当前优先保证亮度稳定，因此角色暂用 `unshaded`。
+- `character_toon_3d.gdshader` 使用 `unshaded`，让模型亮度不随 ±X 朝向和场景方向光变化；保留纹理色与弱 team Fresnel，暂不追求 Toon 明暗分段。角色 shader 不得写入透明 `ALPHA`；否则本体会进入透明队列并与外扩描边发生深度闪烁。
 - `UnitReadabilityLayers` 在地面绘制低透明度椭圆队伍环，并按碰撞半径计算尺寸；脚环参与深度测试，帮助表达角色在场景中的 Z 轴位置。
 - `character_toon_3d.gdshader` 通过视线与法线 Fresnel 叠加弱 team rim。环颜色、透明度、尺寸、Rim 色和强度均可配置。
 - `MeshOutlineHighlight3D` 与阵营无关，复制本体网格并沿法线外扩，沿用骨骼路径。`set_selected(bool)`、`set_targeted(bool)` 和 `set_highlighted(bool)` 按优先级切换细描边；默认状态隐藏外扩网格。

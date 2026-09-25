@@ -28,6 +28,11 @@ func _initialize() -> void:
 	var blue_target: CharacterBody3D = blue.get("target")
 	var red_target: CharacterBody3D = source_red.get("target")
 	var target_ok := blue_target == source_red and red_target == blue
+	var red_garen_root_start := source_red.global_position
+	source_red.call("apply_root", 1.0)
+	await physics_frame
+	var red_garen_root_stops_movement := bool(source_red.call("is_rooted")) \
+		and Vector2(source_red.global_position.x - red_garen_root_start.x, source_red.global_position.z - red_garen_root_start.z).length() < 0.01
 
 	var blue_hp_before := float(blue.get("current_health"))
 	source_red.call("receive_hit", blue.global_position, &"attack1", 80.0)
@@ -54,17 +59,26 @@ func _initialize() -> void:
 	var ryze_hp_after := float(red_ryze.get("current_health"))
 	var ryze_takes_damage := ryze_hp_after < ryze_hp_before and ryze_hp_after > 0.0
 	var ryze_hit_feedback := _hit_feedback_count(red_ryze) == 1
+	var ryze_root_start := red_ryze.global_position
+	red_ryze.call("apply_root", 1.0)
+	await physics_frame
+	var ryze_root_stops_movement := bool(red_ryze.call("is_rooted")) \
+		and Vector2(red_ryze.global_position.x - ryze_root_start.x, red_ryze.global_position.z - ryze_root_start.z).length() < 0.01
 	red_ryze.call("receive_skill_damage", 99999.0, "处决", false, blue.global_position, &"true", &"judgment_hit")
 	var ryze_dies := bool(red_ryze.get("is_dead")) and not red_ryze.is_in_group(&"combat_target")
 
-	print("HERO_VS_HERO target=%s target_highlight=%s aa=%s skill=%s hit=%s/%s/%s ryze_hp=%s ryze_death=%s blue_hp=%.1f->%.1f red_hp=%.1f" % [
-		target_ok, red_outline_ok, red_took_aa, blue_took_skill, red_hit_feedback, blue_hit_feedback, ryze_hit_feedback, ryze_takes_damage, ryze_dies, blue_hp_before, blue_hp_after, red_hp_after_hit
+	print("HERO_VS_HERO target=%s target_highlight=%s root=%s/%s aa=%s skill=%s hit=%s/%s/%s ryze_hp=%s ryze_death=%s blue_hp=%.1f->%.1f red_hp=%.1f" % [
+		target_ok, red_outline_ok, red_garen_root_stops_movement, ryze_root_stops_movement, red_took_aa, blue_took_skill, red_hit_feedback, blue_hit_feedback, ryze_hit_feedback, ryze_takes_damage, ryze_dies, blue_hp_before, blue_hp_after, red_hp_after_hit
 	])
-	var passed := target_ok and red_outline_ok and red_took_aa and blue_took_skill and red_hit_feedback and blue_hit_feedback and ryze_hit_feedback and ryze_takes_damage and ryze_dies
+	var passed := target_ok and red_outline_ok and red_garen_root_stops_movement and ryze_root_stops_movement and red_took_aa and blue_took_skill and red_hit_feedback and blue_hit_feedback and ryze_hit_feedback and ryze_takes_damage and ryze_dies
 	if not passed:
 		push_error("Hero versus hero verification failed")
+		stage.queue_free()
+		await process_frame
 		quit(1)
 		return
+	stage.queue_free()
+	await process_frame
 	quit(0)
 
 

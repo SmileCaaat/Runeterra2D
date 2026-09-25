@@ -170,12 +170,21 @@ func _validate_source() -> void:
 	var asset_ids := _id_set("asset_manifest.csv", "asset_id")
 	var particle_ids := _id_set("particle_profiles.csv", "profile_id")
 	var ai_ids := _id_set("ai_profiles.csv", "profile_id")
+	var asset_rows := _rows_by_id("asset_manifest.csv", "asset_id")
 
 	for row: Dictionary in _tables["units.csv"]:
 		_require_ref(row, "ai_profile_id", ai_ids, true)
 		_require_ref(row, "class_id", class_ids, true)
 		_require_ref(row, "subclass_id", subclass_ids, true)
 		_validate_enum(row, "instance_template_id", ["hero", "monster"])
+		var portrait_profile_id := _s(row, "portrait_profile_id")
+		if _s(row, "unit_type") == "hero" and portrait_profile_id.is_empty():
+			_error(row, "hero units require portrait_profile_id")
+		elif not portrait_profile_id.is_empty():
+			_require_ref(row, "portrait_profile_id", asset_ids)
+			var portrait_asset: Dictionary = asset_rows.get(portrait_profile_id, {})
+			if not portrait_asset.is_empty() and _s(portrait_asset, "asset_type") != "hero_portrait":
+				_error(row, "portrait_profile_id must reference an asset with asset_type=hero_portrait")
 		if _s(row, "unit_type") == "hero":
 			if _s(row, "class_id").is_empty():
 				_error(row, "hero units require class_id")
@@ -423,6 +432,7 @@ func _populate_units(database: CombatDatabase) -> void:
 		definition.level = _i(row, "level")
 		definition.ai_profile_id = _sn(row, "ai_profile_id")
 		definition.skill_ids = _names(row, "skill_ids")
+		definition.portrait_profile_id = _sn(row, "portrait_profile_id")
 		definition.courage_stack_eligible = _b(row, "courage_stack_eligible")
 		database.units.append(definition)
 

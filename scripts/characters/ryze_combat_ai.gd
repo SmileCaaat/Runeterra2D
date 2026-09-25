@@ -49,9 +49,15 @@ var desperate_timer := 0.0
 var attack_index := 0
 var attack_timer := 0.0
 var action_lock := 0.0
-var root_timer := 0.0
 var ai_profile: Resource
 var ai_archetype: Resource
+var ai_brain: HeroBrain
+var ai_decision: HeroAIDecision
+var ai_decision_timer := 0.0
+var last_consumed_decision_generation := -1
+var ai_recent_damage_accumulator := 0.0
+var ai_recent_damage_hold_timer := 0.0
+@export var ai_debug := false
 var arena_min := Vector2(-14.5, -3.4)
 var arena_max := Vector2(14.5, 3.4)
 var super_armor_timer := 0.0
@@ -109,6 +115,7 @@ func _ready() -> void:
 	_build_supercharge_mesh_afterimage()
 	_cache_e_orb_from_center()
 	_refresh_target()
+	_setup_ai_brain()
 	_update_label()
 
 
@@ -170,8 +177,14 @@ func _facing_left() -> bool:
 	return _faces_left
 
 
-func _sync_self_vfx_node(plus_x: AnimatedSprite3D, flip_x: AnimatedSprite3D, animation: StringName, active: bool) -> void:
-	var use_flip := _facing_left() and flip_x != null
+func _sync_self_vfx_node(plus_x: AnimatedSprite3D, flip_x: AnimatedSprite3D, animation: StringName, active: bool, follow_facing := true) -> void:
+	var use_flip := follow_facing and _facing_left() and flip_x != null
+	var next_sprite := flip_x if use_flip else plus_x
+	var current_sprite := plus_x if plus_x != null and plus_x.visible else (flip_x if flip_x != null and flip_x.visible else null)
+	if active and next_sprite != null and current_sprite != null and next_sprite != current_sprite:
+		if current_sprite.animation == animation and next_sprite.sprite_frames == current_sprite.sprite_frames:
+			next_sprite.play(animation)
+			next_sprite.set_frame_and_progress(current_sprite.frame, current_sprite.frame_progress)
 	if plus_x != null:
 		plus_x.visible = active and not use_flip
 		if plus_x.visible:
@@ -189,6 +202,9 @@ func _sync_self_vfx_node(plus_x: AnimatedSprite3D, flip_x: AnimatedSprite3D, ani
 
 
 func _physics_process(delta: float) -> void:
+	ai_recent_damage_hold_timer = maxf(0.0, ai_recent_damage_hold_timer - delta)
+	if ai_recent_damage_hold_timer <= 0.0:
+		ai_recent_damage_accumulator = 0.0
 	for key: StringName in cooldowns:
 		cooldowns[key] = maxf(0.0, float(cooldowns[key]) - delta)
 	arcane_timer = maxf(0.0, arcane_timer - delta)
@@ -208,11 +224,10 @@ func _physics_process(delta: float) -> void:
 	if is_dead:
 		velocity = Vector3.ZERO
 		return
-	if root_timer > 0.0:
-		root_timer = maxf(0.0, root_timer - delta)
-		velocity = Vector3.ZERO
-		move_and_slide()
-		return
+	var rooted := tick_root(delta)
+	if rooted:
+		velocity.x = 0.0
+		velocity.z = 0.0
 	if not enabled:
 		return
 	_refresh_target()
@@ -227,8 +242,11 @@ func _physics_process(delta: float) -> void:
 		var silence_distance := silence_offset.length()
 		_face(silence_offset)
 		if silence_distance > _cast_range():
-			velocity = silence_offset.normalized() * _move_speed()
-			character_model.call(&"play_semantic", &"run")
+			if rooted:
+				velocity = Vector3.ZERO
+			else:
+				velocity = silence_offset.normalized() * _move_speed()
+				character_model.call(&"play_semantic", &"run")
 			move_and_slide()
 		else:
 			velocity = Vector3.ZERO
@@ -238,37 +256,216 @@ func _physics_process(delta: float) -> void:
 	to_target.y = 0.0
 	var distance := to_target.length()
 	_face(to_target)
-	if _should_escape_warp(distance):
-		cast_realm_warp(_escape_destination(to_target))
+	_update_ai_decision(delta)
+	_execute_ai_decision(ai_decision)
+
+
+func uses_hero_brain() -> bool:
+	return true
+
+
+func _setup_ai_brain() -> void:
+	ai_brain = HeroBrain.new()
+	ai_brain.configure(BattlemageZoneEvaluator.new(), RyzeAIKit.new(), database)
+
+
+func _build_ai_context() -> HeroAIContext:
+	var ctx := HeroAIContext.new()
+	ctx.actor = self
+	ctx.target = target if is_instance_valid(target) and _valid_target(target) else null
+	ctx.database = database
+	ctx.archetype = ai_archetype as AIArchetypeDefinition
+	ctx.profile = ai_profile as AIProfileDefinition
+	ctx.now_seconds = float(Time.get_ticks_msec()) / 1000.0
+	ctx.delta = get_physics_process_delta_time()
+	ctx.self_position = global_position
+	ctx.self_health_ratio = get_health_ratio()
+	ctx.cast_range = _cast_range()
+	ctx.attack_range = ctx.cast_range
+	ctx.preferred_distance = _preferred_distance()
+	ctx.engage_distance = float(ai_archetype.engage_distance) if ai_archetype != null else ctx.cast_range
+	ctx.disengage_distance = float(ai_archetype.disengage_distance) if ai_archetype != null else 1.5
+	ctx.q_ready = cooldowns[&"q"] <= 0.0
+	ctx.w_ready = cooldowns[&"w"] <= 0.0
+	ctx.e_ready = cooldowns[&"e"] <= 0.0
+	ctx.r_ready = cooldowns[&"r"] <= 0.0
+	ctx.t_ready = cooldowns[&"t"] <= 0.0
+	ctx.silenced = silence_timer > 0.0
+	ctx.rooted = is_rooted()
+	ctx.action_locked = action_lock > 0.0
+	ctx.arena_min = arena_min
+	ctx.arena_max = arena_max
+	ctx.extras[&"arcane_stacks"] = arcane_stacks
+	ctx.extras[&"arcane_timer"] = arcane_timer
+	ctx.extras[&"supercharged_casts"] = supercharged_casts
+	ctx.extras[&"supercharged_timer"] = supercharged_timer
+	ctx.extras[&"supercharged"] = _is_supercharged()
+	ctx.extras[&"desperate_timer"] = desperate_timer
+	ctx.extras[&"desperate_active"] = desperate_timer > 0.0
+	ctx.extras[&"ready_basic_spell_count"] = _ready_basic_spell_count()
+	ctx.extras[&"warp_range"] = _warp_range()
+	ctx.extras[&"move_speed"] = _move_speed()
+	ctx.extras[&"recent_damage_ratio"] = ai_recent_damage_accumulator / maxf(max_health, 1.0)
+	if ctx.target != null:
+		ctx.target_position = target.global_position
+		ctx.target_velocity = target.velocity
+		ctx.target_health_ratio = float(target.call("get_health_ratio")) if target.has_method("get_health_ratio") else 1.0
+		ctx.target_distance = _current_target_distance()
+		ctx.target_is_hero = target.is_in_group(&"hero_actor")
+		ctx.target_is_training_dummy = target.is_in_group(&"training_dummy")
+		var to_actor := global_position - target.global_position
+		to_actor.y = 0.0
+		var planar_velocity := target.velocity
+		planar_velocity.y = 0.0
+		ctx.target_closing_speed = planar_velocity.dot(to_actor.normalized()) if to_actor.length_squared() > 0.0001 else 0.0
+		ctx.extras[&"escape_destination"] = _escape_destination(target.global_position - global_position)
+		ctx.extras[&"engage_destination"] = _engage_destination()
+	for node: Node in get_tree().get_nodes_in_group(&"combat_target"):
+		var candidate := node as CharacterBody3D
+		if candidate == null or candidate == self or not _can_harm(candidate):
+			continue
+		var offset := candidate.global_position - global_position
+		offset.y = 0.0
+		if offset.length() <= ctx.cast_range:
+			ctx.nearby_enemy_count += 1
+		ctx.nearest_enemy_distance = minf(ctx.nearest_enemy_distance, offset.length())
+		if candidate != target:
+			ctx.enemies.append(candidate)
+	if ai_brain != null and ai_brain.current_decision != null:
+		ctx.current_intent = ai_brain.current_decision.action_id
+		ctx.current_intent_age = ctx.now_seconds - ai_brain.current_intent_started_at
+	if ctx.rooted:
+		for action: StringName in [&"approach", &"retreat", &"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition"]:
+			ctx.block_action(action, "rooted")
+	if ctx.silenced:
+		for action: StringName in [&"skill_q", &"skill_w", &"skill_e", &"skill_t", &"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition"]:
+			ctx.block_action(action, "silenced")
+	return ctx
+
+
+func _update_ai_decision(delta: float) -> void:
+	if ai_brain == null:
 		return
-	if _should_burst_t(distance):
-		cast_desperate_power()
+	ai_decision_timer -= delta
+	if ai_decision_timer > 0.0 and ai_decision != null:
 		return
-	if _should_engage_warp(distance):
-		cast_realm_warp(_engage_destination())
-		return
-	if distance > _cast_range():
-		velocity = to_target.normalized() * _move_speed()
-		character_model.call(&"play_semantic", &"run")
-		move_and_slide()
-		return
-	if distance < _preferred_distance():
-		velocity = -to_target.normalized() * _move_speed()
-		# Kiting changes the travel vector. Face the actual run direction instead
-		# of the target, otherwise the skeletal Run animation visibly moonwalks.
-		_face(velocity)
-		character_model.call(&"play_semantic", &"run")
-		move_and_slide()
-		return
+	ai_decision_timer = maxf(float(ai_archetype.decision_interval), 0.05) if ai_archetype != null else 0.16
+	ai_decision = ai_brain.think(_build_ai_context())
+	if ai_debug:
+		var parts: Array[String] = []
+		var limit := int(database.get_rule(&"ai.utility.debug_top_count", 3)) if database != null else 3
+		for candidate: HeroAIDecision in ai_brain.debug_top_candidates(limit):
+			parts.append("%s %.0f" % [String(candidate.action_id), candidate.score])
+		label.text += "\nAI %s: %s" % [String(ai_decision.action_id), " | ".join(parts)]
+
+
+func _invalidate_ai_decision(_reason: String = "") -> void:
+	if ai_brain != null:
+		ai_brain.clear_intent()
+	ai_decision = null
+	ai_decision_timer = 0.0
+
+
+func _current_target_distance() -> float:
+	if not is_instance_valid(target) or not _valid_target(target):
+		return INF
+	var offset := target.global_position - global_position
+	offset.y = 0.0
+	return offset.length()
+
+
+func _can_execute_ai_decision(decision: HeroAIDecision) -> bool:
+	if decision == null or is_dead or not enabled or action_lock > 0.0:
+		return false
+	var action := decision.action_id
+	if action != &"hold" and (not is_instance_valid(target) or not _can_harm(target)):
+		return false
+	if decision.target != null and decision.target != target:
+		return false
+	if is_rooted() and action in [&"approach", &"retreat", &"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition"]:
+		return false
+	if silence_timer > 0.0 and action in [&"skill_q", &"skill_w", &"skill_e", &"skill_t", &"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition"]:
+		return false
+	var distance := _current_target_distance()
+	match action:
+		&"basic_attack": return distance <= _cast_range()
+		&"skill_q": return cooldowns[&"q"] <= 0.0 and distance <= _cast_range()
+		&"skill_w": return cooldowns[&"w"] <= 0.0 and distance <= _cast_range()
+		&"skill_e": return cooldowns[&"e"] <= 0.0 and distance <= _cast_range()
+		&"skill_t": return cooldowns[&"t"] <= 0.0
+		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition": return _is_valid_ai_warp_destination(decision)
+	return true
+
+
+func _is_valid_ai_warp_destination(decision: HeroAIDecision) -> bool:
+	if cooldowns[&"r"] > 0.0 or not decision.has_destination or not decision.destination.is_finite():
+		return false
+	var travel := decision.destination - global_position
+	travel.y = 0.0
+	if travel.length() > _warp_range() + 0.01:
+		return false
+	return _clamp_to_arena(decision.destination).distance_to(decision.destination) <= 0.01
+
+
+func _start_ai_one_shot(decision: HeroAIDecision) -> bool:
+	if not _can_execute_ai_decision(decision):
+		return false
 	velocity = Vector3.ZERO
-	if cooldowns[&"e"] <= 0.0:
-		_cast_e(target)
-	elif cooldowns[&"w"] <= 0.0:
-		_cast_w(target)
-	elif cooldowns[&"q"] <= 0.0:
-		_cast_q(target)
-	else:
-		_basic_attack(target)
+	match decision.action_id:
+		&"basic_attack": _basic_attack(target)
+		&"skill_q": _cast_q(target)
+		&"skill_w": _cast_w(target)
+		&"skill_e": _cast_e(target)
+		&"skill_t": cast_desperate_power()
+		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition": cast_realm_warp(decision.destination)
+		_: return false
+	return true
+
+
+func _try_consume_ai_one_shot(decision: HeroAIDecision) -> bool:
+	if decision == null or decision.generation == last_consumed_decision_generation:
+		return false
+	if not _start_ai_one_shot(decision):
+		_invalidate_ai_decision("one-shot rejected")
+		return false
+	last_consumed_decision_generation = decision.generation
+	_invalidate_ai_decision()
+	return true
+
+
+func _execute_ai_decision(decision: HeroAIDecision) -> void:
+	if decision == null:
+		return
+	if decision.action_id in [&"hold", &"approach", &"retreat"]:
+		if not _can_execute_ai_decision(decision):
+			_invalidate_ai_decision("movement rejected")
+			return
+		match decision.action_id:
+			&"approach":
+				var direction := target.global_position - global_position
+				direction.y = 0.0
+				_face(direction)
+				velocity = direction.normalized() * _move_speed()
+				character_model.call(&"play_semantic", &"run")
+			&"retreat":
+				var direction := global_position - target.global_position
+				direction.y = 0.0
+				velocity = direction.normalized() * _move_speed()
+				_face(velocity)
+				character_model.call(&"play_semantic", &"run")
+			&"hold":
+				velocity = Vector3.ZERO
+				character_model.call(&"play_semantic", &"idle")
+		move_and_slide()
+		return
+	_try_consume_ai_one_shot(decision)
+
+
+func record_ai_damage_taken(actual_health_loss: float) -> void:
+	if actual_health_loss <= 0.0:
+		return
+	ai_recent_damage_accumulator += actual_health_loss
+	ai_recent_damage_hold_timer = 1.0
 
 
 func _basic_attack(victim: CharacterBody3D) -> void:
@@ -295,10 +492,9 @@ func _cast_w(victim: CharacterBody3D) -> void:
 		if _valid_target(victim):
 			_play_target_vfx(victim, &"Spell2_W")
 			_damage(victim, _ranked_damage(&"ryze_w_damage", 80.0), &"magic", &"ryze_w_hit")
-			var root_duration := _ranked_control(&"ryze_w_damage", 1.0)
-			if victim.has_method("apply_root"):
-				victim.call("apply_root", root_duration)
-			_play_w_loop(victim, root_duration)
+			var root_duration := _ranked_control(&"ryze_w_root", 1.0)
+			var applied_root_duration := float(victim.call("apply_root", root_duration))
+			_play_w_loop(victim, applied_root_duration)
 	)
 
 
@@ -421,10 +617,6 @@ func _teleport_actor(actor: CharacterBody3D, destination: Vector3) -> void:
 	actor.velocity = Vector3.ZERO
 
 
-func apply_root(duration: float) -> void:
-	root_timer = maxf(root_timer, duration)
-
-
 func get_team() -> StringName:
 	return StringName(team)
 
@@ -457,9 +649,11 @@ func receive_breaker_attack(base_attack: float, bonus_damage: float, attacker_po
 func receive_skill_damage(amount: float, source_name: String, is_critical: bool, attacker_position: Vector3, damage_type: StringName = &"magic", hit_profile_id: StringName = &"ryze_e_hit", source_actor: Node = null) -> void:
 	if is_dead or amount <= 0.0:
 		return
+	var health_before := current_health
 	var resolved := CombatMath.resolve_damage(amount, damage_type, armor, magic_resistance, database)
 	var applied_damage := minf(current_health, resolved)
 	current_health = maxf(0.0, current_health - resolved)
+	record_ai_damage_taken(maxf(0.0, health_before - current_health))
 	if source_actor != null and applied_damage > 0.0:
 		var stats := get_node_or_null("/root/CombatStats")
 		if stats != null:
@@ -506,12 +700,14 @@ func apply_magic_resistance_shred(multiplier: float, duration: float) -> void:
 
 func force_retarget_hostile() -> void:
 	target = null
+	_invalidate_ai_decision("force retarget")
 	_refresh_target()
 
 
 func _die() -> void:
 	if is_dead:
 		return
+	_invalidate_ai_decision("death")
 	is_dead = true
 	current_health = 0.0
 	enabled = false
@@ -523,6 +719,7 @@ func _die() -> void:
 
 
 func revive_for_training() -> void:
+	_invalidate_ai_decision("revive")
 	is_dead = false
 	enabled = true
 	current_health = max_health
@@ -590,7 +787,7 @@ func _play_action_to_end(animation: StringName, cast_event_seconds: float, event
 
 
 func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: float, payload: StringName) -> void:
-	if not _valid_target(victim):
+	if not is_instance_valid(victim) or not _valid_target(victim):
 		return
 	var template := _projectile_template(payload)
 	var projectile := template.duplicate() as AnimatedSprite3D if template != null else AnimatedSprite3D.new()
@@ -613,7 +810,7 @@ func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: f
 	var q_elapsed := 0.0
 	if payload == &"q":
 		_update_q_travel_deform(projectile, q_base_scale, _skill_travel_point(victim, payload) - projectile.global_position, 0.0)
-	while is_instance_valid(projectile) and _valid_target(victim):
+	while is_instance_valid(projectile) and is_instance_valid(victim) and _valid_target(victim):
 		var hit_point := _skill_travel_point(victim, payload)
 		var direction := hit_point - projectile.global_position
 		var stop_distance := _rulef(&"ryze.basic.stop_distance", 0.45) if payload == &"basic" else _rulef(&"ryze.skill.stop_distance", 0.08)
@@ -639,7 +836,7 @@ func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: f
 		await get_tree().physics_frame
 	if is_instance_valid(projectile):
 		projectile.queue_free()
-	if not _valid_target(victim):
+	if not is_instance_valid(victim) or not _valid_target(victim):
 		return
 	match payload:
 		&"basic":
@@ -907,7 +1104,7 @@ func _attach_e_voxel_shell(projectile: AnimatedSprite3D, bounce: bool) -> Node3D
 
 
 func _launch_e_bounce(source: CharacterBody3D, victim: CharacterBody3D, damage_multiplier: float, return_target: CharacterBody3D) -> void:
-	if not _valid_target(source) or not _valid_target(victim):
+	if not is_instance_valid(source) or not _valid_target(source) or not is_instance_valid(victim) or not _valid_target(victim):
 		return
 	var projectile := e_projectile_template.duplicate() as AnimatedSprite3D
 	projectile.visible = true
@@ -924,7 +1121,7 @@ func _launch_e_bounce(source: CharacterBody3D, victim: CharacterBody3D, damage_m
 	var duration := maxf(distance / maxf(_rulef(&"ryze.e.missile_speed", 15.0), 0.01), _rulef(&"ryze.e.min_travel_seconds", 0.08))
 	var elapsed := 0.0
 	var landing_pulse := false
-	while is_instance_valid(projectile) and _valid_target(victim) and elapsed < duration:
+	while is_instance_valid(projectile) and is_instance_valid(victim) and _valid_target(victim) and elapsed < duration:
 		var step := minf(1.0 / 60.0, duration - elapsed)
 		elapsed += step
 		var progress := elapsed / duration
@@ -955,10 +1152,10 @@ func _launch_e_bounce(source: CharacterBody3D, victim: CharacterBody3D, damage_m
 		await get_tree().physics_frame
 	if is_instance_valid(projectile):
 		projectile.queue_free()
-	if not _valid_target(victim):
+	if not is_instance_valid(victim) or not _valid_target(victim):
 		return
 	_apply_e(victim, damage_multiplier)
-	if return_target != null and _valid_target(return_target):
+	if is_instance_valid(return_target) and _valid_target(return_target):
 		_launch_e_bounce(victim, return_target, _rulef(&"ryze.e.bounce_damage_ratio", 0.5), null)
 
 
@@ -1102,14 +1299,18 @@ func _cast_event_seconds(animation: StringName, fallback: float) -> float:
 
 
 func _refresh_target() -> void:
-	if target != null and not is_instance_valid(target):
+	if not is_instance_valid(target):
 		target = null
 	var preferred := _find_preferred_hostile()
 	if preferred == null:
-		_set_target_outline(target, false)
+		if is_instance_valid(target):
+			_set_target_outline(target, false)
 		target = null
+		_invalidate_ai_decision("target lost")
 		return
-	var should_switch := not _valid_target(target)
+	var should_switch := not is_instance_valid(target)
+	if not should_switch:
+		should_switch = not _valid_target(target)
 	if (
 		not should_switch
 		and is_instance_valid(target)
@@ -1118,9 +1319,11 @@ func _refresh_target() -> void:
 	):
 		should_switch = true
 	if should_switch:
-		_set_target_outline(target, false)
+		if is_instance_valid(target):
+			_set_target_outline(target, false)
 		target = preferred
 		_set_target_outline(target, true)
+		_invalidate_ai_decision("target changed")
 
 
 func _set_target_outline(candidate: Node, active: bool) -> void:
@@ -1150,7 +1353,7 @@ func _find_preferred_hostile() -> CharacterBody3D:
 	return closest_hero if closest_hero != null else closest_any
 
 
-func _valid_target(candidate: Node) -> bool:
+func _valid_target(candidate: Variant) -> bool:
 	if candidate == null or not is_instance_valid(candidate):
 		return false
 	if not (candidate is CharacterBody3D):
@@ -1228,7 +1431,10 @@ func _sync_t_buff_presentation() -> void:
 
 
 func _sync_shield_presentation() -> void:
-	_sync_self_vfx_node(shield, shield_flip, &"Ryze_Shield", supercharged_casts > 0 and supercharged_timer > 0.0)
+	# Ryze is a 3D model: turning left/right only rotates the model below the
+	# actor root. Keep the shield at one actor-local anchor instead of switching
+	# to the legacy hand-offset Sprite, which made it appear to jump sideways.
+	_sync_self_vfx_node(shield, shield_flip, &"Ryze_Shield", supercharged_casts > 0 and supercharged_timer > 0.0, false)
 
 
 func _is_supercharged() -> bool:
@@ -1270,30 +1476,6 @@ func _build_supercharge_mesh_afterimage() -> void:
 	)
 	supercharge_mesh_afterimage.color.a = _rulef(&"presentation.breaker_afterimage_alpha", 0.32)
 	add_child(supercharge_mesh_afterimage)
-
-
-func _should_burst_t(_distance: float) -> bool:
-	# Desperate Power is an offensive amp. Open it when a weave is available,
-	# not as a low-health panic button.
-	if cooldowns[&"t"] > 0.0 or desperate_timer > 0.0 or not _valid_target(target):
-		return false
-	return _ready_basic_spell_count() >= _rulei(&"ryze.t.ready_spell_count", 2) or arcane_stacks >= _rulei(&"ryze.t.ready_stack_count", 4) or _is_supercharged()
-
-
-func _should_escape_warp(distance: float) -> bool:
-	if cooldowns[&"r"] > 0.0 or not _valid_target(target):
-		return false
-	var disengage := 1.5 if ai_archetype == null else float(ai_archetype.disengage_distance)
-	var pack := 2 if ai_archetype == null else int(ai_archetype.aoe_min_targets)
-	return distance <= disengage or _count_nearby_enemies(_cast_range()) >= pack + 1
-
-
-func _should_engage_warp(distance: float) -> bool:
-	if cooldowns[&"r"] > 0.0 or not _valid_target(target):
-		return false
-	if distance <= _cast_range() or distance > _warp_range():
-		return false
-	return _ready_basic_spell_count() >= 1 or cooldowns[&"t"] <= 0.0 or _is_supercharged()
 
 
 func _engage_destination() -> Vector3:

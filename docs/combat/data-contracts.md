@@ -57,6 +57,12 @@
 
 单位成长公式允许 `none`、`linear`、`primary` 和 `attack_speed`。`linear` 用于按等级等距成长的怪物数据；英雄的 LoL 式非线性成长继续使用 `primary`，不得混用。
 
+## 通用控制状态
+
+所有可战斗单位继承 `CombatUnitInstance`。定身/禁锢等控制由基类 `apply_root(duration)` 写入单位实例计时器；单位自己的 `_physics_process()` 必须用 `tick_root(delta)` 更新，并在 `is_rooted()` 时禁止 X/Z 自主移动，同时仍允许攻击、施法、重力和地面碰撞继续运行。新英雄、怪物、召唤物或训练目标如果绕过这些基类接口，必须补上相同的移动锁定契约，不能只在某几个角色里单独实现 W。
+
+禁锢时长优先来自控制效果对应的 `skill_effect_ranks.csv` 行，并经通用韧性规则缩短；视觉循环应使用 `apply_root()` 返回的最终时长，确保控制状态与表现同步。
+
 `skills.csv` 的 `ability_kind`、`source_slot`、`identity_status` 和 `max_rank` 将英雄身份与参考槽位显式保存。当前单值字段仍是原型默认值；正式的分级值必须写入 `skill_ranks.csv` 与 `skill_effect_ranks.csv`，而非在单元格内编码数组。
 
 项目统一技能记法为“P/Q/W/E/R/T”：P 是被动技能位，Q/W/E/R 是基础主动技能位，T 是项目扩展技能位。`source_slot` 只允许 `basic`、`p`、`q`、`w`、`e`、`r`、`t`；T 不代表参考游戏存在第五主动技能，其参考/原创身份仍由 `identity_status` 表达。
