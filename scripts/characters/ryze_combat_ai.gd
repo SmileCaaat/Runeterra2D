@@ -275,6 +275,7 @@ func _build_ai_context() -> HeroAIContext:
 	ctx.target = target if is_instance_valid(target) and _valid_target(target) else null
 	ctx.database = database
 	ctx.archetype = ai_archetype as AIArchetypeDefinition
+	ctx.archetype_evaluator = ai_brain.archetype_evaluator if ai_brain != null else null
 	ctx.profile = ai_profile as AIProfileDefinition
 	ctx.now_seconds = float(Time.get_ticks_msec()) / 1000.0
 	ctx.delta = get_physics_process_delta_time()
@@ -282,6 +283,8 @@ func _build_ai_context() -> HeroAIContext:
 	ctx.self_health_ratio = get_health_ratio()
 	ctx.cast_range = _cast_range()
 	ctx.attack_range = ctx.cast_range
+	ctx.output_range = ctx.cast_range
+	ctx.control_range = ctx.cast_range
 	ctx.preferred_distance = _preferred_distance()
 	ctx.engage_distance = float(ai_archetype.engage_distance) if ai_archetype != null else ctx.cast_range
 	ctx.disengage_distance = float(ai_archetype.disengage_distance) if ai_archetype != null else 1.5
@@ -291,6 +294,7 @@ func _build_ai_context() -> HeroAIContext:
 	ctx.r_ready = cooldowns[&"r"] <= 0.0
 	ctx.t_ready = cooldowns[&"t"] <= 0.0
 	ctx.silenced = silence_timer > 0.0
+	ctx.control_available = ctx.w_ready and not ctx.silenced
 	ctx.rooted = is_rooted()
 	ctx.action_locked = action_lock > 0.0
 	ctx.arena_min = arena_min
@@ -304,6 +308,8 @@ func _build_ai_context() -> HeroAIContext:
 	ctx.extras[&"desperate_active"] = desperate_timer > 0.0
 	ctx.extras[&"ready_basic_spell_count"] = _ready_basic_spell_count()
 	ctx.extras[&"warp_range"] = _warp_range()
+	ctx.extras[&"r_channel_duration"] = _rulef(&"ryze.r.channel_duration", 0.9)
+	ctx.extras[&"r_cooldown_duration"] = _skill_cooldown(&"ryze_realm_warp", 180.0)
 	ctx.extras[&"move_speed"] = _move_speed()
 	ctx.extras[&"recent_damage_ratio"] = ai_recent_damage_accumulator / maxf(max_health, 1.0)
 	if ctx.target != null:
@@ -313,6 +319,7 @@ func _build_ai_context() -> HeroAIContext:
 		ctx.target_distance = _current_target_distance()
 		ctx.target_is_hero = target.is_in_group(&"hero_actor")
 		ctx.target_is_training_dummy = target.is_in_group(&"training_dummy")
+		ctx.target_rooted = target.has_method("is_rooted") and bool(target.call("is_rooted"))
 		var to_actor := global_position - target.global_position
 		to_actor.y = 0.0
 		var planar_velocity := target.velocity
@@ -350,13 +357,38 @@ func _update_ai_decision(delta: float) -> void:
 	if ai_decision_timer > 0.0 and ai_decision != null:
 		return
 	ai_decision_timer = maxf(float(ai_archetype.decision_interval), 0.05) if ai_archetype != null else 0.16
-	ai_decision = ai_brain.think(_build_ai_context())
+	var context := _build_ai_context()
+	ai_decision = ai_brain.think(context)
 	if ai_debug:
 		var parts: Array[String] = []
 		var limit := int(database.get_rule(&"ai.utility.debug_top_count", 3)) if database != null else 3
 		for candidate: HeroAIDecision in ai_brain.debug_top_candidates(limit):
-			parts.append("%s %.0f" % [String(candidate.action_id), candidate.score])
-		label.text += "\nAI %s: %s" % [String(ai_decision.action_id), " | ".join(parts)]
+			parts.append(_format_ai_candidate_debug(candidate))
+		var outcome: Dictionary = context.outcome_evaluations.get(&"ryze_r_engage", {})
+		var outcome_text := ""
+		if not outcome.is_empty():
+			outcome_text = "\nR engage base=%.1f warp=%.1f channel=%.1f cooldown=%.1f net=%.1f" % [
+				float(outcome.get(&"baseline_state_value", 0.0)),
+				float(outcome.get(&"warp_state_value", 0.0)),
+				float(outcome.get(&"channel_risk", 0.0)),
+				float(outcome.get(&"cooldown_cost", 0.0)),
+				float(outcome.get(&"net_gain", 0.0)),
+			]
+		label.text += "\nAI %s: %s%s" % [String(ai_decision.action_id), " | ".join(parts), outcome_text]
+
+
+func _format_ai_candidate_debug(candidate: HeroAIDecision) -> String:
+	var details: Array[String] = []
+	if candidate.metadata.has(&"anti_dive_bonus"):
+		details.append("anti+%.0f" % float(candidate.metadata[&"anti_dive_bonus"]))
+	if candidate.metadata.has(&"channel_risk_penalty"):
+		details.append("channel-%.0f" % float(candidate.metadata[&"channel_risk_penalty"]))
+	if candidate.metadata.has(&"position_improvement"):
+		details.append("position+%.0f" % float(candidate.metadata[&"position_improvement"]))
+	if candidate.metadata.has(&"root_relief"):
+		details.append("root-%.0f" % float(candidate.metadata[&"root_relief"]))
+	var suffix := " [%s]" % ", ".join(details) if not details.is_empty() else ""
+	return "%s %.0f%s" % [String(candidate.action_id), candidate.score, suffix]
 
 
 func _invalidate_ai_decision(_reason: String = "") -> void:
@@ -537,10 +569,11 @@ func cast_realm_warp(destination: Vector3) -> void:
 	if cooldowns[&"r"] > 0.0:
 		return
 	cooldowns[&"r"] = _skill_cooldown(&"ryze_realm_warp", 180.0)
-	character_model.call(&"play_semantic", &"spell4")
-	var channel := _skill_cast_time(&"ryze_realm_warp", 2.0)
+	var channel := _rulef(&"ryze.r.channel_duration", 0.9)
+	var previous_animation_speed := _play_realm_warp_windup(channel)
 	action_lock = channel
 	await get_tree().create_timer(channel).timeout
+	character_model.call(&"set_animation_speed", previous_animation_speed)
 	# Capture allies at the portal origin before Ryze moves, then share the same planar delta.
 	var origin := global_position
 	var planar := _clamp_to_arena(destination) - origin
@@ -570,6 +603,15 @@ func cast_realm_warp(destination: Vector3) -> void:
 	_r_landing_resolving = false
 	_r_landing_zapped.clear()
 	_add_arcane_stack(true)
+
+
+func _play_realm_warp_windup(channel_duration: float) -> float:
+	var previous_speed := float(character_model.get("animation_speed_scale"))
+	var animation_duration := float(character_model.call("get_semantic_animation_length", &"spell4"))
+	if channel_duration > 0.0 and animation_duration > 0.0:
+		character_model.call("set_animation_speed", previous_speed * animation_duration / channel_duration)
+	character_model.call(&"play_semantic", &"spell4")
+	return previous_speed
 
 
 func _on_character_model_animation_finished(animation_name: StringName) -> void:

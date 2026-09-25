@@ -19,7 +19,7 @@
 
 ### 训练场战斗 AI
 
-训练 AI 使用共享 `HeroBrain`、`BattlemageZoneEvaluator` 与 `RyzeAIKit`。职业层对接近、后撤、保持施法距离连续评分；英雄层让普攻、Q/W/E/T，以及 R 的逃生、切入、换位三个用途参与同一候选竞争。贴脸时 W、后撤与 R 逃生都可能胜出；远距离 T 分数降低，通常先接近或用 R 切入。英雄专属奥术层数、超负荷与技能就绪状态只保存在瑞兹 Context extras 中。
+训练 AI 使用共享 `HeroBrain`、`BattlemageZoneEvaluator` 与 `RyzeAIKit`。职业层对接近、后撤、保持施法距离连续评分；英雄层让普攻、Q/W/E/T，以及 R 的逃生、切入、换位三个用途参与同一候选竞争。W 按贴身压力、目标逼近速度与真实近期损血获得连续 anti-dive 加成；Root 生效后重新降低后撤紧迫性。三种 R 用途都扣除读取 `ryze.r.channel_duration` 的引导风险，Reposition 还必须显著改善当前位置评分。英雄专属奥术层数、超负荷与技能就绪状态只保存在瑞兹 Context extras 中。
 
 决策按 `ai_archetypes.decision_interval` 更新，执行前再次校验目标、冷却、禁锢、沉默、动作锁和传送落点。普攻与技能属于一次性意图，同一个 generation 只启动一次；现有异步施法、弹道、伤害和 VFX 入口继续负责动作。最后一次受伤后保持 1 秒的实际 HP 损失累计值用于防御评分，这不是精确滚动时间窗口。
 
@@ -47,7 +47,7 @@
 | W · Rune Prison | 锁定目标；来源距离 `550 → 5.5m`；目标指向、必中，非投射物，不做纵深容差判定 | 无霸体；角色 `spell2` 出手约 `0.5s` 时结算伤害与 `1 / 1.1 / 1.2 / 1.3 / 1.4s` 定身；无击退，受击硬直为盖伦普攻 `1/4 = 0.06s`；未指定额外命中停顿，暂定 `0s` | 目标处同步播放 `Spell2_W`；命中时播放 `impact`；定身存续期间循环 `W_loop`，结束时立即停止 |
 | E · Spell Flux | 锁定目标；来源距离 `550 → 5.5m`；初段投射物速度 `1500 → 15m/s`；弹射半径 `350 → 3.5m`、弹射速度 `1500 → 15m/s`；目标指向，不做纵深容差判定 | 无霸体；初段和每次弹射的伤害有效时点均为法球接触目标；命中反馈为盖伦普攻 `1/3`：停顿 `0.02s`、硬直 `0.08s`、击退初速 `0.933m/s`。链路包含主目标并将其作为后续弹射起点；无次级目标时回弹主目标；同一目标单链受伤次数不设上限。可把瑞兹自己当弹射节点，但自身不受伤害或减抗 | 初段及弹射均用 `Spell3_E`，外包 `ElasticVoxelShell` 体素壳；弹射额外挤压回弹。每次命中播放 `impact`。减抗复用盖伦破甲那套小图标弹出/晃动/回弹，贴图为 `MagicResistanceReduction.png` |
 | T · Desperate Power | 自身；基本技能外溢半径 `350 → 3.5m`；来源 `+80` 移速按既定比例换算为 `+0.8m/s` | 播放 `taunt` 后进入 6 秒觉醒强化；引导期间拥有霸体，强化持续期不默认继承霸体；引导结束授予满层超负荷且不消耗次数；保留被动冷却缩减 `10 / 20 / 30%` | 觉醒 Cut-In 使用 `assets/presentation/awakening/ryze/` 立绘与语音；`TBuff` / `Shield` 手调 +X，`TBuffFlip` / `ShieldFlip` 手调 -X，运行时按朝向选用对应节点，不改 Transform。强化期循环 `T_Buff`；霸体和护盾使用独立状态表现，不复用阵营 Rim 或交互描边。触发外溢的主目标命中叠一层 `Lightning Chain` one-shot（`vfx_library_lightning_chain`） |
-| R · Realm Warp | 友军选取来源半径 `550 → 5.5m`；最大传送来源距离 `2500 → 25m`；落点与传送路径钳在 `GroundMesh` 与 `ryze_demo` 交集内 | 传送前 2 秒引导播放 `spell4 → Spell4_Idle`，且仅能被沉默、眩晕、击飞打断；打断/主动取消后全额返还冷却。落地后强制进入 `spell4_winddown → Ryze_Spell4_Winddown.anm` 出生动作；该模型动作结束即解除移动锁。以落点为中心 `5.5m` 内每个敌人承受 3 次 E 初段伤害并直接获得 3 层 5 秒乘算减魔抗，不生成 E 初段弹道、分裂或回弹 | `RWinddown` 与落雷均为独立特效，按自身序列帧/粒子生命周期播放，不得延长角色 `action_lock`；特效用 `ryze.tscn` 手调 Transform，随朝向翻转 X。范围内每个受伤敌人脚底播一次 `VFXZapLightning_01`；T 外溢到的敌人同样各一次。缩放 `ryze.r.zap_scale`，不跟三次 E 重复播放 |
+| R · Realm Warp | 友军选取来源半径 `550 → 5.5m`；最大传送来源距离 `2500 → 25m`；落点与传送路径钳在 `GroundMesh` 与 `ryze_demo` 交集内 | 传送前 `combat_rules.ryze.r.channel_duration` 控制引导（当前 `0.9s`）；`Spell4_Idle` 动画同步压缩到相同时长，折跃与引导结束同帧触发；仅能被沉默、眩晕、击飞打断。落地后强制进入 `spell4_winddown → Ryze_Spell4_Winddown.anm` 出生动作；该模型动作结束即解除移动锁。以落点为中心 `5.5m` 内每个敌人承受 3 次 E 初段伤害并直接获得 3 层 5 秒乘算减魔抗，不生成 E 初段弹道、分裂或回弹 | `RWinddown` 与落雷均为独立特效，按自身序列帧/粒子生命周期播放，不得延长角色 `action_lock`；特效用 `ryze.tscn` 手调 Transform，随朝向翻转 X。范围内每个受伤敌人脚底播一次 `VFXZapLightning_01`；T 外溢到的敌人同样各一次。缩放 `ryze.r.zap_scale`，不跟三次 E 重复播放 |
 
 ### 超负荷施法加速
 
@@ -98,7 +98,7 @@
 | Q | Overload（History 2nd） | 5 | 直线符文冲击，首个目标受魔法伤害；超负荷会延长强化状态持续时间 | 4s | `5.5m`；宽 `1.1m`；速度 `17m/s` | `adapted` |
 | W | Rune Prison（History 2nd） | 5 | 单体魔法伤害并直接定身 | 14s | `5.5m`，锁定必中 | `adapted` |
 | E | Spell Flux（History 2nd） | 5 | 法球命中后叠加乘算减魔抗 5 秒、最多 3 层；分裂至瑞兹与主目标周围最多 6 名敌人，再由次级法球回弹主目标并造成半额伤害 | 7s | `5.5m`；弹射半径 `3.5m`；速度 `15m/s` | `adapted` |
-| R | Realm Warp（Current） | 3 | 提高 Q 对 Flux 的强化收益；引导 2 秒开启传送门，仅瑞兹和身边友军传送至短距离目标地点，并受竞技场边界钳制 | 180/160/140s | 友军选取 `5.5m`；最大传送 `25m` | `adapted` |
+| R | Realm Warp（Current） | 3 | 提高 Q 对 Flux 的强化收益；引导 `combat_rules.ryze.r.channel_duration`（当前 `0.9s`）开启传送门，仅瑞兹和身边友军传送至短距离目标地点，并受竞技场边界钳制 | 180/160/140s | 友军选取 `5.5m`；最大传送 `25m` | `adapted` |
 | T | Desperate Power（History 2nd） | 3 | 觉醒型自我强化：持续 6 秒，增加法术吸血、移速，并使基本技能对主目标周围敌人造成半额伤害 | 50s | 200 | `adapted` |
 
 ## 技能形态选择与改编矩阵
@@ -109,7 +109,7 @@
 | Overload（History 2nd） | Q | `adapted` | 方向首中投射物：`5.5m`、宽 `1.1m`、速度 `17m/s` | 使用 `spell1` 与 `impact`；强化状态只延长持续时间 |
 | Rune Prison（History 2nd） | W | `adapted` | `5.5m` 的锁定必中、直接禁锢 | 命中事件结算伤害并通过通用 `apply_root()` 禁锢；目标处 `Spell2_W`，禁锢期间 `W_loop` |
 | Spell Flux（History 2nd） | E | `adapted` | `5.5m` 锁定；初段/弹射速度 `15m/s`、弹射半径 `3.5m`，保留 3 层乘算减魔抗、6 敌人分裂及半额回弹 | 同目标命中不设上限；无次级目标时回弹主目标 |
-| Realm Warp（Current） | R | `adapted` | 使用当前 2 秒引导、Q-Flux 增幅和受边界钳制的 `25m` 短距离友军传送；落地 `5.5m` 直接施加 3 次 E 初段效果及 3 层减抗 | 落地同步角色 `spell4_winddown` 与 `Spell4_R_winddown`；沉默、眩晕、击飞才能打断，打断返还冷却 |
+| Realm Warp（Current） | R | `adapted` | 使用 `combat_rules.ryze.r.channel_duration`（当前 `0.9s`）引导、Q-Flux 增幅和受边界钳制的 `25m` 短距离友军传送；落地 `5.5m` 直接施加 3 次 E 初段效果及 3 层减抗 | 引导与 `Spell4_Idle` 动画同步至规则时长；落地同步角色 `spell4_winddown` 与 `Spell4_R_winddown`；沉默、眩晕、击飞才能打断，打断返还冷却 |
 | Desperate Power（History 2nd） | T | `adapted` | 使用 6 秒法术吸血、移速与基本技能半额范围外溢；引导结束授予满层超负荷 | 作为觉醒技能保留且不消耗超负荷次数；法术吸血和范围外溢需扩展当前伤害管线 |
 
 ## 公式登记边界
@@ -122,7 +122,7 @@
 | `RYZE-HISTORY2-W` | `damage(rank)=80/100/120/140/160 + 0.40×AP + 0.025×最大法力`；`root=1/1.1/1.2/1.3/1.4s` | `reference` | `skill_effect_ranks.csv` 的 `ryze_w_damage` 与 `ryze_w_root` | 已入表并接入运行时 |
 | `RYZE-HISTORY2-E` | `damage(rank)=36/52/68/84/100 + 0.20×AP + 0.02×最大法力`；减魔抗每层剩余 `0.92`，持续 `5s`，最多 3 层且逐层乘算；回弹伤害为初始伤害 `0.5` | `reference + project` | `ryze_flux` / `ryze_flux_magic_resistance` / `ryze.e.bounce_damage_ratio` | 已入表；运行时读剩余倍率 `0.92`，不再写死 `0.08` |
 | `RYZE-HISTORY2-T` | 被动冷却缩减 `0.10/0.20/0.30`；主动 `6s`、法术吸血 `0.15/0.20/0.25`、`+80` 移速，基本技能对主目标周围敌人造成 `0.5` 倍伤害 | `reference` | `ryze_desperate_power` / `ryze.t.spill_damage_ratio` | 已入表；被动急速与通用吸血管线仍待接 |
-| `RYZE-CURRENT-R` | Q 对 Flux 目标增伤 `0.50/0.75/1.00`；2 秒引导传送门、R CD `180/160/140s` | `reference` | `skill_ranks.csv` 的 `ryze_realm_warp` | 已入表；Q-Flux 增伤尚未接线 |
+| `RYZE-CURRENT-R` | Q 对 Flux 目标增伤 `0.50/0.75/1.00`；`0.9s` 引导传送门、R CD `180/160/140s` | `reference` | 引导时长来自 `combat_rules.csv` 的 `ryze.r.channel_duration`；冷却/射程来自 `skill_ranks.csv` 的 `ryze_realm_warp` | 已入表；Q-Flux 增伤尚未接线 |
 | `RYZE-SIDESCROLLER-ACTION` | 普攻 `5.5m/13m/s/0.85m`；Q `5.5m/1.1m/17m/s`；W/E 锁定 `5.5m`；E 弹射 `3.5m/15m/s`；T 引导霸体与 `3.5m` 外溢；R `25m` 传送与落地三段 E 范围效果 | `derived + project` | `hit_profiles` / `animation_events` / `ryze.*` 规则 | 已入表；E 弹射弧/挤压与命中回退高度也在 `ryze.e.*` / `ryze.hit.fallback_height` |
 
 ## 横版动作化待决项

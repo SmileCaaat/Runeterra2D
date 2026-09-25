@@ -9,5 +9,5 @@ ryze_arcane_mastery,ryze,0,passive,p,faithful,1,奥术精通,self,instant,0,0,0,
 ryze_overload,ryze,1,active,q,faithful,5,超负荷,direction,cast,4,0,0,5.5,1.1,0,0,40,locked,cast_time,true,,spell1,,,0,0,ryze_q_vfx,,ryze_overload_icon,first_enemy|projectile_17mps|depth_1_1
 ryze_rune_prison,ryze,2,active,w,faithful,5,符文囚笼,unit,cast,14,0,0,5.5,0,0,0,60,locked,cast_time,false,,spell2,,,0,0,ryze_w_vfx,,ryze_rune_prison_icon,targeted|frame_5
 ryze_spell_flux,ryze,3,active,e,faithful,5,法术洪流,unit,cast,7,0,0,5.5,3.5,5,0,60,locked,cast_time,false,,spell3,,,0,0,ryze_e_vfx,,ryze_spell_flux_icon,targeted|bounce_15mps|multiplicative_mr_shred
-ryze_realm_warp,ryze,4,active,r,adapted,3,空间扭曲,ground_area,channel,180,2,0,25,5.5,2,0,100,locked,cast_time,true,,spell4,spell4_winddown,,0,0,ryze_r_winddown_vfx,,ryze_realm_warp_icon,teleport|ally_radius_5_5|interrupt_silence_stun_knockup|refund_on_cancel
+ryze_realm_warp,ryze,4,active,r,adapted,3,空间扭曲,ground_area,channel,180,0.9,0,25,5.5,2,0,100,locked,cast_time,true,,spell4,spell4_winddown,,0,0,ryze_r_winddown_vfx,,ryze_realm_warp_icon,teleport|ally_radius_5_5|interrupt_silence_stun_knockup|refund_on_cancel
 ryze_desperate_power,ryze,5,active,t,faithful,3,绝望之力,self,channel,50,0,0,0,3.5,6,0,0,locked,cast_time,false,,taunt,,,0,0,ryze_t_buff,,ryze_desperate_power_icon,awakening|super_armor_channel|spell_vamp|aoe_spill

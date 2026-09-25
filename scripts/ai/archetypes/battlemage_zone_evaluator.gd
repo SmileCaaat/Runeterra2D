@@ -2,6 +2,17 @@ class_name BattlemageZoneEvaluator
 extends AIArchetypeEvaluator
 
 
+func short_horizon_weights(_ctx: HeroAIContext) -> Dictionary:
+	return {
+		&"position_value": 0.25,
+		&"output_opportunity": 0.34,
+		&"threat": 0.22,
+		&"control_opportunity": 0.22,
+		&"commitment_risk": 0.32,
+		&"resource_cost": 0.22,
+	}
+
+
 func build_candidates(ctx: HeroAIContext, output: Array[HeroAIDecision]) -> void:
 	if ctx.target == null:
 		output.append(HeroAIDecision.make(&"hold", 10.0, "no target"))

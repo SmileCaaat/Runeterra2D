@@ -5,6 +5,7 @@ var actor: CharacterBody3D
 var target: CharacterBody3D
 var database: CombatDatabase
 var archetype: AIArchetypeDefinition
+var archetype_evaluator: AIArchetypeEvaluator
 var profile: AIProfileDefinition
 var delta := 0.0
 var now_seconds := 0.0
@@ -15,6 +16,7 @@ var target_position := Vector3.ZERO
 var target_velocity := Vector3.ZERO
 var target_distance := INF
 var target_closing_speed := 0.0
+var target_rooted := false
 var target_is_hero := false
 var target_is_training_dummy := false
 var nearby_enemy_count := 0
@@ -25,6 +27,9 @@ var engage_distance := 0.0
 var disengage_distance := 0.0
 var attack_range := 0.0
 var cast_range := 0.0
+var output_range := 0.0
+var control_range := 0.0
+var control_available := false
 var q_ready := false
 var w_ready := false
 var e_ready := false
@@ -39,6 +44,7 @@ var current_intent: StringName = &""
 var current_intent_age := 0.0
 var blocked_actions: Dictionary = {}
 var extras: Dictionary = {}
+var outcome_evaluations: Dictionary = {}
 
 
 func block_action(action_id: StringName, reason: String = "") -> void:

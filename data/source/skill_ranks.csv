@@ -37,9 +37,9 @@ ryze_spell_flux,2,7,0,0,5.5,3.5,5,0,70,cooldown|range|bounce_radius,目标指向
 ryze_spell_flux,3,7,0,0,5.5,3.5,5,0,80,cooldown|range|bounce_radius,目标指向和弹射
 ryze_spell_flux,4,7,0,0,5.5,3.5,5,0,90,cooldown|range|bounce_radius,目标指向和弹射
 ryze_spell_flux,5,7,0,0,5.5,3.5,5,0,100,cooldown|range|bounce_radius,目标指向和弹射
-ryze_realm_warp,1,180,2,0,25,5.5,2,0,100,cooldown|channel|range,落地三次E且三层减抗
-ryze_realm_warp,2,160,2,0,25,5.5,2,0,100,cooldown|channel|range,落地三次E且三层减抗
-ryze_realm_warp,3,140,2,0,25,5.5,2,0,100,cooldown|channel|range,落地三次E且三层减抗
+ryze_realm_warp,1,180,0.9,0,25,5.5,2,0,100,cooldown|channel|range,引导时长由combat_rules的ryze.r.channel_duration驱动；落地三次E且三层减抗
+ryze_realm_warp,2,160,0.9,0,25,5.5,2,0,100,cooldown|channel|range,引导时长由combat_rules的ryze.r.channel_duration驱动；落地三次E且三层减抗
+ryze_realm_warp,3,140,0.9,0,25,5.5,2,0,100,cooldown|channel|range,引导时长由combat_rules的ryze.r.channel_duration驱动；落地三次E且三层减抗
 ryze_desperate_power,1,50,0,0,0,3.5,6,0,0,cooldown|duration,觉醒技能
 ryze_desperate_power,2,50,0,0,0,3.5,6,0,0,cooldown|duration,觉醒技能
 ryze_desperate_power,3,50,0,0,0,3.5,6,0,0,cooldown|duration,觉醒技能

@@ -16,10 +16,11 @@ func _initialize() -> void:
 	var generated_ok := generated_database != null and generated_database.source_digest == database.source_digest
 	var editor_plugin_ok := load("res://addons/combat_data/editor_plugin.gd") != null
 
-	var counts_ok := database.rules.size() == 181 and database.stats.size() == 62
+	var counts_ok := database.rules.size() == 182 and database.stats.size() == 62
 	counts_ok = counts_ok and is_equal_approx(float(database.get_rule(&"ai.intent.min_commit_seconds", 0.0)), 0.22)
 	counts_ok = counts_ok and is_equal_approx(float(database.get_rule(&"ai.intent.switch_margin", 0.0)), 8.0)
 	counts_ok = counts_ok and is_equal_approx(float(database.get_rule(&"ai.intent.emergency_switch_margin", 0.0)), 20.0)
+	counts_ok = counts_ok and is_equal_approx(float(database.get_rule(&"ryze.r.channel_duration", 0.0)), 0.9)
 	counts_ok = counts_ok and database.hero_classes.size() == 7 and database.hero_subclasses.size() == 13 and database.ai_archetypes.size() == 13
 	counts_ok = counts_ok and database.units.size() == 4 and database.unit_stats.size() == 145
 	counts_ok = counts_ok and database.skills.size() == 12

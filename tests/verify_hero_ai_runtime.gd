@@ -36,6 +36,29 @@ func _initialize() -> void:
 	blue_ryze.set("target", red_garen)
 	blue_ryze.set("action_lock", 0.0)
 	var cooldowns: Dictionary = blue_ryze.get("cooldowns")
+	for cooldown_key: StringName in cooldowns:
+		cooldowns[cooldown_key] = 0.0
+	blue_ryze.set("ai_recent_damage_accumulator", 0.0)
+	var scene_brain: HeroBrain = blue_ryze.get("ai_brain")
+	blue_ryze.global_position = Vector3.ZERO
+	red_garen.global_position = Vector3(9.5, 0.0, 0.0)
+	red_garen.velocity = Vector3(-5.0, 0.0, 0.0)
+	scene_brain.clear_intent()
+	var closing_scene_ctx: HeroAIContext = blue_ryze.call("_build_ai_context")
+	var closing_scene_decision := scene_brain.think(closing_scene_ctx)
+	var closing_scene_outcome: Dictionary = closing_scene_ctx.outcome_evaluations.get(&"ryze_r_engage", {})
+	var scene_closing_ok := not closing_scene_outcome.is_empty() and not bool(closing_scene_outcome.get(&"accepted", true)) and closing_scene_decision.action_id != &"ryze_r_engage"
+	red_garen.global_position = Vector3(18.0, 0.0, 0.0)
+	red_garen.velocity = Vector3(5.0, 0.0, 0.0)
+	scene_brain.clear_intent()
+	var fleeing_scene_ctx: HeroAIContext = blue_ryze.call("_build_ai_context")
+	scene_brain.think(fleeing_scene_ctx)
+	var fleeing_scene_outcome: Dictionary = fleeing_scene_ctx.outcome_evaluations.get(&"ryze_r_engage", {})
+	var scene_fleeing_ok := not fleeing_scene_outcome.is_empty() and bool(fleeing_scene_outcome.get(&"accepted", false)) and _has_decision(scene_brain.last_candidates, &"ryze_r_engage")
+	blue_ryze.global_position = Vector3.ZERO
+	red_garen.global_position = Vector3(3.0, 0.0, 0.0)
+	red_garen.velocity = Vector3.ZERO
+	scene_brain.clear_intent()
 	cooldowns[&"q"] = 0.0
 	var q := HeroAIDecision.make(&"skill_q", 60.0, "runtime test")
 	q.target = red_garen
@@ -144,13 +167,46 @@ func _initialize() -> void:
 	blue_garen.set("ai_decision_timer", 0.0)
 	blue_garen.call("_update_ai_decision", 0.2)
 	debug_ok = debug_ok and String(blue_garen.get_node("AIStateLabel").text).contains("AI ")
+
+	for group_name: StringName in [&"combat_target", &"friendly_actor", &"enemy_actor", &"player_actor", &"hero_actor"]:
+		probe.remove_from_group(group_name)
+	probe.global_position = Vector3.ZERO
+	var probe_cooldowns: Dictionary = probe.get("cooldowns")
+	probe_cooldowns[&"r"] = 0.0
+	var r_channel_duration := float(probe.call("_rulef", &"ryze.r.channel_duration", 0.0))
+	var model := probe.get_node("RyzeModel")
+	var original_animation_speed := float(model.get("animation_speed_scale"))
+	var spell4_original_duration := float(model.call("get_semantic_animation_length", &"spell4"))
+	var warp_destination := Vector3(2.0, 0.0, 0.0)
+	probe.call("cast_realm_warp", warp_destination)
+	await create_timer(0.70).timeout
+	var warp_still_winding_up := probe.global_position.distance_to(warp_destination) > 0.5
+	var animation_speed_during_windup := float(model.get("animation_speed_scale"))
+	var actual_channel_duration := 0.70
+	while probe.global_position.distance_to(warp_destination) > 0.05 and actual_channel_duration < 1.3:
+		await physics_frame
+		actual_channel_duration += Engine.time_scale / float(Engine.physics_ticks_per_second)
+	var r_timing_ok := is_equal_approx(r_channel_duration, 0.9) and warp_still_winding_up
+	r_timing_ok = r_timing_ok and absf(actual_channel_duration - r_channel_duration) <= 0.12
+	var expected_windup_speed := original_animation_speed * spell4_original_duration / r_channel_duration
+	r_timing_ok = r_timing_ok and absf(animation_speed_during_windup - expected_windup_speed) <= 0.02
+	r_timing_ok = r_timing_ok and is_equal_approx(float(model.get("animation_speed_scale")), original_animation_speed)
+	r_timing_ok = r_timing_ok and is_zero_approx(float(probe.get("super_armor_timer")))
+
 	probe.call("receive_skill_damage", 99999.0, "AI death test", false, Vector3.ZERO, &"true")
 	var lifecycle_ok := bool(probe.get("is_dead")) and probe.get("ai_decision") == null and probe.get("ai_brain").current_decision == null
 	probe.call("revive_for_training")
 	lifecycle_ok = lifecycle_ok and not bool(probe.get("is_dead")) and probe.get("ai_brain").current_decision == null
 
-	var passed := roster_ok and one_shot_ok and retarget_ok and invalidate_ok and root_ok and warp_ok and hold_ok and damage_ok and e_w_ok and lifecycle_ok and debug_ok
-	print("HERO_AI_RUNTIME roster=%s one_shot=%s retarget=%s invalidate=%s root=%s warp=%s damage_hold=%s actual_damage=%s e_w=%s lifecycle=%s debug=%s" % [roster_ok, one_shot_ok, retarget_ok, invalidate_ok, root_ok, warp_ok, hold_ok, damage_ok, e_w_ok, lifecycle_ok, debug_ok])
+	var passed := roster_ok and one_shot_ok and retarget_ok and invalidate_ok and root_ok and warp_ok and hold_ok and damage_ok and e_w_ok and lifecycle_ok and debug_ok and r_timing_ok and scene_closing_ok and scene_fleeing_ok
+	print("HERO_AI_RUNTIME roster=%s scene_closing_r_rejected=%s scene_fleeing_r_allowed=%s one_shot=%s retarget=%s invalidate=%s root=%s warp=%s damage_hold=%s actual_damage=%s e_w=%s lifecycle=%s debug=%s r_timing=%s r_rule=%.2f r_elapsed=%.2f r_stayed=%s r_animation=%.2f/%.2f r_speed_restored=%s no_r_super_armor=%s" % [roster_ok, scene_closing_ok, scene_fleeing_ok, one_shot_ok, retarget_ok, invalidate_ok, root_ok, warp_ok, hold_ok, damage_ok, e_w_ok, lifecycle_ok, debug_ok, r_timing_ok, r_channel_duration, actual_channel_duration, warp_still_winding_up, animation_speed_during_windup, expected_windup_speed, is_equal_approx(float(model.get("animation_speed_scale")), original_animation_speed), is_zero_approx(float(probe.get("super_armor_timer")))])
 	stage.queue_free()
 	await process_frame
 	quit(0 if passed else 1)
+
+
+func _has_decision(candidates: Array[HeroAIDecision], action_id: StringName) -> bool:
+	for candidate: HeroAIDecision in candidates:
+		if candidate.action_id == action_id:
+			return true
+	return false
