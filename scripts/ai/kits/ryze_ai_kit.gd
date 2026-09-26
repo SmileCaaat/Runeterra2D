@@ -207,6 +207,7 @@ func _add(output: Array[HeroAIDecision], ctx: HeroAIContext, id: StringName, sco
 
 func _add_warp(output: Array[HeroAIDecision], ctx: HeroAIContext, id: StringName, score: float, destination: Vector3, channel_risk_penalty: float) -> HeroAIDecision:
 	var decision := HeroAIDecision.make(id, score, "realm warp")
+	decision.skill_slot = &"r"
 	decision.score -= channel_risk_penalty
 	decision.target = ctx.target
 	decision.has_destination = true
