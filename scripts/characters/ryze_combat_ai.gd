@@ -89,17 +89,44 @@ var _faces_left := false
 
 func _ready() -> void:
 	database = CombatData.database()
-	definition = database.get_unit(&"ryze") if database != null else null
-	if definition != null:
-		bind_hero_instance(database, definition)
-		_bind_ai_profile()
-		_bind_playable_bounds()
-		max_health = definition.max_health
-		current_health = max_health
-		armor = definition.armor
-		base_armor = definition.armor
-		magic_resistance = definition.magic_resistance
-		base_magic_resistance = definition.magic_resistance
+	if database == null:
+		push_error("Ryze requires CombatDatabase")
+		process_mode = Node.PROCESS_MODE_DISABLED
+		return
+	definition = database.get_unit(&"ryze")
+	if definition == null:
+		push_error("Ryze requires unit definition ryze")
+		process_mode = Node.PROCESS_MODE_DISABLED
+		return
+	for skill_id: StringName in [&"ryze_overload", &"ryze_rune_prison", &"ryze_spell_flux", &"ryze_realm_warp", &"ryze_desperate_power"]:
+		if database.get_skill(skill_id) == null or database.get_skill_rank(skill_id, 1) == null:
+			push_error("Ryze requires skill and rank data %s" % skill_id)
+			process_mode = Node.PROCESS_MODE_DISABLED
+			return
+	for effect_id: StringName in [&"ryze_q_damage", &"ryze_w_damage", &"ryze_w_root", &"ryze_e_damage"]:
+		if database.get_skill_effect_rank(effect_id, 1) == null:
+			push_error("Ryze requires effect rank %s" % effect_id)
+			process_mode = Node.PROCESS_MODE_DISABLED
+			return
+	for buff_id: StringName in [&"ryze_flux", &"ryze_arcane_mastery", &"ryze_supercharged", &"ryze_desperate_power"]:
+		if database.get_buff(buff_id) == null:
+			push_error("Ryze requires buff %s" % buff_id)
+			process_mode = Node.PROCESS_MODE_DISABLED
+			return
+	for template: AnimatedSprite3D in [basic_projectile_template, q_projectile_template, w_effect_template, e_projectile_template, r_winddown_template, w_loop_template, impact_template]:
+		if template == null:
+			push_error("Ryze requires all authored CastVFXPreview templates")
+			process_mode = Node.PROCESS_MODE_DISABLED
+			return
+	bind_hero_instance(database, definition)
+	_bind_ai_profile()
+	_bind_playable_bounds()
+	max_health = definition.max_health
+	current_health = max_health
+	armor = definition.armor
+	base_armor = definition.armor
+	magic_resistance = definition.magic_resistance
+	base_magic_resistance = definition.magic_resistance
 	add_to_group(&"combat_target")
 	_build_hit_feedback()
 	_configure_team_groups()
@@ -881,7 +908,7 @@ func get_health_ratio() -> float:
 
 
 func receive_hit(attacker_position: Vector3, _attack_name: StringName, amount: float = -1.0, source_actor: Node = null) -> void:
-	var damage := amount if amount >= 0.0 else (definition.attack_damage if definition != null else 55.0)
+	var damage := amount if amount >= 0.0 else definition.attack_damage
 	receive_skill_damage(damage, "普攻", true, attacker_position, &"physical", &"basic_melee", source_actor)
 
 
@@ -1033,6 +1060,8 @@ func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: f
 	if not is_instance_valid(victim) or not _valid_target(victim):
 		return
 	var projectile := _create_projectile(payload, animation)
+	if projectile == null:
+		return
 	_update_projectile_facing(projectile, _skill_travel_point(victim, payload) - projectile.global_position)
 	projectile.frame = 0
 	projectile.play()
@@ -1071,7 +1100,7 @@ func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: f
 		return
 	match payload:
 		&"basic":
-			_damage(victim, definition.attack_damage if definition != null else 55.0, &"physical", &"ryze_basic_hit")
+			_damage(victim, definition.attack_damage, &"physical", &"ryze_basic_hit")
 		&"q":
 			_damage(victim, _ranked_damage(&"ryze_q_damage", 60.0), &"magic", &"ryze_q_hit")
 		&"e": _resolve_e_chain(victim)
@@ -1079,14 +1108,10 @@ func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: f
 
 func _create_projectile(payload: StringName, animation: StringName) -> AnimatedSprite3D:
 	var template := _projectile_template(payload)
-	var projectile := template.duplicate() as AnimatedSprite3D if template != null else AnimatedSprite3D.new()
 	if template == null:
-		projectile.sprite_frames = VFX_FRAMES
-		projectile.animation = animation
-		projectile.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		projectile.pixel_size = _character_pixel_size()
-		projectile.no_depth_test = true
-		projectile.render_priority = 3
+		push_error("Ryze projectile template missing for %s" % payload)
+		return null
+	var projectile := template.duplicate() as AnimatedSprite3D
 	projectile.visible = true
 	projectile.set_meta(&"authored_offset", projectile.offset)
 	get_tree().current_scene.add_child(projectile)
@@ -1106,6 +1131,8 @@ func _launch_directional_projectile(
 		return
 	planar_direction = planar_direction.normalized()
 	var projectile := _create_projectile(payload, animation)
+	if projectile == null:
+		return
 	projectile.add_to_group(&"ryze_directional_projectile")
 	_update_projectile_facing(projectile, planar_direction)
 	projectile.frame = 0
@@ -1145,7 +1172,7 @@ func _launch_directional_projectile(
 		return
 	match payload:
 		&"basic":
-			_damage(hit_target, definition.attack_damage if definition != null else 55.0, &"physical", &"ryze_basic_hit")
+			_damage(hit_target, definition.attack_damage, &"physical", &"ryze_basic_hit")
 		&"q":
 			_damage(hit_target, _ranked_damage(&"ryze_q_damage", 60.0), &"magic", &"ryze_q_hit")
 
@@ -1189,7 +1216,8 @@ func _projectile_origin(payload: StringName) -> Vector3:
 	# local X is mirrored with the character, so one placement serves both sides.
 	var template := _projectile_template(payload)
 	if template == null:
-		return global_position + Vector3.UP * _rulef(&"ryze.hit.fallback_height", 1.15)
+		push_error("Ryze requires projectile template for %s" % payload)
+		return global_position
 	var local := template.position
 	if _facing_left():
 		local.x = -local.x
@@ -1202,17 +1230,13 @@ func _play_target_vfx(victim: CharacterBody3D, animation: StringName) -> void:
 	# W is authored against Ryze in the scene as a convenient stand-in target;
 	# its local transform is then transferred to the real victim at runtime.
 	var template: AnimatedSprite3D = w_effect_template if animation == &"Spell2_W" else null
-	var effect := template.duplicate() as AnimatedSprite3D if template != null else AnimatedSprite3D.new()
 	if template == null:
-		effect.sprite_frames = VFX_FRAMES
-		effect.animation = animation
-		effect.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		effect.pixel_size = _character_pixel_size()
-		effect.no_depth_test = true
-		effect.render_priority = 3
+		push_error("Ryze target VFX template missing for %s" % animation)
+		return
+	var effect := template.duplicate() as AnimatedSprite3D
 	effect.visible = true
 	get_tree().current_scene.add_child(effect)
-	effect.global_position = victim.global_position + (template.position if template != null else Vector3.UP * _rulef(&"ryze.w.fallback_height", 1.1))
+	effect.global_position = victim.global_position + template.position
 	effect.frame = 0
 	effect.play()
 	effect.animation_finished.connect(effect.queue_free)
@@ -1597,12 +1621,18 @@ func _add_arcane_stack(consumes_supercharge: bool) -> void:
 
 func _ranked_damage(effect: StringName, fallback: float) -> float:
 	var row := database.get_skill_effect_rank(effect, 1) if database != null else null
-	return row.base_value if row != null else fallback
+	if row == null:
+		push_error("Ryze requires damage effect rank %s" % effect)
+		return 0.0
+	return row.base_value
 
 
 func _ranked_control(effect: StringName, fallback: float) -> float:
 	var row := database.get_skill_effect_rank(effect, 1) if database != null else null
-	return row.control_duration if row != null else fallback
+	if row == null:
+		push_error("Ryze requires control effect rank %s" % effect)
+		return 0.0
+	return row.control_duration
 
 
 func _cast_event_seconds(animation: StringName, fallback: float) -> float:
@@ -1844,11 +1874,23 @@ func _update_label() -> void:
 
 
 func _rulef(rule_id: StringName, fallback: float) -> float:
-	return float(database.get_rule(rule_id, fallback)) if database != null else fallback
+	if String(rule_id).begins_with("presentation."):
+		return float(database.get_rule(rule_id, fallback)) if database != null else fallback
+	var value: Variant = database.get_rule(rule_id) if database != null else null
+	if value == null:
+		push_error("Ryze requires combat rule %s" % rule_id)
+		return 0.0
+	return float(value)
 
 
 func _rulei(rule_id: StringName, fallback: int) -> int:
-	return int(database.get_rule(rule_id, fallback)) if database != null else fallback
+	if String(rule_id).begins_with("presentation."):
+		return int(database.get_rule(rule_id, fallback)) if database != null else fallback
+	var value: Variant = database.get_rule(rule_id) if database != null else null
+	if value == null:
+		push_error("Ryze requires combat rule %s" % rule_id)
+		return 0
+	return int(value)
 
 
 func _cast_range() -> float:
@@ -1860,17 +1902,17 @@ func _warp_range() -> float:
 
 
 func _move_speed() -> float:
-	if database == null:
-		return 3.4
-	var speed := database.get_unit_stat_value(&"ryze", &"move_speed", level)
-	return speed if speed > 0.0 else 3.4
+	var speed := database.get_unit_stat_value(&"ryze", &"move_speed", level) if database != null else 0.0
+	if speed <= 0.0:
+		push_error("Ryze requires positive move_speed unit stat")
+	return speed
 
 
 func _basic_missile_speed() -> float:
-	if database == null:
-		return 13.0
-	var speed := database.get_unit_stat_value(&"ryze", &"missile_speed", level)
-	return speed if speed > 0.0 else 13.0
+	var speed := database.get_unit_stat_value(&"ryze", &"missile_speed", level) if database != null else 0.0
+	if speed <= 0.0:
+		push_error("Ryze requires positive missile_speed unit stat")
+	return speed
 
 
 func _character_pixel_size() -> float:
@@ -1882,13 +1924,11 @@ func _character_pixel_size() -> float:
 
 
 func _skill_cooldown(skill_id: StringName, fallback: float) -> float:
-	if database == null:
-		return fallback
-	var rank := database.get_skill_rank(skill_id, 1)
-	if rank != null and rank.cooldown > 0.0:
-		return rank.cooldown
-	var skill := database.get_skill(skill_id)
-	return skill.cooldown if skill != null and skill.cooldown > 0.0 else fallback
+	var rank := database.get_skill_rank(skill_id, 1) if database != null else null
+	if rank == null:
+		push_error("Ryze requires skill rank %s" % skill_id)
+		return 0.0
+	return rank.cooldown
 
 
 func get_skill_cooldown_state(slot: StringName) -> Dictionary:
@@ -1909,54 +1949,51 @@ func get_skill_cooldown_state(slot: StringName) -> Dictionary:
 
 
 func _skill_range(skill_id: StringName, fallback: float) -> float:
-	if database == null:
-		return fallback
-	var rank := database.get_skill_rank(skill_id, 1)
-	if rank != null and rank.cast_range > 0.0:
-		return rank.cast_range
-	var skill := database.get_skill(skill_id)
-	return skill.cast_range if skill != null and skill.cast_range > 0.0 else fallback
+	var rank := database.get_skill_rank(skill_id, 1) if database != null else null
+	if rank == null:
+		push_error("Ryze requires skill rank %s" % skill_id)
+		return 0.0
+	return rank.cast_range
 
 
 func _skill_radius(skill_id: StringName, fallback: float) -> float:
-	if database == null:
-		return fallback
-	var rank := database.get_skill_rank(skill_id, 1)
-	if rank != null and rank.radius > 0.0:
-		return rank.radius
-	var skill := database.get_skill(skill_id)
-	return skill.radius if skill != null and skill.radius > 0.0 else fallback
+	var rank := database.get_skill_rank(skill_id, 1) if database != null else null
+	if rank == null:
+		push_error("Ryze requires skill rank %s" % skill_id)
+		return 0.0
+	return rank.radius
 
 
 func _skill_cast_time(skill_id: StringName, fallback: float) -> float:
-	if database == null:
-		return fallback
-	var rank := database.get_skill_rank(skill_id, 1)
-	if rank != null and rank.cast_time > 0.0:
-		return rank.cast_time
-	var skill := database.get_skill(skill_id)
-	return skill.cast_time if skill != null and skill.cast_time > 0.0 else fallback
+	var rank := database.get_skill_rank(skill_id, 1) if database != null else null
+	if rank == null:
+		push_error("Ryze requires skill rank %s" % skill_id)
+		return 0.0
+	return rank.cast_time
 
 
 func _buff_duration(buff_id: StringName, fallback: float) -> float:
-	if database == null:
-		return fallback
-	var buff := database.get_buff(buff_id)
-	return buff.duration if buff != null and buff.duration > 0.0 else fallback
+	var buff := database.get_buff(buff_id) if database != null else null
+	if buff == null:
+		push_error("Ryze requires buff %s" % buff_id)
+		return 0.0
+	return buff.duration
 
 
 func _buff_max_stacks(buff_id: StringName, fallback: int) -> int:
-	if database == null:
-		return fallback
-	var buff := database.get_buff(buff_id)
-	return buff.max_stacks if buff != null and buff.max_stacks > 0 else fallback
+	var buff := database.get_buff(buff_id) if database != null else null
+	if buff == null:
+		push_error("Ryze requires buff %s" % buff_id)
+		return 0
+	return buff.max_stacks
 
 
 func _flux_remain_multiplier() -> float:
-	if database == null:
-		return _rulef(&"ryze.e.mr_remain_multiplier", 0.92)
-	var modifier := database.get_buff_modifier(&"ryze_flux", &"magic_resistance")
-	return modifier.value if modifier != null else _rulef(&"ryze.e.mr_remain_multiplier", 0.92)
+	var modifier := database.get_buff_modifier(&"ryze_flux", &"magic_resistance") if database != null else null
+	if modifier == null:
+		push_error("Ryze requires flux magic_resistance modifier")
+		return 0.0
+	return modifier.value
 
 
 func _flux_duration() -> float:

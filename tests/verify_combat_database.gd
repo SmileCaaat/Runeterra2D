@@ -16,7 +16,7 @@ func _initialize() -> void:
 	var generated_ok := generated_database != null and generated_database.source_digest == database.source_digest
 	var editor_plugin_ok := load("res://addons/combat_data/editor_plugin.gd") != null
 
-	var counts_ok := database.rules.size() == 183 and database.stats.size() == 62
+	var counts_ok := database.rules.size() == 184 and database.stats.size() == 62
 	counts_ok = counts_ok and is_equal_approx(float(database.get_rule(&"ai.intent.min_commit_seconds", 0.0)), 0.22)
 	counts_ok = counts_ok and is_equal_approx(float(database.get_rule(&"ai.intent.switch_margin", 0.0)), 8.0)
 	counts_ok = counts_ok and is_equal_approx(float(database.get_rule(&"ai.intent.emergency_switch_margin", 0.0)), 20.0)

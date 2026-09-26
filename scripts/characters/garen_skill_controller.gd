@@ -200,7 +200,9 @@ var silence_timer := 0.0
 
 
 func _ready() -> void:
-	_apply_combat_data()
+	if not _apply_combat_data():
+		process_mode = Node.PROCESS_MODE_DISABLED
+		return
 	# The skeletal model no longer has a current sprite-frame texture. Dedicated
 	# mesh-material afterimages/outlines will replace those presentation layers.
 	_build_mesh_afterimages()
@@ -1600,25 +1602,48 @@ func get_skill_cooldown_state(skill_index: int) -> Dictionary:
 	return {"remaining": float(cooldowns[skill_index]), "total": _get_cooldown(skill_index)}
 
 
-func _apply_combat_data() -> void:
+func _apply_combat_data() -> bool:
 	combat_database = CombatData.database()
 	if combat_database == null:
-		push_warning("Combat database is unavailable; using inspector fallback values")
-		return
+		push_error("GarenSkillController requires CombatDatabase")
+		return false
 	garen_definition = combat_database.get_unit(&"garen")
-	if garen_definition != null:
-		max_health = garen_definition.max_health
-		current_health = max_health
-		current_level = garen_definition.level
+	if garen_definition == null:
+		push_error("GarenSkillController requires unit definition garen")
+		return false
+	max_health = garen_definition.max_health
+	current_health = max_health
+	current_level = garen_definition.level
 	for slot: int in range(SKILL_BREAKER, SKILL_SEVEN_SEAS + 1):
 		skill_definitions[slot] = combat_database.get_skill_by_slot(&"garen", slot)
+		if skill_definitions[slot] == null:
+			push_error("GarenSkillController requires skill slot %d" % slot)
+			return false
+	for rule_id: StringName in [
+		&"garen.perseverance.lockout_duration", &"garen.perseverance.period",
+		&"garen.perseverance.early_level_increment", &"garen.perseverance.mid_level_increment",
+		&"garen.perseverance.late_level_increment", &"garen.black_sail.guard_duration",
+		&"garen.courage.max_stacks", &"garen.courage.resistance_per_stack",
+		&"garen.ocean_storm.armor_shred_duration", &"garen.ocean_storm.armor_shred_hits",
+		&"garen.ocean_storm.armor_shred_ratio", &"garen.ocean_storm.base_spins",
+		&"garen.ocean_storm.bonus_attack_speed_per_spin", &"garen.ocean_storm.nearest_damage_multiplier",
+	]:
+		if combat_database.get_rule(rule_id) == null:
+			push_error("GarenSkillController requires combat rule %s" % rule_id)
+			return false
+	if combat_database.get_buff_modifier(&"breaker_speed", &"move_speed") == null:
+		push_error("GarenSkillController requires breaker_speed move modifier")
+		return false
 
 	var breaker := _definition(SKILL_BREAKER)
 	var perseverance := combat_database.get_skill(&"garen_perseverance")
 	var perseverance_effect := _effect(&"perseverance_regen")
+	if perseverance == null or perseverance_effect == null:
+		push_error("Garen requires perseverance skill and effect data")
+		return false
 	passive_lockout_duration = _rule_float(&"garen.perseverance.lockout_duration", passive_lockout_duration)
 	passive_regen_period = _rule_float(&"garen.perseverance.period", passive_regen_period)
-	passive_regen_ratio_per_5 = perseverance_effect.base_value if perseverance_effect != null else passive_regen_ratio_per_5
+	passive_regen_ratio_per_5 = perseverance_effect.base_value
 	passive_early_level_increment = _rule_float(&"garen.perseverance.early_level_increment", passive_early_level_increment)
 	passive_mid_level_increment = _rule_float(&"garen.perseverance.mid_level_increment", passive_mid_level_increment)
 	passive_late_level_increment = _rule_float(&"garen.perseverance.late_level_increment", passive_late_level_increment)
@@ -1626,20 +1651,24 @@ func _apply_combat_data() -> void:
 	passive_vfx_fade_in = _rule_float(&"presentation.perseverance_vfx_fade_in", passive_vfx_fade_in)
 	passive_vfx_fade_out = _rule_float(&"presentation.perseverance_vfx_fade_out", passive_vfx_fade_out)
 	passive_vfx_frame_rate = _rule_float(&"presentation.perseverance_vfx_frame_rate", passive_vfx_frame_rate)
-	if perseverance != null:
-		passive_regen_period = perseverance.tick_interval if perseverance.tick_interval > 0.0 else passive_regen_period
+	# Passive timing is authored in combat_rules when the skill row has no tick interval.
+	if perseverance.tick_interval > 0.0:
+		passive_regen_period = perseverance.tick_interval
 	var breaker_buff := combat_database.get_buff(&"breaker_speed")
 	var breaker_damage_effect := _effect(&"breaker_damage")
 	var breaker_silence_effect := _effect(&"breaker_silence")
 	var breaker_rank: int = int(skill_ranks.get(SKILL_BREAKER, 1))
 	var breaker_rank_data := combat_database.get_skill_rank(&"garen_breaker", breaker_rank)
 	var breaker_damage_rank := combat_database.get_skill_effect_rank(&"breaker_damage", breaker_rank)
-	breaker_duration = breaker_rank_data.duration if breaker_rank_data != null else (breaker_buff.duration if breaker_buff != null else breaker_duration)
+	if breaker_buff == null or breaker_damage_effect == null or breaker_silence_effect == null or breaker_rank_data == null or breaker_damage_rank == null:
+		push_error("Garen requires complete Breaker gameplay data")
+		return false
+	breaker_duration = breaker_rank_data.duration
 	breaker_speed_bonus = _modifier_value(&"breaker_speed", &"move_speed", breaker_speed_bonus)
-	breaker_damage = breaker_damage_rank.base_value if breaker_damage_rank != null else (breaker_damage_effect.base_value if breaker_damage_effect != null else breaker_damage)
-	breaker_damage_coefficient = breaker_damage_rank.scaling_coefficient if breaker_damage_rank != null else (breaker_damage_effect.scaling_coefficient if breaker_damage_effect != null else breaker_damage_coefficient)
-	breaker_silence_duration = breaker_silence_effect.control_duration if breaker_silence_effect != null else breaker_silence_duration
-	breaker_cooldown = breaker_rank_data.cooldown if breaker_rank_data != null else (breaker.cooldown if breaker != null else breaker_cooldown)
+	breaker_damage = breaker_damage_rank.base_value
+	breaker_damage_coefficient = breaker_damage_rank.scaling_coefficient
+	breaker_silence_duration = breaker_silence_effect.control_duration
+	breaker_cooldown = breaker_rank_data.cooldown
 
 	var black_sail := _definition(SKILL_BLACK_SAIL)
 	var black_sail_buff := combat_database.get_buff(&"black_sail")
@@ -1648,30 +1677,38 @@ func _apply_combat_data() -> void:
 	var reduction_rank := combat_database.get_skill_effect_rank(&"black_sail_damage_reduction", black_sail_rank)
 	var shield_rank := combat_database.get_skill_effect_rank(&"black_sail_shield", black_sail_rank)
 	var tenacity_rank := combat_database.get_skill_effect_rank(&"black_sail_tenacity", black_sail_rank)
-	black_sail_duration = black_sail_rank_data.duration if black_sail_rank_data != null else (black_sail_buff.duration if black_sail_buff != null else black_sail_duration)
-	black_sail_damage_reduction = reduction_rank.base_value if reduction_rank != null else black_sail_damage_reduction
-	black_sail_shield = shield_rank.base_value if shield_rank != null else black_sail_shield
-	black_sail_shield_bonus_health_ratio = shield_rank.scaling_coefficient if shield_rank != null else black_sail_shield_bonus_health_ratio
-	black_sail_tenacity = tenacity_rank.base_value if tenacity_rank != null else black_sail_tenacity
+	if black_sail_buff == null or black_sail_rank_data == null or reduction_rank == null or shield_rank == null or tenacity_rank == null:
+		push_error("Garen requires complete Black Sail gameplay data")
+		return false
+	black_sail_duration = black_sail_rank_data.duration
+	black_sail_damage_reduction = reduction_rank.base_value
+	black_sail_shield = shield_rank.base_value
+	black_sail_shield_bonus_health_ratio = shield_rank.scaling_coefficient
+	black_sail_tenacity = tenacity_rank.base_value
 	black_sail_guard_duration = _rule_float(&"garen.black_sail.guard_duration", black_sail_guard_duration)
 	courage_max_stacks = int(_rule_float(&"garen.courage.max_stacks", float(courage_max_stacks)))
 	courage_resistance_per_stack = _rule_float(&"garen.courage.resistance_per_stack", courage_resistance_per_stack)
 	var rum_cleanse_effect := _effect(&"black_sail_rum_cleanse")
-	black_sail_rum_cleanse_ratio = rum_cleanse_effect.base_value if rum_cleanse_effect != null else black_sail_rum_cleanse_ratio
-	black_sail_cooldown = black_sail_rank_data.cooldown if black_sail_rank_data != null else (black_sail.cooldown if black_sail != null else black_sail_cooldown)
+	if rum_cleanse_effect == null:
+		push_error("Garen requires Black Sail rum cleanse effect")
+		return false
+	black_sail_rum_cleanse_ratio = rum_cleanse_effect.base_value
+	black_sail_cooldown = black_sail_rank_data.cooldown
 
 	var ocean := _definition(SKILL_OCEAN_STORM)
 	var ocean_effect := _effect(&"ocean_damage")
 	var ocean_rank := get_skill_rank(SKILL_OCEAN_STORM)
 	var ocean_rank_data := combat_database.get_skill_rank(&"garen_ocean_storm", ocean_rank)
 	var ocean_damage_rank := combat_database.get_skill_effect_rank(&"ocean_damage", ocean_rank)
-	if ocean != null:
-		ocean_storm_duration = ocean_rank_data.duration if ocean_rank_data != null else ocean.duration
-		ocean_storm_tick = ocean_rank_data.tick_interval if ocean_rank_data != null else ocean.tick_interval
-		ocean_storm_radius = ocean_rank_data.radius if ocean_rank_data != null else ocean.radius
-		ocean_storm_cooldown = ocean_rank_data.cooldown if ocean_rank_data != null else ocean.cooldown
-	ocean_storm_damage = ocean_damage_rank.base_value if ocean_damage_rank != null else (ocean_effect.base_value if ocean_effect != null else ocean_storm_damage)
-	ocean_storm_damage_coefficient = ocean_damage_rank.scaling_coefficient if ocean_damage_rank != null else (ocean_effect.scaling_coefficient if ocean_effect != null else ocean_storm_damage_coefficient)
+	if ocean == null or ocean_effect == null or ocean_rank_data == null or ocean_damage_rank == null:
+		push_error("Garen requires complete Ocean Storm gameplay data")
+		return false
+	ocean_storm_duration = ocean_rank_data.duration
+	ocean_storm_tick = ocean_rank_data.tick_interval
+	ocean_storm_radius = ocean_rank_data.radius
+	ocean_storm_cooldown = ocean_rank_data.cooldown
+	ocean_storm_damage = ocean_damage_rank.base_value
+	ocean_storm_damage_coefficient = ocean_damage_rank.scaling_coefficient
 	ocean_storm_loop_frame_count = int(_rule_float(&"garen.ocean_storm.loop_frame_count", float(ocean_storm_loop_frame_count)))
 
 	var judgment := _definition(SKILL_TYRANT_JUDGMENT)
@@ -1679,10 +1716,12 @@ func _apply_combat_data() -> void:
 	var judgment_rank := get_skill_rank(SKILL_TYRANT_JUDGMENT)
 	var judgment_rank_data := combat_database.get_skill_rank(&"garen_tyrant_judgment", judgment_rank)
 	var judgment_damage_rank := combat_database.get_skill_effect_rank(&"judgment_damage", judgment_rank)
-	judgment_cooldown = judgment_rank_data.cooldown if judgment_rank_data != null else (judgment.cooldown if judgment != null else judgment_cooldown)
-	if judgment_effect != null:
-		judgment_base_damage = judgment_damage_rank.base_value if judgment_damage_rank != null else judgment_effect.base_value
-		judgment_missing_health_damage = judgment_damage_rank.target_missing_health_coefficient if judgment_damage_rank != null else judgment_effect.target_missing_health_coefficient
+	if judgment == null or judgment_effect == null or judgment_rank_data == null or judgment_damage_rank == null:
+		push_error("Garen requires complete Tyrant Judgment gameplay data")
+		return false
+	judgment_cooldown = judgment_rank_data.cooldown
+	judgment_base_damage = judgment_damage_rank.base_value
+	judgment_missing_health_damage = judgment_damage_rank.target_missing_health_coefficient
 
 	var seven_seas := _definition(SKILL_SEVEN_SEAS)
 	var seven_damage := _effect(&"seven_seas_damage")
@@ -1693,13 +1732,15 @@ func _apply_combat_data() -> void:
 	var seven_rank_data := combat_database.get_skill_rank(&"garen_seven_seas", seven_rank)
 	var seven_damage_rank := combat_database.get_skill_effect_rank(&"seven_seas_damage", seven_rank)
 	var seven_rum_rank := combat_database.get_skill_effect_rank(&"seven_seas_rum", seven_rank)
-	if seven_seas != null:
-		ghostship_radius = seven_rank_data.radius if seven_rank_data != null else seven_seas.radius
-		seven_seas_cooldown = seven_rank_data.cooldown if seven_rank_data != null else seven_seas.cooldown
-	ghostship_damage = seven_damage_rank.base_value if seven_damage_rank != null else (seven_damage.base_value if seven_damage != null else ghostship_damage)
-	ghostship_stun_duration = seven_stun.control_duration if seven_stun != null else ghostship_stun_duration
-	rum_duration = seven_rum_rank.base_value if seven_rum_rank != null else (seven_rum.base_value if seven_rum != null else (rum_buff.duration if rum_buff != null else rum_duration))
-	rum_speed_bonus = seven_rum_rank.scaling_coefficient if seven_rum_rank != null else (seven_rum.scaling_coefficient if seven_rum != null else rum_speed_bonus)
+	if seven_seas == null or seven_damage == null or seven_stun == null or seven_rum == null or rum_buff == null or seven_rank_data == null or seven_damage_rank == null or seven_rum_rank == null:
+		push_error("Garen requires complete Seven Seas gameplay data")
+		return false
+	ghostship_radius = seven_rank_data.radius
+	seven_seas_cooldown = seven_rank_data.cooldown
+	ghostship_damage = seven_damage_rank.base_value
+	ghostship_stun_duration = seven_stun.control_duration
+	rum_duration = seven_rum_rank.base_value
+	rum_speed_bonus = seven_rum_rank.scaling_coefficient
 
 	breaker_afterimage_count = int(combat_database.get_rule(&"presentation.breaker_afterimage_count", breaker_afterimage_count))
 	breaker_afterimage_lifetime = _rule_float(&"presentation.breaker_afterimage_lifetime", breaker_afterimage_lifetime)
@@ -1730,10 +1771,15 @@ func _apply_combat_data() -> void:
 	ghostship_camera_shake_strength = _rule_float(&"presentation.ghostship_camera_shake_strength", ghostship_camera_shake_strength)
 	ghostship_buff_audio_delay = _rule_float(&"presentation.seven_seas_buff_audio_delay", ghostship_buff_audio_delay)
 
-	_apply_asset_profile(jolly_roger, jolly_audio, &"jolly_roger", _skill_audio_profile(SKILL_BLACK_SAIL, &"garen_w_cast"))
-	_apply_asset_profile(ocean_storm, ocean_audio, &"ocean_storm", _skill_audio_profile(SKILL_OCEAN_STORM, &"garen_e_cast"))
-	_apply_asset_profile(anchor_effect, anchor_audio, &"anchor", _skill_audio_profile(SKILL_TYRANT_JUDGMENT, &"garen_r_cast"))
-	_apply_asset_profile(ghostship, ghostship_audio, &"ghostship", &"ghostship_audio")
+	if not _apply_asset_profile(jolly_roger, jolly_audio, &"jolly_roger", _skill_audio_profile(SKILL_BLACK_SAIL, &"garen_w_cast")):
+		return false
+	if not _apply_asset_profile(ocean_storm, ocean_audio, &"ocean_storm", _skill_audio_profile(SKILL_OCEAN_STORM, &"garen_e_cast")):
+		return false
+	if not _apply_asset_profile(anchor_effect, anchor_audio, &"anchor", _skill_audio_profile(SKILL_TYRANT_JUDGMENT, &"garen_r_cast")):
+		return false
+	if not _apply_asset_profile(ghostship, ghostship_audio, &"ghostship", &"ghostship_audio"):
+		return false
+	return true
 
 
 func _definition(skill_index: int) -> SkillDefinition:
@@ -1785,7 +1831,10 @@ func _effect(effect_id: StringName) -> SkillEffectDefinition:
 
 func _modifier_value(buff_id: StringName, stat_id: StringName, fallback: float) -> float:
 	var modifier := combat_database.get_buff_modifier(buff_id, stat_id) if combat_database != null else null
-	return modifier.value if modifier != null else fallback
+	if modifier == null:
+		push_error("Garen requires buff modifier %s/%s" % [buff_id, stat_id])
+		return 0.0
+	return modifier.value
 
 
 func _skill_animation(skill_index: int, fallback: StringName) -> StringName:
@@ -1800,36 +1849,56 @@ func _skill_windup_animation(skill_index: int, fallback: StringName) -> StringNa
 
 func _skill_float(skill_index: int, property_name: StringName, fallback: float) -> float:
 	var definition := _definition(skill_index)
-	return float(definition.get(property_name)) if definition != null else fallback
+	if definition == null:
+		push_error("Garen requires skill slot %d for %s" % [skill_index, property_name])
+		return 0.0
+	return float(definition.get(property_name))
 
 
 func _rule_float(rule_id: StringName, fallback: float) -> float:
-	return float(combat_database.get_rule(rule_id, fallback)) if combat_database != null else fallback
+	if String(rule_id).begins_with("presentation."):
+		return float(combat_database.get_rule(rule_id, fallback)) if combat_database != null else fallback
+	var value: Variant = combat_database.get_rule(rule_id) if combat_database != null else null
+	if value == null:
+		push_error("Garen requires combat rule %s" % rule_id)
+		return 0.0
+	return float(value)
 
 
-func _apply_asset_profile(effect: AnimatedSprite3D, audio: AudioStreamPlayer3D, effect_id: StringName, audio_id: StringName) -> void:
+func _apply_asset_profile(effect: AnimatedSprite3D, audio: AudioStreamPlayer3D, effect_id: StringName, audio_id: StringName) -> bool:
 	var profile := combat_database.get_asset_profile(effect_id)
-	if profile != null:
-		var frames := load(profile.resource_file) as SpriteFrames
-		if frames != null:
-			effect.sprite_frames = frames
-		effect.animation = profile.animation_name
-		effect.scale = profile.scale
-		effect.offset = profile.offset
-		effect.pixel_size = profile.pixel_size
-		effect.render_priority = profile.render_priority
-		effect.no_depth_test = profile.no_depth_test
-		if not profile.shader_material_path.is_empty():
-			var material := load(profile.shader_material_path) as Material
-			if material != null:
-				effect.material_override = material.duplicate()
+	if profile == null or effect == null:
+		push_error("Garen requires VFX profile and node %s" % effect_id)
+		return false
+	var frames := load(profile.resource_file) as SpriteFrames
+	if frames == null:
+		push_error("Garen requires VFX frames %s" % profile.resource_file)
+		return false
+	effect.sprite_frames = frames
+	effect.animation = profile.animation_name
+	effect.scale = profile.scale
+	effect.offset = profile.offset
+	effect.pixel_size = profile.pixel_size
+	effect.render_priority = profile.render_priority
+	effect.no_depth_test = profile.no_depth_test
+	if not profile.shader_material_path.is_empty():
+		var material := load(profile.shader_material_path) as Material
+		if material == null:
+			push_error("Garen requires VFX material %s" % profile.shader_material_path)
+			return false
+		effect.material_override = material.duplicate()
 	var audio_profile := combat_database.get_asset_profile(audio_id)
-	if audio_profile != null:
-		var stream := load(audio_profile.audio_path) as AudioStream
-		if stream != null:
-			audio.stream = stream
-		audio.volume_db = audio_profile.volume_db
-		audio.max_distance = audio_profile.max_distance
+	if audio_profile == null or audio == null:
+		push_error("Garen requires audio profile and node %s" % audio_id)
+		return false
+	var stream := load(audio_profile.audio_path) as AudioStream
+	if stream == null:
+		push_error("Garen requires audio stream %s" % audio_profile.audio_path)
+		return false
+	audio.stream = stream
+	audio.volume_db = audio_profile.volume_db
+	audio.max_distance = audio_profile.max_distance
+	return true
 
 
 func _apply_sprite_asset_profile(effect: AnimatedSprite3D, asset_id: StringName) -> void:

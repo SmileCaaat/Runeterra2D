@@ -59,7 +59,9 @@ var hit_feedback: HeroHitFeedback3D
 
 
 func _ready() -> void:
-	_apply_combat_data()
+	if not _apply_combat_data():
+		process_mode = Node.PROCESS_MODE_DISABLED
+		return
 	_setup_ai_brain()
 	bind_hero_instance(combat_database, garen_definition)
 	_build_hit_feedback()
@@ -296,7 +298,7 @@ func _check_attack_hit(distance: float) -> void:
 			skill_controller.call("resolve_breaker_attack", hit_target)
 			current_attack_is_breaker = false
 		else:
-			var damage := garen_definition.attack_damage if garen_definition != null else 69.0
+			var damage := garen_definition.attack_damage
 			var hit_profile_id: StringName = hit_event.payload_id if hit_event != null else &"basic_melee"
 			if hit_target.has_method("receive_hit"):
 				hit_target.call("receive_hit", global_position, character_model.current_animation, damage, self)
@@ -415,7 +417,7 @@ func _build_ai_context() -> HeroAIContext:
 	ctx.extras[&"t_range"] = _skill_range(SKILL_T)
 	ctx.extras[&"breaker_lunge_range"] = _breaker_lunge_range()
 	ctx.extras[&"move_speed_multiplier"] = float(skill_controller.call("get_move_speed_multiplier")) * _external_move_speed_multiplier()
-	ctx.extras[&"attack_damage"] = garen_definition.attack_damage if garen_definition != null else 69.0
+	ctx.extras[&"attack_damage"] = garen_definition.attack_damage
 	ctx.extras[&"recent_damage_ratio"] = ai_recent_damage_accumulator / maxf(float(skill_controller.get("max_health")), 1.0)
 	if ctx.target != null:
 		ctx.target_position = target.global_position
@@ -707,8 +709,8 @@ func _move_during_ocean_storm(delta: float) -> void:
 
 
 func _apply_gravity(delta: float) -> void:
-	var floor_velocity := float(combat_database.get_rule(&"combat.floor_stick_velocity", -0.1)) if combat_database != null else -0.1
-	var gravity := float(combat_database.get_rule(&"combat.gravity", 20.0)) if combat_database != null else 20.0
+	var floor_velocity := float(combat_database.get_rule(&"combat.floor_stick_velocity"))
+	var gravity := float(combat_database.get_rule(&"combat.gravity"))
 	if is_on_floor():
 		velocity.y = floor_velocity
 	else:
@@ -849,7 +851,7 @@ func is_targetable() -> bool:
 
 
 func receive_hit(attacker_position: Vector3, _attack_name: StringName, amount: float = -1.0, source_actor: Node = null) -> void:
-	var damage := amount if amount >= 0.0 else (garen_definition.attack_damage if garen_definition != null else 69.0)
+	var damage := amount if amount >= 0.0 else garen_definition.attack_damage
 	receive_skill_damage(damage, "普攻", true, attacker_position, &"physical", &"basic_melee", source_actor)
 
 
@@ -984,13 +986,13 @@ func _perform_breaker_lunge() -> void:
 		return
 	var direction := offset.normalized()
 	_face_direction(direction)
-	var standoff := float(combat_database.get_rule(&"garen.breaker.lunge_standoff", 0.85)) if combat_database != null else 0.85
+	var standoff := float(combat_database.get_rule(&"garen.breaker.lunge_standoff"))
 	var destination := target.global_position - direction * standoff
 	destination.y = global_position.y
 	destination.x = clampf(destination.x, arena_min.x, arena_max.x)
 	destination.z = clampf(destination.z, arena_min.y, arena_max.y)
 	var origin := global_position
-	var duration := float(combat_database.get_rule(&"garen.breaker.lunge_duration", 0.12)) if combat_database != null else 0.12
+	var duration := float(combat_database.get_rule(&"garen.breaker.lunge_duration"))
 	var elapsed := 0.0
 	while elapsed < duration and not is_rooted() and _is_target_available(target):
 		await get_tree().process_frame
@@ -998,38 +1000,57 @@ func _perform_breaker_lunge() -> void:
 		global_position = origin.lerp(destination, ease(clampf(elapsed / duration, 0.0, 1.0), -1.6))
 
 
-func _apply_combat_data() -> void:
+func _apply_combat_data() -> bool:
 	combat_database = CombatData.database()
 	if combat_database == null:
-		push_warning("Combat database is unavailable; using inspector fallback values")
-		return
+		push_error("Garen requires CombatDatabase")
+		return false
 	garen_definition = combat_database.get_unit(&"garen")
+	if garen_definition == null:
+		push_error("Garen requires unit definition garen")
+		return false
+	for rule_id: StringName in [&"combat.floor_stick_velocity", &"combat.gravity", &"garen.breaker.lunge_standoff", &"garen.breaker.lunge_duration"]:
+		if combat_database.get_rule(rule_id) == null:
+			push_error("Garen requires combat rule %s" % rule_id)
+			return false
 	var configured_combo: Array[StringName] = []
 	for event: AnimationEventDefinition in combat_database.animation_events:
 		if event.owner_id == &"garen" and event.event_type == "hit" and event.payload_id == &"basic_melee" and not configured_combo.has(event.animation_name):
 			configured_combo.append(event.animation_name)
-	if not configured_combo.is_empty():
-		attack_combo = configured_combo
-	if garen_definition != null:
-		move_speed = garen_definition.move_speed
-		acceleration = garen_definition.acceleration
-		attack_range = garen_definition.attack_range
-		fighter_ai = combat_database.get_ai_profile(garen_definition.ai_profile_id)
-	if fighter_ai != null:
-		arena_min = fighter_ai.arena_min
-		arena_max = fighter_ai.arena_max
-		ai_archetype = combat_database.get_ai_archetype(fighter_ai.archetype_id)
+	if configured_combo.is_empty():
+		push_error("Garen requires authored basic melee animation events")
+		return false
+	attack_combo = configured_combo
+	move_speed = garen_definition.move_speed
+	acceleration = garen_definition.acceleration
+	attack_range = garen_definition.attack_range
+	fighter_ai = combat_database.get_ai_profile(garen_definition.ai_profile_id)
+	if fighter_ai == null:
+		push_error("Garen requires AI profile %s" % garen_definition.ai_profile_id)
+		return false
+	arena_min = fighter_ai.arena_min
+	arena_max = fighter_ai.arena_max
+	ai_archetype = combat_database.get_ai_archetype(fighter_ai.archetype_id)
+	if ai_archetype == null:
+		push_error("Garen requires archetype %s" % fighter_ai.archetype_id)
+		return false
 	var hit_profile := combat_database.get_hit_profile(&"basic_melee")
-	if hit_profile != null:
-		attack_hit_range = hit_profile.size.x
 	var breaker_profile := combat_database.get_hit_profile(&"breaker_hit")
-	if breaker_profile != null:
-		breaker_hit_range = breaker_profile.size.x
+	if hit_profile == null or breaker_profile == null:
+		push_error("Garen requires basic_melee and breaker_hit profiles")
+		return false
+	attack_hit_range = hit_profile.size.x
+	breaker_hit_range = breaker_profile.size.x
 	var attack_profile := combat_database.get_asset_profile(&"garen_attack_audio")
-	if attack_profile != null:
-		var stream := load(attack_profile.audio_path) as AudioStream
-		if stream != null:
-			attack_audio.stream = stream
-		attack_audio.volume_db = attack_profile.volume_db
-		attack_audio.max_distance = attack_profile.max_distance
-		attack_pitches = [attack_profile.pitch_max, 1.0, attack_profile.pitch_min]
+	if attack_profile == null:
+		push_error("Garen requires attack audio profile")
+		return false
+	var stream := load(attack_profile.audio_path) as AudioStream
+	if stream == null:
+		push_error("Garen requires attack audio stream %s" % attack_profile.audio_path)
+		return false
+	attack_audio.stream = stream
+	attack_audio.volume_db = attack_profile.volume_db
+	attack_audio.max_distance = attack_profile.max_distance
+	attack_pitches = [attack_profile.pitch_max, 1.0, attack_profile.pitch_min]
+	return true
