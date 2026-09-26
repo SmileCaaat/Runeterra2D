@@ -1413,7 +1413,7 @@ func _desperate_duration() -> float:
 
 
 func _sync_t_buff_presentation() -> void:
-	_sync_self_vfx_node(t_buff, t_buff_flip, &"T_Buff", desperate_timer > 0.0)
+	_sync_self_vfx_node(t_buff, t_buff_flip, &"T_Buff", desperate_timer > 0.0, false)
 
 
 func _sync_shield_presentation() -> void:

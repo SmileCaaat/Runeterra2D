@@ -69,6 +69,28 @@ func _initialize() -> void:
 		and blue.is_in_group(&"combat_target") \
 		and bool(blue.call("is_targetable")) \
 		and is_equal_approx(float(blue.get("current_health")), float(blue.get("max_health")))
-	print("GAREN_TARGETING_LIFECYCLE hero_priority=%s unit_controls=%s e_started=%s death=%s e_death_cancel=%s revive=%s" % [hero_priority_ok, unit_controls_ok, e_started, death_ok, not bool(skills.get("ocean_storm_loop_active")), revive_ok])
+	if roster_panel != null:
+		roster_panel.set_training_units({&"friendly_dummy": false, &"enemy_dummy": false, &"scuttle": false})
+		await process_frame
+	red.global_position = blue.global_position + Vector3(1.0, 0.0, 0.0)
+	red.call("revive_for_training")
+	blue.call("force_retarget_hostile")
+	blue.call("set_control_authority", HeroInstance.ControlAuthority.PLAYER)
+	var skill_cooldowns: Array = skills.get("cooldowns")
+	skill_cooldowns[3] = 0.0
+	var target_death_e_started := bool(skills.call("begin_skill", 3))
+	await process_frame
+	target_death_e_started = target_death_e_started and bool(skills.get("is_casting"))
+	red.call("receive_skill_damage", 99999.0, "E target death test", false, blue.global_position, &"true", &"judgment_hit", blue)
+	await create_timer(0.08).timeout
+	var target_death_cancel_ok := bool(red.get("is_dead")) and blue.get("target") == null \
+		and not bool(skills.get("is_casting")) and not bool(skills.get("ocean_storm_loop_active")) \
+		and not ocean_storm.visible and not ocean_storm.is_playing()
+	red.call("revive_for_training")
+	blue.call("force_retarget_hostile")
+	await process_frame
+	var followup_attack_ok: bool = blue.get("target") == red and bool(blue.call("request_player_basic_attack", Vector2.RIGHT)) \
+		and int(blue.get("state")) == 2 # GarenActor.CombatState.ATTACK
+	print("GAREN_TARGETING_LIFECYCLE hero_priority=%s unit_controls=%s e_started=%s death=%s e_death_cancel=%s revive=%s target_death_e=%s target_death_cancel=%s followup_attack=%s" % [hero_priority_ok, unit_controls_ok, e_started, death_ok, not bool(skills.get("ocean_storm_loop_active")), revive_ok, target_death_e_started, target_death_cancel_ok, followup_attack_ok])
 	stage.queue_free()
-	quit(0 if hero_priority_ok and unit_controls_ok and e_started and death_ok and revive_ok else 1)
+	quit(0 if hero_priority_ok and unit_controls_ok and e_started and death_ok and revive_ok and target_death_e_started and target_death_cancel_ok and followup_attack_ok else 1)

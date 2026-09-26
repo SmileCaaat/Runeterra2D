@@ -87,8 +87,11 @@ func _init() -> void:
 			instance.set("_faces_left", true)
 			instance.call("_sync_t_buff_presentation")
 			instance.call("_sync_shield_presentation")
-			valid = valid and t_buff_flip.visible and not t_buff.visible
+			valid = valid and t_buff.visible and not t_buff_flip.visible
 			valid = valid and shield.visible and not shield_flip.visible
+			var t_buff_anchor := t_buff.position
+			var t_buff_frame := t_buff.frame
+			var t_buff_frame_progress := t_buff.frame_progress
 			shield.frame = mini(shield.sprite_frames.get_frame_count(&"Ryze_Shield") - 1, 12)
 			shield.frame_progress = 0.4
 			var shield_anchor := shield.position
@@ -99,12 +102,17 @@ func _init() -> void:
 			instance.call("_sync_shield_presentation")
 			valid = valid and t_buff.visible and not t_buff_flip.visible
 			valid = valid and shield.visible and not shield_flip.visible
+			valid = valid and t_buff.position.is_equal_approx(t_buff_anchor) and t_buff.frame == t_buff_frame
+			valid = valid and is_equal_approx(t_buff.frame_progress, t_buff_frame_progress)
 			valid = valid and shield.position.is_equal_approx(shield_anchor) and shield.frame == shield_frame
 			valid = valid and is_equal_approx(shield.frame_progress, shield_frame_progress)
 			instance.set("_faces_left", true)
 			instance.call("_sync_t_buff_presentation")
 			instance.call("_sync_shield_presentation")
+			valid = valid and t_buff.visible and not t_buff_flip.visible
 			valid = valid and shield.visible and not shield_flip.visible
+			valid = valid and t_buff.position.is_equal_approx(t_buff_anchor) and t_buff.frame == t_buff_frame
+			valid = valid and is_equal_approx(t_buff.frame_progress, t_buff_frame_progress)
 			valid = valid and shield.position.is_equal_approx(shield_anchor) and shield.frame == shield_frame
 			valid = valid and is_equal_approx(shield.frame_progress, shield_frame_progress)
 			instance.desperate_timer = 0.0

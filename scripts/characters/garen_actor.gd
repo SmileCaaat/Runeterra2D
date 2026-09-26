@@ -111,12 +111,12 @@ func _physics_process(delta: float) -> void:
 	_refresh_target()
 	if state == CombatState.ATTACK:
 		_check_attack_audio()
+	if not _is_target_available(target) and bool(skill_controller.call("allows_movement_while_casting")):
+		skill_controller.call("cancel_ocean_storm")
 	if is_player_controlled():
 		_physics_process_player(delta, rooted)
 		return
 	if not _is_target_available(target):
-		if bool(skill_controller.call("allows_movement_while_casting")):
-			skill_controller.call("cancel_ocean_storm")
 		_set_state(CombatState.IDLE)
 		_slow_down(delta)
 		_apply_gravity(delta)
