@@ -1,6 +1,6 @@
 extends "res://scripts/actors/hero_instance.gd"
 
-## Training implementation of the data-authored Ryze kit.  It intentionally
+## Ryze runtime actor for movement, authority, targeting, and AI adaptation. It intentionally
 ## keeps targeting and all authored ranges in meters, so later player input can
 ## reuse the same Q/W/E/T/R calls without changing combat numbers.
 

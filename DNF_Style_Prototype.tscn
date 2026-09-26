@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://b2j2adnbghlvd" path="res://assets/characters/rogue_admiral_garen_3d/rogue_admiral_garen.glb" id="1_garen_model"]
 [ext_resource type="Texture2D" uid="uid://s6tqtqunb51r" path="res://assets/fx/soft_ground_shadow.svg" id="2_shadow"]
-[ext_resource type="Script" uid="uid://dv8xxg0p6k8ch" path="res://scripts/characters/garen_combat_ai.gd" id="3_garen_ai"]
+[ext_resource type="Script" uid="uid://dv8xxg0p6k8ch" path="res://scripts/characters/garen_actor.gd" id="3_garen_ai"]
 [ext_resource type="AudioStream" uid="uid://cca16a1p03bpr" path="res://assets/audio/combat/garen_attack_swing.wav" id="6_attack_audio"]
 [ext_resource type="Script" uid="uid://cahtpkohg2pbo" path="res://scripts/characters/garen_skill_controller.gd" id="8_skill_controller"]
 [ext_resource type="SpriteFrames" uid="uid://nkv1ee1afy3v" path="res://assets/vfx/garen_skills/garen_skill_vfx_frames.tres" id="9_skill_vfx"]

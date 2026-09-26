@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://b05cxt20dfbt6"]
 
-[ext_resource type="Script" uid="uid://j7fa0rm30lbk" path="res://scripts/characters/ryze_combat_ai.gd" id="1"]
+[ext_resource type="Script" uid="uid://j7fa0rm30lbk" path="res://scripts/characters/ryze_actor.gd" id="1"]
 [ext_resource type="SpriteFrames" uid="uid://bjujrhb8prp6w" path="res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres" id="3"]
 [ext_resource type="Texture2D" uid="uid://s6tqtqunb51r" path="res://assets/fx/soft_ground_shadow.svg" id="4"]
 [ext_resource type="Script" path="res://scripts/rendering/unit_readability_layers.gd" id="5_readability"]

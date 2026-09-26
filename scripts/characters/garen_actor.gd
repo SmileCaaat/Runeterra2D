@@ -1,5 +1,7 @@
 extends "res://scripts/actors/hero_instance.gd"
 
+## Garen runtime actor; skill mechanics live in GarenSkillController.
+
 signal attack_landed(animation_name: StringName)
 
 enum CombatState { IDLE, CHASE, ATTACK }

@@ -145,7 +145,7 @@ func _init() -> void:
 			valid = valid and flux != null and is_equal_approx(flux.value, 0.92)
 		instance.queue_free()
 	for script_path: String in [
-		"res://scripts/characters/garen_combat_ai.gd",
+		"res://scripts/characters/garen_actor.gd",
 		"res://scripts/characters/target_dummy.gd",
 		"res://scripts/characters/moving_training_dummy.gd",
 		"res://scripts/characters/scuttle_crab.gd",
