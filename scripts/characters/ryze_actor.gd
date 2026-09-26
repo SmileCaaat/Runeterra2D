@@ -471,8 +471,8 @@ func _build_ai_context() -> HeroAIContext:
 	ctx.extras[&"warp_range"] = _warp_range()
 	ctx.extras[&"r_channel_duration"] = _rulef(&"ryze.r.channel_duration", 0.9)
 	ctx.extras[&"r_cooldown_duration"] = _skill_cooldown(&"ryze_realm_warp", 180.0)
-	ctx.extras[&"move_speed"] = _move_speed()
-	ctx.extras[&"recent_damage_ratio"] = ai_recent_damage_accumulator / maxf(max_health, 1.0)
+	ctx.move_speed = _move_speed()
+	ctx.recent_damage_ratio = ai_recent_damage_accumulator / maxf(max_health, 1.0)
 	if ctx.target != null:
 		ctx.target_position = target.global_position
 		ctx.target_velocity = target.velocity

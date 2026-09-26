@@ -127,7 +127,7 @@ func _initialize() -> void:
 	dive_ctx.w_ready = true
 	dive_ctx.e_ready = true
 	dive_ctx.r_ready = true
-	dive_ctx.extras[&"recent_damage_ratio"] = 0.12
+	dive_ctx.recent_damage_ratio = 0.12
 	dive_ctx.extras[&"r_channel_duration"] = 0.9
 	dive_ctx.extras[&"warp_range"] = 25.0
 	dive_ctx.extras[&"escape_destination"] = Vector3(-8.0, 0.0, 0.0)
@@ -181,7 +181,7 @@ func _initialize() -> void:
 	closing_ctx.r_ready = true
 	closing_ctx.w_ready = true
 	closing_ctx.q_ready = true
-	closing_ctx.extras[&"move_speed"] = 4.0
+	closing_ctx.move_speed = 4.0
 	closing_ctx.extras[&"warp_range"] = 25.0
 	closing_ctx.extras[&"r_channel_duration"] = 0.9
 	closing_ctx.extras[&"r_cooldown_duration"] = 180.0
@@ -202,7 +202,7 @@ func _initialize() -> void:
 	fleeing_ctx.control_available = true
 	fleeing_ctx.r_ready = true
 	fleeing_ctx.q_ready = true
-	fleeing_ctx.extras[&"move_speed"] = 4.0
+	fleeing_ctx.move_speed = 4.0
 	fleeing_ctx.extras[&"warp_range"] = 25.0
 	fleeing_ctx.extras[&"r_channel_duration"] = 0.9
 	fleeing_ctx.extras[&"r_cooldown_duration"] = 180.0

@@ -171,7 +171,7 @@ func _close_pressure(ctx: HeroAIContext) -> float:
 
 
 func _recent_damage_pressure(ctx: HeroAIContext) -> float:
-	return AIUtilityScore.saturate(float(ctx.extras.get(&"recent_damage_ratio", 0.0)) / 0.2)
+	return AIUtilityScore.saturate(ctx.recent_damage_ratio / 0.2)
 
 
 func _channel_risk_penalty(ctx: HeroAIContext) -> float:

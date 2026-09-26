@@ -420,7 +420,7 @@ func _build_ai_context() -> HeroAIContext:
 	ctx.extras[&"breaker_lunge_range"] = _breaker_lunge_range()
 	ctx.extras[&"move_speed_multiplier"] = float(skill_controller.call("get_move_speed_multiplier")) * _external_move_speed_multiplier()
 	ctx.extras[&"attack_damage"] = garen_definition.attack_damage
-	ctx.extras[&"recent_damage_ratio"] = ai_recent_damage_accumulator / maxf(float(skill_controller.get("max_health")), 1.0)
+	ctx.recent_damage_ratio = ai_recent_damage_accumulator / maxf(float(skill_controller.get("max_health")), 1.0)
 	if ctx.target != null:
 		ctx.target_position = target.global_position
 		ctx.target_velocity = target.velocity

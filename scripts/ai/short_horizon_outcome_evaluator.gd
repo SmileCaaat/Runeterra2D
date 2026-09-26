@@ -62,7 +62,7 @@ func evaluate_action(
 
 
 func _baseline_positions(ctx: HeroAIContext, predicted_target: Vector3, horizon: float) -> Dictionary:
-	var speed := maxf(float(ctx.extras.get(&"move_speed", 0.0)), 0.0)
+	var speed := maxf(ctx.move_speed, 0.0)
 	var preferred := maxf(ctx.preferred_distance, 0.1)
 	var away := _planar(ctx.self_position - predicted_target)
 	if away.length_squared() < 0.0001:
@@ -119,7 +119,7 @@ func _threat_at(ctx: HeroAIContext, actor_position: Vector3, predicted_target: V
 func _commitment_feature(ctx: HeroAIContext, horizon: float) -> float:
 	var pressure := 100.0 * (1.0 - AIUtilityScore.remap01(ctx.target_distance, ctx.disengage_distance + 1.0, maxf(ctx.cast_range, ctx.disengage_distance + 2.0)))
 	var other_enemy_pressure := minf(float(maxi(ctx.nearby_enemy_count - 1, 0)) * 28.0, 60.0)
-	var recent_damage := clampf(float(ctx.extras.get(&"recent_damage_ratio", 0.0)) / 0.20, 0.0, 1.0) * 30.0
+	var recent_damage := clampf(ctx.recent_damage_ratio / 0.20, 0.0, 1.0) * 30.0
 	var chase_pressure := AIUtilityScore.saturate(ctx.target_closing_speed / 4.0) * 22.0
 	var cheaper_defense_pressure := 18.0 if ctx.control_available and not ctx.target_rooted else 0.0
 	var root_relief := 0.65 if ctx.target_rooted else 1.0

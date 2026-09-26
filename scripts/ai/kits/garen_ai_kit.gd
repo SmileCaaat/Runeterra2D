@@ -25,7 +25,7 @@ func build_candidates(ctx: HeroAIContext, output: Array[HeroAIDecision]) -> void
 		var w_score := 12.0 + defensive_need * 48.0 + float(mini(nearby, 2)) * 10.0
 		if distance <= ctx.engage_distance: w_score += 12.0
 		if ctx.self_health_ratio > 0.90 and nearby <= 1: w_score -= 12.0
-		w_score += minf(float(ctx.extras.get(&"recent_damage_ratio", 0.0)) * 90.0, 25.0)
+		w_score += minf(ctx.recent_damage_ratio * 90.0, 25.0)
 		_add(output, ctx, &"skill_w", w_score, "black sail defense")
 	if ctx.e_ready and distance <= float(ctx.extras.get(&"e_range", attack_range)):
 		var connected := 1.0 - AIUtilityScore.remap01(distance, attack_range * 0.85, ctx.engage_distance)
