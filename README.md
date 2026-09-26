@@ -31,4 +31,6 @@ Godot_v4.7-stable_win64_console.exe --headless --path . --script res://scripts/t
 
 ## 当前状态
 
+已接入英雄手动接管 MVP：开局全员 AI，F1–F5 / TAB / 点击槽位切换焦点，方向键移动、X 普攻、QWERT 施法并自动接管当前英雄，反引号切换 AUTO/MANUAL。切换英雄后旧英雄恢复 AI；瑞兹 R 需要同时按方向键。操作与后续英雄接入契约见 [手动接管 MVP](docs/combat/manual-takeover.md)。
+
 这是非商业学习原型，仍在持续验证角色、战斗配表和资产生产工作流。项目与 Riot Games、腾讯、Neople 或 Nexon 没有关联；第三方名称、商标和参考内容归各自权利人所有。

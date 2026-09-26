@@ -21,6 +21,10 @@ func _run() -> void:
 	for layer_name: StringName in [&"BackgroundFar", &"BackgroundMid", &"ForegroundNearLeft", &"ForegroundNearRight"]:
 		authored_layer_positions[layer_name] = (stage.get_node("World/Backdrop").get_node(NodePath(layer_name)) as MeshInstance3D).position
 	root.add_child(stage)
+	current_scene = stage
+	# SceneTree fixtures assign current_scene after _ready; bind the default roster
+	# now, matching the main-scene startup path used by the game.
+	(stage.get_node("BattleHUD") as BattleHUD).get_roster_panel().set_roster(&"friendly", [&"garen"])
 	await process_frame
 	passed = passed and stage.name == "TrainingGround"
 	passed = passed and StringName(stage.get_meta(&"stage_profile_id", &"")) == &"small"
@@ -142,7 +146,8 @@ func _run() -> void:
 			if team_slots.size() == 1:
 				var garen_avatar := team_slots[0].find_child("HeroAvatar", true, false) as TextureRect
 				passed = passed and garen_avatar != null and garen_avatar.texture != null
-				passed = passed and garen_avatar.texture.resource_path.ends_with("garen/rogue_admiral_cutin.jpg")
+				var garen_definition := CombatData.database().get_unit(&"garen")
+				passed = passed and garen_avatar.texture.resource_path == CombatData.database().get_asset_profile(garen_definition.portrait_profile_id).resource_file
 				passed = passed and team_slot_row.get_child(1).get_child_count() == 0
 			var duo_roster: Array[StringName] = [&"garen", &"ryze"]
 			roster_panel.call("set_roster", &"friendly", duo_roster)
@@ -153,11 +158,12 @@ func _run() -> void:
 			if team_slots.size() == 2:
 				var ryze_avatar := team_slots[1].find_child("HeroAvatar", true, false) as TextureRect
 				passed = passed and ryze_avatar != null and ryze_avatar.texture != null
-				passed = passed and ryze_avatar.texture.resource_path.ends_with("ryze/desperate_power_cutin.jpg")
+				var ryze_definition := CombatData.database().get_unit(&"ryze")
+				passed = passed and ryze_avatar.texture.resource_path == CombatData.database().get_asset_profile(ryze_definition.portrait_profile_id).resource_file
 				var ryze_key := InputEventKey.new()
-				ryze_key.keycode = KEY_F2
+				ryze_key.physical_keycode = KEY_F2
 				ryze_key.pressed = true
-				battle_hud.call("_unhandled_key_input", ryze_key)
+				stage.get_node("BattleControlCoordinator").call("_unhandled_input", ryze_key)
 				passed = passed and String((battle_hud.get("_name_label") as Label).text) == "瑞兹"
 				passed = passed and not bool((battle_hud.get("_mp_fill") as ColorRect).get_parent().visible)
 			var garen_roster: Array[StringName] = [&"garen"]

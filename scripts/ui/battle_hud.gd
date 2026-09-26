@@ -1,6 +1,8 @@
 class_name BattleHUD
 extends CanvasLayer
 
+signal selected_hero_changed(hero: HeroInstance, index: int)
+
 ## Split-layout battle HUD.
 ## Window stays 16:9. Bottom band is exclusive HUD; combat renders only above it
 ## via a shared-world SubViewport so GroundEdgeFront is never covered.
@@ -25,6 +27,7 @@ var _portrait_fallback_label: Label
 var _name_label: Label
 var _level_label: Label
 var _role_label: Label
+var _control_mode_label: Label
 var _hp_fill: ColorRect
 var _mp_fill: ColorRect
 var _hp_text: Label
@@ -69,6 +72,8 @@ func _process(_delta: float) -> void:
 	_hero_refresh_timer -= _delta
 	if _hero_refresh_timer <= 0.0:
 		_hero_refresh_timer = 0.1
+		if _team_heroes.any(func(hero: Variant) -> bool: return not is_instance_valid(hero) or hero.is_queued_for_deletion()):
+			_refresh_team_roster()
 		_update_team_health_bars()
 		_update_current_hero_data()
 
@@ -157,7 +162,7 @@ func _build() -> void:
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(columns)
 
-	var team_panel := _make_section_panel("TeamPanel", "A · 我方队伍", "F1–F5", Color(0.21, 0.44, 0.57, 0.96))
+	var team_panel := _make_section_panel("TeamPanel", "A · 我方队伍", "F1–F5 / TAB", Color(0.21, 0.44, 0.57, 0.96))
 	team_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	team_panel.size_flags_stretch_ratio = 0.31
 	columns.add_child(team_panel)
@@ -330,6 +335,10 @@ func _make_team_slot(hero: Node3D, index: int, seat: Control) -> PanelContainer:
 	idx.modulate = Color(1, 1, 1, 0.75)
 	idx.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(idx)
+	var authority_label := Label.new()
+	authority_label.name = "AuthorityBadge"
+	authority_label.add_theme_font_size_override("font_size", 8)
+	top.add_child(authority_label)
 	var key := Label.new()
 	key.text = "F%d" % (index + 1)
 	key.add_theme_font_size_override("font_size", 8)
@@ -415,6 +424,11 @@ func _build_current_hero(parent: VBoxContainer) -> void:
 	_level_label = Label.new()
 	_level_label.add_theme_font_size_override("font_size", 10)
 	name_row.add_child(_level_label)
+	_control_mode_label = Label.new()
+	_control_mode_label.name = "ControlMode"
+	_control_mode_label.add_theme_font_size_override("font_size", 10)
+	_control_mode_label.tooltip_text = "方向键移动 · X普攻 · QWERT技能 · ` 自动/手动"
+	name_row.add_child(_control_mode_label)
 	_role_label = Label.new()
 	_role_label.add_theme_font_size_override("font_size", 9)
 	_role_label.modulate = Color(0.84, 0.80, 0.89)
@@ -900,17 +914,20 @@ func _add_status_chip(parent: HBoxContainer, text: String, color: Color) -> void
 
 func _on_team_slot_gui_input(event: InputEvent, index: int) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		_select_hero(index, true)
+		select_hero(index, true)
 
 
-func _unhandled_key_input(event: InputEvent) -> void:
-	if not event is InputEventKey or not event.pressed or event.echo:
-		return
-	if event.keycode < KEY_F1 or event.keycode > KEY_F5:
-		return
-	var index := int(event.keycode) - int(KEY_F1)
-	if index < _team_heroes.size():
-		_select_hero(index, true)
+func get_selected_hero() -> HeroInstance:
+	return _selected_hero as HeroInstance if is_instance_valid(_selected_hero) else null
+
+
+func get_friendly_heroes() -> Array[Node3D]:
+	return _team_heroes.duplicate()
+
+
+func select_next_hero() -> void:
+	if not _team_heroes.is_empty():
+		select_hero((_selected_index + 1) % _team_heroes.size())
 
 
 func _on_roster_changed(team: StringName, _heroes: Array[StringName]) -> void:
@@ -934,13 +951,20 @@ func _refresh_team_roster() -> void:
 		_team_slot_row.add_child(seat)
 		if index < _team_heroes.size():
 			_team_slots.append(_make_team_slot(_team_heroes[index], index, seat))
+	for hero: Node3D in _team_heroes:
+		if hero is HeroInstance and not hero.control_authority_changed.is_connected(_on_control_authority_changed):
+			hero.control_authority_changed.connect(_on_control_authority_changed)
 	if _team_heroes.is_empty():
+		if is_instance_valid(_selected_hero):
+			_selected_hero.call("set_outline_selected", false)
 		_selected_hero = null
 		_selected_index = 0
+		if previously_selected != null:
+			selected_hero_changed.emit(null, -1)
+		_update_control_mode()
 		_update_current_hero_data()
 		return
-	_selected_index = _team_heroes.find(previously_selected) if _team_heroes.has(previously_selected) else 0
-	_select_hero(_selected_index, false)
+	select_hero(_team_heroes.find(previously_selected) if is_instance_valid(previously_selected) and _team_heroes.has(previously_selected) else 0, false)
 	_update_team_health_bars()
 
 
@@ -954,6 +978,8 @@ func _get_friendly_roster_heroes() -> Array[Node3D]:
 	var roster_ids: Array = _roster_panel.roster.get(&"friendly", [])
 	for hero_id: StringName in roster_ids:
 		for candidate: Node in characters.get_children():
+			if not candidate.is_in_group(&"friendly_actor"):
+				continue
 			if not candidate is Node3D or not candidate.has_method("get_combat_unit_definition"):
 				continue
 			var definition := candidate.call("get_combat_unit_definition") as UnitDefinition
@@ -963,15 +989,43 @@ func _get_friendly_roster_heroes() -> Array[Node3D]:
 	return result
 
 
-func _select_hero(index: int, _announce: bool) -> void:
-	if _team_heroes.is_empty():
+func select_hero(index: int, _announce := true) -> void:
+	if index < 0 or index >= _team_heroes.size():
 		return
-	_selected_index = clampi(index, 0, _team_heroes.size() - 1)
+	var previous := _selected_hero
+	var previous_index := _selected_index
+	if is_instance_valid(previous):
+		previous.call("set_outline_selected", false)
+	_selected_index = index
 	_selected_hero = _team_heroes[_selected_index]
+	if is_instance_valid(_selected_hero):
+		_selected_hero.call("set_outline_selected", true)
 	for slot_index in _team_slots.size():
 		var slot := _team_slots[slot_index]
 		slot.add_theme_stylebox_override("panel", _slot_style(slot_index == _selected_index))
 	_update_current_hero_data()
+	if previous != _selected_hero or previous_index != _selected_index:
+		selected_hero_changed.emit(get_selected_hero(), _selected_index)
+	_update_control_mode()
+
+
+func _select_hero(index: int, announce: bool) -> void:
+	select_hero(index, announce)
+
+
+func _on_control_authority_changed(_authority: HeroInstance.ControlAuthority) -> void:
+	_update_control_mode()
+
+
+func _update_control_mode() -> void:
+	var hero := get_selected_hero()
+	var manual := hero != null and hero.is_player_controlled()
+	_control_mode_label.text = "MANUAL" if manual else ("AUTO" if hero != null else "—")
+	_control_mode_label.modulate = Color(0.65, 1.0, 1.0) if manual else Color(0.8, 0.8, 0.85, 0.7)
+	for index in _team_slots.size():
+		var badge := _team_slots[index].find_child("AuthorityBadge", true, false) as Label
+		var slot_hero := _team_heroes[index] as HeroInstance if is_instance_valid(_team_heroes[index]) else null
+		badge.text = "M" if is_instance_valid(slot_hero) and slot_hero.is_player_controlled() else "A"
 
 
 func _update_current_hero_data() -> void:

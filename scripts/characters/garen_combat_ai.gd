@@ -82,7 +82,6 @@ func _configure_team_groups() -> void:
 	var readability := get_node_or_null("UnitReadability")
 	if readability != null and readability.has_method("refresh_team_visuals"):
 		readability.call("refresh_team_visuals")
-	set_outline_selected(is_in_group(&"player_actor"))
 
 
 func get_skill_cooldown_state(slot: StringName) -> Dictionary:
@@ -106,6 +105,9 @@ func _physics_process(delta: float) -> void:
 	_refresh_target()
 	if state == CombatState.ATTACK:
 		_check_attack_audio()
+	if is_player_controlled():
+		_physics_process_player(delta, rooted)
+		return
 	if not _is_target_available(target):
 		if bool(skill_controller.call("allows_movement_while_casting")):
 			skill_controller.call("cancel_ocean_storm")
@@ -150,6 +152,62 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	global_position.x = clampf(global_position.x, arena_min.x, arena_max.x)
 	global_position.z = clampf(global_position.z, arena_min.y, arena_max.y)
+
+
+func _physics_process_player(delta: float, rooted: bool) -> void:
+	if _is_target_available(target):
+		skill_controller.call("set_target", target)
+	var casting := bool(skill_controller.get("is_casting"))
+	if state == CombatState.ATTACK:
+		_slow_down(delta)
+		_check_attack_hit(_target_distance())
+	elif casting and not bool(skill_controller.call("allows_movement_while_casting")):
+		_slow_down(delta)
+	else:
+		_apply_player_movement(delta, rooted)
+	_apply_gravity(delta)
+	move_and_slide()
+	global_position.x = clampf(global_position.x, arena_min.x, arena_max.x)
+	global_position.z = clampf(global_position.z, arena_min.y, arena_max.y)
+
+
+func _apply_player_movement(delta: float, rooted: bool) -> void:
+	var direction := Vector3(player_move_input.x, 0.0, player_move_input.y)
+	if rooted:
+		velocity.x = 0.0
+		velocity.z = 0.0
+		_set_state(CombatState.IDLE)
+	elif direction.is_zero_approx():
+		_slow_down(delta)
+		_set_state(CombatState.IDLE)
+	else:
+		var speed := move_speed * float(skill_controller.call("get_move_speed_multiplier")) * _external_move_speed_multiplier()
+		velocity.x = move_toward(velocity.x, direction.x * speed, acceleration * delta)
+		velocity.z = move_toward(velocity.z, direction.z * speed, acceleration * delta)
+		_face_direction(direction)
+		_set_state(CombatState.CHASE)
+
+
+func request_player_basic_attack() -> bool:
+	return _request_player_action(&"basic_attack")
+
+
+func request_player_skill(slot: StringName, _direction_input := Vector2.ZERO) -> bool:
+	if slot not in [&"q", &"w", &"e", &"r", &"t"]:
+		return false
+	return _request_player_action(StringName("skill_" + slot))
+
+
+func _request_player_action(action: StringName) -> bool:
+	if not is_player_controlled() or is_dead or process_mode == Node.PROCESS_MODE_DISABLED:
+		return false
+	_refresh_target()
+	var decision := HeroAIDecision.make(action, 0.0, "player request")
+	decision.target = target
+	if not _can_execute_ai_decision(decision):
+		return false
+	_face_direction(target.global_position - global_position)
+	return _start_combat_action(decision)
 
 
 func _start_next_attack() -> void:
@@ -244,7 +302,7 @@ func _animation_elapsed_seconds() -> float:
 
 
 func _on_animation_finished(_animation_name: StringName) -> void:
-	if state != CombatState.ATTACK or not _is_target_available(target):
+	if state != CombatState.ATTACK:
 		return
 	state = CombatState.CHASE
 	_invalidate_ai_decision("attack finished")
@@ -265,6 +323,15 @@ func select_ai_skill() -> int:
 
 func uses_hero_brain() -> bool:
 	return true
+
+
+func supports_player_control() -> bool:
+	return true
+
+
+func _on_control_authority_changed(_authority: ControlAuthority) -> void:
+	player_move_input = Vector2.ZERO
+	_invalidate_ai_decision("control authority changed")
 
 
 func _setup_ai_brain() -> void:
@@ -393,8 +460,16 @@ func _can_execute_ai_decision(decision: HeroAIDecision) -> bool:
 func _try_consume_ai_one_shot(decision: HeroAIDecision) -> bool:
 	if decision == null or decision.generation == last_consumed_decision_generation:
 		return false
-	if not _can_execute_ai_decision(decision):
+	if not _start_combat_action(decision):
 		_invalidate_ai_decision("one-shot rejected")
+		return false
+	last_consumed_decision_generation = decision.generation
+	_invalidate_ai_decision()
+	return true
+
+
+func _start_combat_action(decision: HeroAIDecision) -> bool:
+	if not _can_execute_ai_decision(decision):
 		return false
 	var started := false
 	if decision.action_id == &"basic_attack":
@@ -410,12 +485,7 @@ func _try_consume_ai_one_shot(decision: HeroAIDecision) -> bool:
 			&"skill_t": skill_index = SKILL_T
 		if skill_index > 0:
 			started = bool(skill_controller.call("begin_skill", skill_index, target))
-	if not started:
-		_invalidate_ai_decision("one-shot start failed")
-		return false
-	last_consumed_decision_generation = decision.generation
-	_invalidate_ai_decision()
-	return true
+	return started
 
 
 func _execute_ai_decision(decision: HeroAIDecision, delta: float, direction: Vector3) -> void:
@@ -597,7 +667,8 @@ func _refresh_target() -> void:
 	_invalidate_ai_decision("target changed")
 	_set_target_outline(target, true)
 	skill_controller.call("set_target", target)
-	_set_state(CombatState.CHASE)
+	if state != CombatState.ATTACK and not bool(skill_controller.get("is_casting")):
+		_set_state(CombatState.CHASE)
 
 
 func _set_target_outline(candidate: Node, active: bool) -> void:

@@ -231,10 +231,13 @@ func _physics_process(delta: float) -> void:
 	if not enabled:
 		return
 	_refresh_target()
-	if target == null:
-		return
 	action_lock = maxf(0.0, action_lock - delta)
 	if action_lock > 0.0:
+		return
+	if is_player_controlled():
+		_apply_player_movement(rooted)
+		return
+	if target == null:
 		return
 	if silence_timer > 0.0:
 		var silence_offset := target.global_position - global_position
@@ -262,6 +265,63 @@ func _physics_process(delta: float) -> void:
 
 func uses_hero_brain() -> bool:
 	return true
+
+
+func _apply_player_movement(rooted: bool) -> void:
+	var direction := Vector3(player_move_input.x, 0.0, player_move_input.y)
+	velocity = Vector3.ZERO if rooted else direction * _move_speed()
+	if velocity.length_squared() > 0.0001:
+		_face(velocity)
+		character_model.call(&"play_semantic", &"run")
+	else:
+		character_model.call(&"play_semantic", &"idle")
+	move_and_slide()
+	global_position = _clamp_to_arena(global_position)
+
+
+func request_player_basic_attack() -> bool:
+	return _request_player_action(&"basic_attack")
+
+
+func request_player_skill(slot: StringName, direction_input := Vector2.ZERO) -> bool:
+	if slot == &"r":
+		if not direction_input.is_finite() or direction_input.length_squared() < 0.04:
+			return false
+		var direction := Vector3(direction_input.x, 0.0, direction_input.y).normalized()
+		var distance := minf(_rulef(&"ryze.r.manual_warp_distance", 8.0), _warp_range())
+		var destination := _clamp_to_arena(global_position + direction * distance)
+		if destination.distance_to(global_position) < 0.01:
+			return false
+		return _request_player_action(&"player_r", destination, true)
+	if slot not in [&"q", &"w", &"e", &"t"]:
+		return false
+	return _request_player_action(StringName("skill_" + slot))
+
+
+func _request_player_action(action: StringName, destination := Vector3.ZERO, has_destination := false) -> bool:
+	if not is_player_controlled():
+		return false
+	_refresh_target()
+	var decision := HeroAIDecision.make(action, 0.0, "player request")
+	decision.target = target
+	decision.destination = destination
+	decision.has_destination = has_destination
+	if not _can_execute_ai_decision(decision):
+		return false
+	if has_destination:
+		_face(destination - global_position)
+	elif is_instance_valid(target):
+		_face(target.global_position - global_position)
+	return _start_combat_action(decision)
+
+
+func supports_player_control() -> bool:
+	return true
+
+
+func _on_control_authority_changed(_authority: ControlAuthority) -> void:
+	player_move_input = Vector2.ZERO
+	_invalidate_ai_decision("control authority changed")
 
 
 func _setup_ai_brain() -> void:
@@ -410,13 +470,13 @@ func _can_execute_ai_decision(decision: HeroAIDecision) -> bool:
 	if decision == null or is_dead or not enabled or action_lock > 0.0:
 		return false
 	var action := decision.action_id
-	if action != &"hold" and (not is_instance_valid(target) or not _can_harm(target)):
+	if action not in [&"hold", &"player_r"] and (not is_instance_valid(target) or not _can_harm(target)):
 		return false
 	if decision.target != null and decision.target != target:
 		return false
-	if is_rooted() and action in [&"approach", &"retreat", &"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition"]:
+	if is_rooted() and action in [&"approach", &"retreat", &"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r"]:
 		return false
-	if silence_timer > 0.0 and action in [&"skill_q", &"skill_w", &"skill_e", &"skill_t", &"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition"]:
+	if silence_timer > 0.0 and action in [&"skill_q", &"skill_w", &"skill_e", &"skill_t", &"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r"]:
 		return false
 	var distance := _current_target_distance()
 	match action:
@@ -425,7 +485,7 @@ func _can_execute_ai_decision(decision: HeroAIDecision) -> bool:
 		&"skill_w": return cooldowns[&"w"] <= 0.0 and distance <= _cast_range()
 		&"skill_e": return cooldowns[&"e"] <= 0.0 and distance <= _cast_range()
 		&"skill_t": return cooldowns[&"t"] <= 0.0
-		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition": return _is_valid_ai_warp_destination(decision)
+		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r": return _is_valid_ai_warp_destination(decision)
 	return true
 
 
@@ -440,6 +500,10 @@ func _is_valid_ai_warp_destination(decision: HeroAIDecision) -> bool:
 
 
 func _start_ai_one_shot(decision: HeroAIDecision) -> bool:
+	return _start_combat_action(decision)
+
+
+func _start_combat_action(decision: HeroAIDecision) -> bool:
 	if not _can_execute_ai_decision(decision):
 		return false
 	velocity = Vector3.ZERO
@@ -449,7 +513,7 @@ func _start_ai_one_shot(decision: HeroAIDecision) -> bool:
 		&"skill_w": _cast_w(target)
 		&"skill_e": _cast_e(target)
 		&"skill_t": cast_desperate_power()
-		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition": cast_realm_warp(decision.destination)
+		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r": cast_realm_warp(decision.destination)
 		_: return false
 	return true
 
@@ -1419,7 +1483,6 @@ func _configure_team_groups() -> void:
 	var readability := get_node_or_null("UnitReadability")
 	if readability != null and readability.has_method("refresh_team_visuals"):
 		readability.call("refresh_team_visuals")
-	set_outline_selected(is_in_group(&"player_actor"))
 
 
 func _bind_ai_profile() -> void:

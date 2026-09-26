@@ -21,6 +21,8 @@ Project design policy, formula provenance and per-hero fidelity records live in 
 
 Never edit `data/generated/combat_database.tres` by hand. Runtime timers, cooldowns, current health, buff stacks and targets must not be written into Resources because Resources are shared definitions.
 
+手动接管沿用同一战斗数据和技能执行流程；`ryze.r.manual_warp_distance` 定义玩家方向 R 的距离（默认 8 米）。修改后重建数据库并执行 `tests/verify_player_takeover_runtime.gd`，控制接口说明见 [手动接管 MVP](../docs/combat/manual-takeover.md)。
+
 ## Override order
 
 `combat_rules` global defaults -> game mode -> unit -> skill/effect -> active buff -> resolved combat value.
