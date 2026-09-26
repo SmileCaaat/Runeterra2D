@@ -5,6 +5,7 @@
 ## 文档入口
 
 - [手动接管 MVP](manual-takeover.md)：控制权、HUD 焦点、公共英雄适配接口、键位及回归验收范围。
+- [Hero Runtime Template](hero-runtime-template.md)：Jinx 准入前冻结的 Actor/SkillController/ModelAnimator/AIKit 边界与回归顺序。
 
 - [英雄参考与改编原则](hero-design-rules.md)：先复刻、再简化、最后扩展的设计方针，以及来源、审计和验收流程。
 - [公式与来源索引](formula-reference.md)：当前已实现公式、项目自定义公式、未实现语义和 Wiki 网址。
@@ -21,8 +22,8 @@
 2. `docs/combat/` 中的项目设计与数据契约。
 3. `data/source/*.csv` 中的当前运行时配置。
 4. 类型化 Resource 与公式实现代码。
-5. 场景或 Inspector 中的兼容回退值。
+5. 场景或 Inspector 中仅用于表现与编辑器预览的配置。
 
-CSV 和代码必须一致。文档中的示例值不能覆盖 CSV；Inspector 回退值也不能成为隐藏的第二套平衡数据。
+CSV 和代码必须一致。文档中的示例值不能覆盖 CSV；运行时缺失 Gameplay 数据必须报错并停止受影响行为，不能从 Inspector 静默取平衡数值。
 
 每次新增英雄、改变公式语义或改变表结构时，必须同步更新相应英雄档案、公式索引、配表契约和自动测试。结构性改动还必须递增 `schema.version`。
