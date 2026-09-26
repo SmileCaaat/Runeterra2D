@@ -148,7 +148,7 @@
 权威位置：
 
 - 出手 Transform / 透明度：`scenes/units/ryze.tscn` 的 `CastVFXPreview` 各节点。
-- 命中与轴点补偿：`scripts/characters/ryze_actor.gd`。
+- 角色移动、朝向、目标与 AI 适配：`scripts/characters/ryze_actor.gd`。技能状态、Q/W/E/R/T、投射物命中、E 弹射与伤害结算：`scripts/characters/ryze_skill_controller.gd`。固定 VFX 锚点及其表现仍由 Actor 管理。
 - `data/source/asset_manifest.csv` 的普攻 / Q / W / E / Impact 行已按 2026-09-06 验收从场景回写。E 出手另加脚本 `E_LAUNCH_Y_BIAS` / `E_HIT_X_BIAS`，不要把表里的本地坐标再叠一层。不能用旧聊天数字覆盖场景。
 
 | 层 | 位置 | 轴点 | 说明 |
