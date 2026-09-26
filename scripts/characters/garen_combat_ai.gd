@@ -213,53 +213,29 @@ func _request_player_action(action: StringName, direction_input := Vector2.ZERO)
 	if direction_input.is_finite() and direction_input.length_squared() > 0.0001:
 		player_facing_direction = direction_input.normalized()
 		_face_direction(Vector3(player_facing_direction.x, 0.0, player_facing_direction.y))
-	if state == CombatState.ATTACK:
-		return false
-	if action == &"basic_attack":
-		if bool(skill_controller.get("is_casting")):
+	var request := HeroActionRequest.new()
+	request.source = HeroActionRequest.Source.PLAYER
+	request.action_id = action
+	request.direction = _player_aim_direction(direction_input)
+	if action != &"basic_attack":
+		var skill_index := _player_skill_index(action)
+		if skill_index == 0 or combat_database == null:
 			return false
-		var attack_aim := _player_aim_direction(Vector2.ZERO)
-		_face_direction(Vector3(attack_aim.x, 0.0, attack_aim.y))
-		_start_next_attack(true)
-		return true
-	var skill_index := _player_skill_index(action)
-	if skill_index == 0 or combat_database == null:
-		return false
-	var skill := combat_database.get_skill_by_slot(&"garen", skill_index)
-	if skill == null:
-		return false
-	var casting := bool(skill_controller.get("is_casting"))
-	if casting and not (skill_index == SKILL_W and int(skill_controller.get("current_skill")) == SKILL_E):
-		return false
-	var skill_target: CharacterBody3D
-	var face_target_on_cast := false
-	var ground_point := Vector3.INF
-	match skill.target_type:
-		"unit":
-			_refresh_target()
-			if not _is_target_available(target):
-				return false
-			var target_offset := target.global_position - global_position
-			target_offset.y = 0.0
-			if target_offset.length() > skill.cast_range:
-				return false
-			skill_target = target
-			face_target_on_cast = skill.facing_policy != "none"
-		"ground_area":
-			var aim := _player_aim_direction(direction_input)
-			player_facing_direction = aim
-			_face_direction(Vector3(aim.x, 0.0, aim.y))
-			ground_point = global_position + Vector3(aim.x, 0.0, aim.y) * skill.cast_range
-			ground_point.x = clampf(ground_point.x, arena_min.x, arena_max.x)
-			ground_point.z = clampf(ground_point.z, arena_min.y, arena_max.y)
-			if not ground_point.is_finite() or global_position.distance_to(ground_point) < 0.05:
-				return false
-		_: # self and self_area actions deliberately do not acquire or face a target.
-			pass
-	var started := bool(skill_controller.call("begin_skill", skill_index, skill_target, ground_point))
-	if started and face_target_on_cast and is_instance_valid(skill_target):
-		_face_direction(skill_target.global_position - global_position)
-	return started
+		request.skill_slot = StringName(String(action).trim_prefix("skill_"))
+		var skill := combat_database.get_skill_by_slot(&"garen", skill_index)
+		if skill == null:
+			return false
+		match skill.target_type:
+			"unit":
+				_refresh_target()
+				request.target = target
+			"ground_area":
+				var aim := request.direction
+				request.ground_position = global_position + Vector3(aim.x, 0.0, aim.y) * skill.cast_range
+				request.ground_position.x = clampf(request.ground_position.x, arena_min.x, arena_max.x)
+				request.ground_position.z = clampf(request.ground_position.z, arena_min.y, arena_max.y)
+				request.has_ground_position = true
+	return execute_action(request)
 
 
 func _player_skill_index(action: StringName) -> int:
@@ -522,28 +498,77 @@ func _invalidate_ai_decision(_reason: String = "") -> void:
 
 
 func _can_execute_ai_decision(decision: HeroAIDecision) -> bool:
-	if decision == null or is_dead:
+	return can_execute_action(_ai_action_request(decision))
+
+
+func _ai_action_request(decision: HeroAIDecision) -> HeroActionRequest:
+	if decision == null:
+		return null
+	var request := HeroActionRequest.new()
+	request.source = HeroActionRequest.Source.AI
+	request.action_id = decision.action_id
+	request.skill_slot = decision.skill_slot
+	request.target = decision.target
+	request.has_ground_position = decision.has_destination
+	request.ground_position = decision.destination
+	return request
+
+
+## Final hero-local gate for both intent sources. AI retains its chosen target
+## and range policy; manual casts follow the skill's targeting semantics.
+func can_execute_action(request: HeroActionRequest) -> bool:
+	if request == null or is_dead or process_mode == Node.PROCESS_MODE_DISABLED:
 		return false
-	var action := decision.action_id
-	if action != &"hold" and not _is_target_available(target):
-		return false
-	if decision.target != null and decision.target != target:
-		return false
+	var action := request.action_id
 	var casting := bool(skill_controller.get("is_casting"))
 	var ocean_storm := casting and int(skill_controller.get("current_skill")) == SKILL_E
+	if request.source == HeroActionRequest.Source.PLAYER:
+		if not is_player_controlled() or state == CombatState.ATTACK:
+			return false
+		if action == &"basic_attack":
+			return not casting
+		var player_skill_index := _player_skill_index(action)
+		if player_skill_index == 0 or combat_database == null:
+			return false
+		var skill := combat_database.get_skill_by_slot(&"garen", player_skill_index)
+		if skill == null or request.skill_slot != StringName(String(action).trim_prefix("skill_")):
+			return false
+		var skill_cooldowns: Array = skill_controller.get("cooldowns") as Array
+		if not _skill_ready(skill_cooldowns, player_skill_index):
+			return false
+		if float(skill_controller.get("silence_timer")) > 0.0 and player_skill_index != SKILL_W:
+			return false
+		if casting and not (player_skill_index == SKILL_W and ocean_storm):
+			return false
+		match skill.target_type:
+			"unit":
+				if not is_instance_valid(request.target) or not _is_target_available(request.target):
+					return false
+				var target_offset := request.target.global_position - global_position
+				target_offset.y = 0.0
+				return target_offset.length() <= skill.cast_range
+			"ground_area":
+				if not request.has_ground_position or not request.ground_position.is_finite():
+					return false
+				var ground_offset := request.ground_position - global_position
+				ground_offset.y = 0.0
+				return ground_offset.length() >= 0.05 and ground_offset.length() <= skill.cast_range + 0.01
+			"direction":
+				return request.direction.is_finite() and request.direction.length_squared() > 0.0001
+			"self", "self_area":
+				return true
+		return false
+	if action != &"hold" and not _is_target_available(target):
+		return false
+	if request.target != null and request.target != target:
+		return false
 	if action == &"approach":
 		return not casting and not is_rooted() and state != CombatState.ATTACK
 	if action == &"hold":
 		return true
 	if action == &"basic_attack":
 		return not casting and state != CombatState.ATTACK and (_target_distance() <= attack_range or (bool(skill_controller.call("should_use_breaker_attack")) and _target_distance() <= _breaker_lunge_range()))
-	var skill_index := 0
-	match action:
-		&"skill_q": skill_index = SKILL_Q
-		&"skill_w": skill_index = SKILL_W
-		&"skill_e": skill_index = SKILL_E
-		&"skill_r": skill_index = SKILL_R
-		&"skill_t": skill_index = SKILL_T
+	var skill_index := _player_skill_index(action)
 	if skill_index == 0:
 		return false
 	var skill_cooldowns: Array = skill_controller.get("cooldowns") as Array
@@ -570,22 +595,31 @@ func _try_consume_ai_one_shot(decision: HeroAIDecision) -> bool:
 
 
 func _start_combat_action(decision: HeroAIDecision) -> bool:
-	if not _can_execute_ai_decision(decision):
+	return execute_action(_ai_action_request(decision))
+
+
+## Starts only requests accepted by can_execute_action; damage and cooldowns
+## remain owned by the existing attack and skill implementations.
+func execute_action(request: HeroActionRequest) -> bool:
+	if not can_execute_action(request):
 		return false
-	var started := false
-	if decision.action_id == &"basic_attack":
-		_start_next_attack()
-		started = true
-	else:
-		var skill_index := 0
-		match decision.action_id:
-			&"skill_q": skill_index = SKILL_Q
-			&"skill_w": skill_index = SKILL_W
-			&"skill_e": skill_index = SKILL_E
-			&"skill_r": skill_index = SKILL_R
-			&"skill_t": skill_index = SKILL_T
-		if skill_index > 0:
-			started = bool(skill_controller.call("begin_skill", skill_index, target))
+	if request.action_id == &"basic_attack":
+		if request.source == HeroActionRequest.Source.PLAYER:
+			_face_direction(Vector3(request.direction.x, 0.0, request.direction.y))
+		_start_next_attack(request.source == HeroActionRequest.Source.PLAYER)
+		return true
+	var skill_index := _player_skill_index(request.action_id)
+	if skill_index == 0:
+		return false
+	if request.source == HeroActionRequest.Source.AI:
+		return bool(skill_controller.call("begin_skill", skill_index, target))
+	var skill := combat_database.get_skill_by_slot(&"garen", skill_index)
+	var ground_point := request.ground_position if request.has_ground_position else Vector3.INF
+	if skill.target_type == "ground_area":
+		_face_direction(Vector3(request.direction.x, 0.0, request.direction.y))
+	var started := bool(skill_controller.call("begin_skill", skill_index, request.target, ground_point))
+	if started and skill.target_type == "unit" and skill.facing_policy != "none" and is_instance_valid(request.target):
+		_face_direction(request.target.global_position - global_position)
 	return started
 
 

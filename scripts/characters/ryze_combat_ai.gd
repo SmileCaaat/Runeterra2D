@@ -314,49 +314,19 @@ func _request_player_action(
 	if direction_input.is_finite() and direction_input.length_squared() > 0.0001:
 		player_facing_direction = direction_input.normalized()
 		_face(Vector3(player_facing_direction.x, 0.0, player_facing_direction.y))
-	if action == &"basic_attack":
-		if not _is_player_combat_action_ready(&"basic_attack"):
-			return false
-		var basic_aim := _player_aim_vector3()
-		_face(basic_aim)
-		_basic_attack_directional(basic_aim)
-		return true
-	var slot := StringName(String(action).trim_prefix("skill_"))
-	var skill := database.get_skill_by_slot(&"ryze", _player_skill_index(slot)) if database != null else null
-	if skill == null or silence_timer > 0.0 or cooldowns.get(slot, 0.0) > 0.0:
-		return false
-	var skill_target: CharacterBody3D
-	if skill.target_type == "unit":
-		_refresh_target()
-		if not _can_harm(target) or _current_target_distance() > skill.cast_range:
-			return false
-		skill_target = target
-		if skill.facing_policy != "none":
-			_face(target.global_position - global_position)
-	elif skill.target_type == "ground_area":
-		if not has_destination or not destination.is_finite() or destination.distance_to(global_position) > _warp_range() + 0.01:
-			return false
-		if _clamp_to_arena(destination).distance_to(destination) > 0.01:
-			return false
-		if is_rooted():
-			return false
-		_face(destination - global_position)
-	elif skill.target_type == "direction":
-		_face(_player_aim_vector3())
-	else:
-		# Self and directional casts intentionally do not acquire or face the AI target.
-		pass
-	if not _is_player_combat_action_ready(slot):
-		return false
-	velocity = Vector3.ZERO
-	match slot:
-		&"q": _cast_q_directional(_player_aim_vector3())
-		&"w": _cast_w(skill_target)
-		&"e": _cast_e(skill_target)
-		&"r": cast_realm_warp(destination)
-		&"t": cast_desperate_power()
-		_: return false
-	return true
+	var request := HeroActionRequest.new()
+	request.source = HeroActionRequest.Source.PLAYER
+	request.action_id = action
+	request.direction = _player_aim_direction(direction_input)
+	request.ground_position = destination
+	request.has_ground_position = has_destination
+	if action != &"basic_attack":
+		request.skill_slot = StringName(String(action).trim_prefix("skill_"))
+		var skill := database.get_skill_by_slot(&"ryze", _player_skill_index(request.skill_slot)) if database != null else null
+		if skill != null and skill.target_type == "unit":
+			_refresh_target()
+			request.target = target
+	return execute_action(request)
 
 
 func _player_skill_index(slot: StringName) -> int:
@@ -540,12 +510,57 @@ func _current_target_distance() -> float:
 
 
 func _can_execute_ai_decision(decision: HeroAIDecision) -> bool:
-	if decision == null or is_dead or not enabled or action_lock > 0.0:
+	return can_execute_action(_ai_action_request(decision))
+
+
+func _ai_action_request(decision: HeroAIDecision) -> HeroActionRequest:
+	if decision == null:
+		return null
+	var request := HeroActionRequest.new()
+	request.source = HeroActionRequest.Source.AI
+	request.action_id = decision.action_id
+	request.skill_slot = decision.skill_slot
+	request.target = decision.target
+	request.ground_position = decision.destination
+	request.has_ground_position = decision.has_destination
+	return request
+
+
+## Final gate for both intent sources; skill effects remain in Ryze's existing
+## cast methods while manual direction and AI target tracking stay distinct.
+func can_execute_action(request: HeroActionRequest) -> bool:
+	if request == null or is_dead or not enabled or action_lock > 0.0:
 		return false
-	var action := decision.action_id
+	var action := request.action_id
+	if request.source == HeroActionRequest.Source.PLAYER:
+		if not is_player_controlled():
+			return false
+		if action == &"basic_attack":
+			return _is_player_combat_action_ready(&"basic_attack") and request.direction.is_finite() and request.direction.length_squared() > 0.0001
+		var slot := request.skill_slot
+		var skill := database.get_skill_by_slot(&"ryze", _player_skill_index(slot)) if database != null else null
+		if skill == null or action != StringName("skill_" + slot) or silence_timer > 0.0 or not _is_player_combat_action_ready(slot):
+			return false
+		match skill.target_type:
+			"unit":
+				if not is_instance_valid(request.target) or not _can_harm(request.target):
+					return false
+				var target_offset := request.target.global_position - global_position
+				target_offset.y = 0.0
+				return target_offset.length() <= skill.cast_range
+			"ground_area":
+				return request.has_ground_position and request.ground_position.is_finite() \
+					and request.ground_position.distance_to(global_position) <= _warp_range() + 0.01 \
+					and _clamp_to_arena(request.ground_position).distance_to(request.ground_position) <= 0.01 \
+					and not is_rooted()
+			"direction":
+				return request.direction.is_finite() and request.direction.length_squared() > 0.0001
+			"self", "self_area":
+				return true
+		return false
 	if action not in [&"hold", &"player_r"] and (not is_instance_valid(target) or not _can_harm(target)):
 		return false
-	if decision.target != null and decision.target != target:
+	if request.target != null and request.target != target:
 		return false
 	if is_rooted() and action in [&"approach", &"retreat", &"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r"]:
 		return false
@@ -558,18 +573,22 @@ func _can_execute_ai_decision(decision: HeroAIDecision) -> bool:
 		&"skill_w": return cooldowns[&"w"] <= 0.0 and distance <= _cast_range()
 		&"skill_e": return cooldowns[&"e"] <= 0.0 and distance <= _cast_range()
 		&"skill_t": return cooldowns[&"t"] <= 0.0
-		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r": return _is_valid_ai_warp_destination(decision)
+		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r": return _is_valid_warp_destination(request)
 	return true
 
 
 func _is_valid_ai_warp_destination(decision: HeroAIDecision) -> bool:
-	if cooldowns[&"r"] > 0.0 or not decision.has_destination or not decision.destination.is_finite():
+	return _is_valid_warp_destination(_ai_action_request(decision))
+
+
+func _is_valid_warp_destination(request: HeroActionRequest) -> bool:
+	if request == null or cooldowns[&"r"] > 0.0 or not request.has_ground_position or not request.ground_position.is_finite():
 		return false
-	var travel := decision.destination - global_position
+	var travel := request.ground_position - global_position
 	travel.y = 0.0
 	if travel.length() > _warp_range() + 0.01:
 		return false
-	return _clamp_to_arena(decision.destination).distance_to(decision.destination) <= 0.01
+	return _clamp_to_arena(request.ground_position).distance_to(request.ground_position) <= 0.01
 
 
 func _start_ai_one_shot(decision: HeroAIDecision) -> bool:
@@ -577,16 +596,44 @@ func _start_ai_one_shot(decision: HeroAIDecision) -> bool:
 
 
 func _start_combat_action(decision: HeroAIDecision) -> bool:
-	if not _can_execute_ai_decision(decision):
+	return execute_action(_ai_action_request(decision))
+
+
+## Executes an accepted request through the established attack and skill paths.
+func execute_action(request: HeroActionRequest) -> bool:
+	if not can_execute_action(request):
 		return false
 	velocity = Vector3.ZERO
-	match decision.action_id:
+	if request.source == HeroActionRequest.Source.PLAYER:
+		var aim := Vector3(request.direction.x, 0.0, request.direction.y)
+		match request.skill_slot:
+			&"":
+				_face(aim)
+				_basic_attack_directional(aim)
+			&"q":
+				_face(aim)
+				_cast_q_directional(aim)
+			&"w", &"e":
+				var skill := database.get_skill_by_slot(&"ryze", _player_skill_index(request.skill_slot))
+				if skill.facing_policy != "none":
+					_face(request.target.global_position - global_position)
+				if request.skill_slot == &"w":
+					_cast_w(request.target)
+				else:
+					_cast_e(request.target)
+			&"r":
+				_face(request.ground_position - global_position)
+				cast_realm_warp(request.ground_position)
+			&"t": cast_desperate_power()
+			_: return false
+		return true
+	match request.action_id:
 		&"basic_attack": _basic_attack(target)
 		&"skill_q": _cast_q(target)
 		&"skill_w": _cast_w(target)
 		&"skill_e": _cast_e(target)
 		&"skill_t": cast_desperate_power()
-		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r": cast_realm_warp(decision.destination)
+		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r": cast_realm_warp(request.ground_position)
 		_: return false
 	return true
 
