@@ -29,7 +29,7 @@
 [ext_resource type="Shader" uid="uid://mptsdhv37oje" path="res://assets/shaders/stage_readability_alpha.gdshader" id="29_stage_readability_alpha"]
 [ext_resource type="SpriteFrames" path="res://assets/vfx/garen_perseverance/garen_perseverance_frames.tres" id="30_perseverance_vfx"]
 [ext_resource type="Shader" uid="uid://dhmnkmvmy6wu3" path="res://assets/shaders/stage_edge_tile.gdshader" id="31_stage_edge_tile"]
-[ext_resource type="Script" uid="uid://grd5gbe0em8x" path="res://scripts/ui/battle_hud.gd" id="32_battle_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/battle_hud.tscn" id="32_battle_hud"]
 [ext_resource type="Script" uid="uid://bq5564jbeieq2" path="res://scripts/characters/garen_model_animator.gd" id="33_garen_model_animator"]
 [ext_resource type="Script" uid="uid://ovl5floywgdp" path="res://scripts/presentation/mesh_outline_highlight_3d.gd" id="34_outline"]
 
@@ -579,5 +579,4 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.5)
 [node name="BattleControlCoordinator" type="Node" parent="."]
 script = ExtResource("35_control")
 
-[node name="BattleHUD" type="CanvasLayer" parent="." unique_id=936934129]
-script = ExtResource("32_battle_hud")
+[node name="BattleHUD" parent="." unique_id=936934129 instance=ExtResource("32_battle_hud")]

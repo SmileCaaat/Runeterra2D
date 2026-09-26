@@ -1,0 +1,24 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/ui/equipment_slot.tscn" id="1_slot"]
+
+[sub_resource type="StyleBoxFlat" id="SpecialStyle"]
+bg_color = Color(0.41, 0.34, 0.55, 0.55)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.86, 0.79, 1, 0.3)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+
+[node name="EquipFrame" instance=ExtResource("1_slot")]
+
+[node name="EquipmentSlot" parent="." index="0"]
+theme_override_styles/panel = SubResource("SpecialStyle")
