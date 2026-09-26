@@ -16,7 +16,6 @@ func _run() -> void:
 	var attack_audio := player.get_node("AttackAudio") as AudioStreamPlayer3D
 	var skills := player.get_node("SkillController")
 	player.set_physics_process(false)
-	skills.set("automatic_demo", false)
 	var database := CombatData.database()
 	var passed := database != null
 
@@ -79,7 +78,10 @@ func _run() -> void:
 	passed = passed and CombatAudio.resolve_surface_audio(ghostship_hit.hit_audio_profile_id, &"flesh", false) == &"garen_basic_hit_flesh"
 	passed = passed and seven_seas != null and is_equal_approx(seven_seas.travel_duration, 1.35)
 	var seven_seas_effects := database.get_skill_effects(&"garen_seven_seas", "on_impact")
-	passed = passed and seven_seas_effects.size() == 3
+	var seven_seas_path_effects := database.get_skill_effects(&"garen_seven_seas", "on_path")
+	passed = passed and seven_seas_effects.size() == 2 and seven_seas_path_effects.size() == 1
+	if not seven_seas_path_effects.is_empty():
+		passed = passed and seven_seas_path_effects[0].id == &"seven_seas_rum"
 	for effect: SkillEffectDefinition in seven_seas_effects:
 		passed = passed and is_equal_approx(effect.delay, 1.35)
 

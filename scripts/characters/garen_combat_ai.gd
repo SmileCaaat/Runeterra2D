@@ -54,14 +54,12 @@ var arena_max := Vector2(14.5, 4.3)
 var external_move_speed_modifiers: Dictionary = {}
 var attack_pitches: Array[float] = [1.08, 1.0, 0.88]
 var breaker_lunge_pending := false
-var automatic_demo_before_manual_control := true
 var is_dead := false
 var hit_feedback: HeroHitFeedback3D
 
 
 func _ready() -> void:
 	_apply_combat_data()
-	skill_controller.set("automatic_demo", false)
 	_setup_ai_brain()
 	bind_hero_instance(combat_database, garen_definition)
 	_build_hit_feedback()
@@ -366,18 +364,6 @@ func _on_animation_finished(_animation_name: StringName) -> void:
 	_set_state(CombatState.CHASE)
 
 
-func select_ai_skill() -> int:
-	if ai_decision == null:
-		return 0
-	match ai_decision.action_id:
-		&"skill_q": return SKILL_Q
-		&"skill_w": return SKILL_W
-		&"skill_e": return SKILL_E
-		&"skill_r": return SKILL_R
-		&"skill_t": return SKILL_T
-	return 0
-
-
 func uses_hero_brain() -> bool:
 	return true
 
@@ -388,12 +374,6 @@ func supports_player_control() -> bool:
 
 func _on_control_authority_changed(_authority: ControlAuthority) -> void:
 	player_move_input = Vector2.ZERO
-	if skill_controller != null:
-		if _authority == ControlAuthority.PLAYER:
-			automatic_demo_before_manual_control = bool(skill_controller.get("automatic_demo"))
-			skill_controller.set("automatic_demo", false)
-		else:
-			skill_controller.set("automatic_demo", automatic_demo_before_manual_control)
 	_invalidate_ai_decision("control authority changed")
 
 

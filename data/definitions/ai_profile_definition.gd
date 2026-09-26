@@ -10,6 +10,4 @@ extends Resource
 @export var wander_wait_max := 0.8
 @export var arena_min := Vector2(-7.5, -3.4)
 @export var arena_max := Vector2(7.5, 3.4)
-@export var demo_skill_gap := 0.8
-@export var skill_sequence: Array[StringName] = []
 @export var deterministic_seed := 0

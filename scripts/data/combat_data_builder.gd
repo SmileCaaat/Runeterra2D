@@ -675,11 +675,10 @@ func _populate_ai_profiles(database: CombatDatabase) -> void:
 		definition.id = _sn(row, "profile_id")
 		definition.archetype_id = _sn(row, "archetype_id")
 		definition.behavior = _s(row, "behavior")
-		for field: String in ["chase_stop_distance", "waypoint_tolerance", "wander_wait_min", "wander_wait_max", "demo_skill_gap"]:
+		for field: String in ["chase_stop_distance", "waypoint_tolerance", "wander_wait_min", "wander_wait_max"]:
 			definition.set(field, _f(row, field))
 		definition.arena_min = Vector2(_f(row, "arena_min_x"), _f(row, "arena_min_y"))
 		definition.arena_max = Vector2(_f(row, "arena_max_x"), _f(row, "arena_max_y"))
-		definition.skill_sequence = _names(row, "skill_sequence")
 		definition.deterministic_seed = _i(row, "deterministic_seed")
 		database.ai_profiles.append(definition)
 

@@ -11,10 +11,6 @@ const SKILL_OCEAN_STORM := 3
 const SKILL_TYRANT_JUDGMENT := 4
 const SKILL_SEVEN_SEAS := 5
 
-@export_group("Demo AI")
-@export var automatic_demo := true
-@export_range(0.1, 5.0, 0.1) var demo_gap := 0.8
-
 @export_group("Skill 1 - 破舰")
 @export var breaker_duration := 4.5
 @export var breaker_speed_bonus := 0.35
@@ -186,8 +182,6 @@ var passive_vfx_should_show := false
 var perseverance_motes: GPUParticles3D
 var perseverance_mote_material: StandardMaterial3D
 var slow_multiplier := 1.0
-var demo_timer := 0.5
-var next_demo_skill := SKILL_BREAKER
 var cooldowns := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 var cast_counts := [0, 0, 0, 0, 0, 0]
 var damage_event_count := 0
@@ -259,14 +253,6 @@ func _process(delta: float) -> void:
 			anchor_effect.global_position = anchor_impact_position + Vector3.UP * anchor_rebound_lift
 		elif is_instance_valid(target):
 			anchor_effect.global_position = target.global_position
-	if not automatic_demo or is_casting or not is_instance_valid(target):
-		return
-	demo_timer -= delta
-	if demo_timer > 0.0:
-		return
-	if fighter.has_method("can_start_skill") and not bool(fighter.call("can_start_skill")):
-		return
-	try_begin_demo_skill()
 
 
 func set_target(next_target: CharacterBody3D) -> void:
@@ -308,7 +294,6 @@ func begin_skill(
 		cast_counts[skill_index] += 1
 		cooldowns[skill_index] = _get_cooldown(skill_index)
 		_cast_black_sail()
-		demo_timer = demo_gap
 		return true
 	if is_casting:
 		return false
@@ -324,36 +309,6 @@ func begin_skill(
 
 func _is_valid_skill_target(skill_target: Variant, relation := "hostile") -> bool:
 	return CombatTargetQuery.matches_relation(fighter, skill_target, relation)
-
-
-func try_begin_demo_skill() -> bool:
-	if not automatic_demo or is_casting or demo_timer > 0.0 or not is_instance_valid(target):
-		return false
-	# A hero-owned selector turns a reusable subclass archetype into a concrete
-	# decision. Once a selector is present it is authoritative: falling back to
-	# the old carousel when it returns "no cast" would reintroduce the long-R-CD
-	# lock that this system replaces.
-	if fighter != null and fighter.has_method("select_ai_skill"):
-		var selected_skill := int(fighter.call("select_ai_skill"))
-		if selected_skill > 0:
-			return try_begin_ai_skill(selected_skill)
-		return false
-	if cooldowns[next_demo_skill] > 0.0 or not _skill_in_range(next_demo_skill):
-		return false
-	var started := begin_skill(next_demo_skill, target)
-	if started:
-		next_demo_skill = next_demo_skill % SKILL_SEVEN_SEAS + 1
-	return started
-
-
-func try_begin_ai_skill(skill_index: int) -> bool:
-	if not automatic_demo or is_casting or demo_timer > 0.0 or not is_instance_valid(target):
-		return false
-	if skill_index < SKILL_BREAKER or skill_index > SKILL_SEVEN_SEAS:
-		return false
-	if cooldowns[skill_index] > 0.0 or not _skill_in_range(skill_index):
-		return false
-	return begin_skill(skill_index, target)
 
 
 func get_move_speed_multiplier() -> float:
@@ -1271,7 +1226,6 @@ func _cast_skill_async(skill_index: int, cast_generation: int, ground_target_pos
 	if _cast_generation == cast_generation:
 		is_casting = false
 		current_skill = 0
-		demo_timer = demo_gap
 
 
 func _cast_breaker() -> void:
@@ -1331,7 +1285,6 @@ func cancel_ocean_storm() -> void:
 	if current_skill == SKILL_OCEAN_STORM:
 		is_casting = false
 		current_skill = 0
-	demo_timer = demo_gap
 	ocean_storm_loop_active = false
 	ocean_storm.visible = false
 	ocean_storm.stop()
@@ -1623,21 +1576,6 @@ func _frame_uv_rect(frame_texture: Texture2D) -> Vector4:
 	return Vector4(0.0, 0.0, 1.0, 1.0)
 
 
-func _skill_in_range(skill_index: int) -> bool:
-	if not is_instance_valid(target):
-		return false
-	var distance := fighter.global_position.distance_to(target.global_position)
-	match skill_index:
-		SKILL_OCEAN_STORM:
-			return distance <= ocean_storm_radius
-		SKILL_TYRANT_JUDGMENT:
-			return distance <= _skill_float(SKILL_TYRANT_JUDGMENT, "cast_range", 4.0)
-		SKILL_SEVEN_SEAS:
-			return distance <= _skill_float(SKILL_SEVEN_SEAS, "cast_range", 7.5)
-		_:
-			return true
-
-
 func _get_cooldown(skill_index: int) -> float:
 	var base_cooldown := 0.0
 	match skill_index:
@@ -1672,9 +1610,6 @@ func _apply_combat_data() -> void:
 		max_health = garen_definition.max_health
 		current_health = max_health
 		current_level = garen_definition.level
-		var ai := combat_database.get_ai_profile(garen_definition.ai_profile_id)
-		if ai != null:
-			demo_gap = ai.demo_skill_gap
 	for slot: int in range(SKILL_BREAKER, SKILL_SEVEN_SEAS + 1):
 		skill_definitions[slot] = combat_database.get_skill_by_slot(&"garen", slot)
 

@@ -15,7 +15,6 @@ func _initialize() -> void:
 	var enemy_two := scene.get_node("Characters/EnemyTargetDummy2") as CharacterBody3D
 	var friendly_dummy := scene.get_node("Characters/FriendlyTargetDummy1") as CharacterBody3D
 	var skills := player.get_node("SkillController")
-	skills.set("automatic_demo", false)
 	var jolly_audio := skills.get_node("JollyRogerAudio") as AudioStreamPlayer3D
 	var ocean_audio := skills.get_node("OceanStormAudio") as AudioStreamPlayer3D
 	var anchor_audio := skills.get_node("AnchorAudio") as AudioStreamPlayer3D

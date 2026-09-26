@@ -34,9 +34,6 @@ func _run() -> void:
 	enemy = stage.get_node("Characters/RosterGarenRed")
 	for hero: Node in get_nodes_in_group(&"hero_actor"):
 		hero.set_physics_process(false)
-		var hero_skills := hero.get_node_or_null("SkillController")
-		if hero_skills != null:
-			hero_skills.set("automatic_demo", false)
 	coordinator.set_physics_process(false)
 	_check(not garen.is_player_controlled() and not ryze.is_player_controlled() and coordinator.manual_hero == null, "default AI")
 	hud.select_hero(0)
@@ -178,10 +175,6 @@ func _frames(count: int) -> void:
 func _ryze_tests() -> void:
 	hud.select_hero(1)
 	coordinator._ensure_manual_control()
-	for hero: Node in get_nodes_in_group(&"hero_actor"):
-		var hero_skills := hero.get_node_or_null("SkillController")
-		if hero_skills != null:
-			hero_skills.set("automatic_demo", false)
 	var cooldowns: Dictionary = ryze.get("cooldowns")
 	ryze.set_physics_process(true)
 	await _wait_ryze_idle()
