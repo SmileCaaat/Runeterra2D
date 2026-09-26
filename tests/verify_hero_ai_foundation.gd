@@ -32,6 +32,11 @@ func _initialize() -> void:
 	ryze_brain.configure(BattlemageZoneEvaluator.new(), RyzeAIKit.new())
 	var distant := ryze_brain.think(ryze_ctx)
 	var distant_ok := distant.action_id != &"skill_t" and _has(ryze_brain.last_candidates, &"ryze_r_engage")
+	var warp_slot_ok := false
+	for candidate: HeroAIDecision in ryze_brain.last_candidates:
+		if candidate.action_id == &"ryze_r_engage":
+			warp_slot_ok = candidate.skill_slot == &"r"
+			break
 	ryze_ctx.target_distance = 1.2
 	ryze_ctx.target_closing_speed = 3.0
 	ryze_ctx.now_seconds = 1.0
@@ -76,6 +81,14 @@ func _initialize() -> void:
 	intent_ctx.r_ready = true
 	intent_ctx.w_ready = true
 	var first := intent.think(intent_ctx)
+	var generic_slot_probe := HeroAIDecision.make(&"unfamiliar_action", 1.0)
+	generic_slot_probe.target = target
+	generic_slot_probe.skill_slot = &"r"
+	intent_ctx.r_ready = false
+	var slot_gate_ok := not bool(intent.call("_decision_still_valid", intent_ctx, generic_slot_probe))
+	intent_ctx.r_ready = true
+	slot_gate_ok = slot_gate_ok and bool(intent.call("_decision_still_valid", intent_ctx, generic_slot_probe)) \
+		and HeroAIDecision.make(&"skill_q", 1.0).skill_slot == &"q"
 	fixed.scores = {&"skill_r": 68.0, &"skill_w": 72.0}
 	intent_ctx.now_seconds = 0.1
 	var kept := intent.think(intent_ctx)
@@ -114,7 +127,7 @@ func _initialize() -> void:
 	dive_ctx.w_ready = true
 	dive_ctx.e_ready = true
 	dive_ctx.r_ready = true
-	dive_ctx.extras[&"recent_damage_ratio"] = 0.12
+	dive_ctx.recent_damage_ratio = 0.12
 	dive_ctx.extras[&"r_channel_duration"] = 0.9
 	dive_ctx.extras[&"warp_range"] = 25.0
 	dive_ctx.extras[&"escape_destination"] = Vector3(-8.0, 0.0, 0.0)
@@ -168,7 +181,7 @@ func _initialize() -> void:
 	closing_ctx.r_ready = true
 	closing_ctx.w_ready = true
 	closing_ctx.q_ready = true
-	closing_ctx.extras[&"move_speed"] = 4.0
+	closing_ctx.move_speed = 4.0
 	closing_ctx.extras[&"warp_range"] = 25.0
 	closing_ctx.extras[&"r_channel_duration"] = 0.9
 	closing_ctx.extras[&"r_cooldown_duration"] = 180.0
@@ -189,7 +202,7 @@ func _initialize() -> void:
 	fleeing_ctx.control_available = true
 	fleeing_ctx.r_ready = true
 	fleeing_ctx.q_ready = true
-	fleeing_ctx.extras[&"move_speed"] = 4.0
+	fleeing_ctx.move_speed = 4.0
 	fleeing_ctx.extras[&"warp_range"] = 25.0
 	fleeing_ctx.extras[&"r_channel_duration"] = 0.9
 	fleeing_ctx.extras[&"r_cooldown_duration"] = 180.0
@@ -199,9 +212,9 @@ func _initialize() -> void:
 	var fleeing_outcome: Dictionary = fleeing_ctx.outcome_evaluations.get(&"ryze_r_engage", {})
 	var fleeing_allow_ok := bool(fleeing_outcome.get(&"accepted", false)) and _has(outcome_brain.last_candidates, &"ryze_r_engage") and fleeing_outcome.has(&"net_gain")
 
-	var passed := distant_ok and close_ok and ideal_ok and execute_ok and empowered_ok and hysteresis_ok and filter_ok and e_w_ok
+	var passed := distant_ok and close_ok and ideal_ok and execute_ok and empowered_ok and hysteresis_ok and filter_ok and e_w_ok and warp_slot_ok and slot_gate_ok
 	passed = passed and anti_dive_ok and root_reassess_ok and rooted_escape_ok and reposition_threshold_ok and closing_reject_ok and debug_values_ok and fleeing_allow_ok
-	print("HERO_AI_FOUNDATION far=%s close=%s ideal=%s execute=%s empowered=%s hysteresis=%s filter=%s e_w=%s fast_chase_w=%s rooted_reassess=%s rooted_escape=%s reposition_threshold=%s closing_r_rejected=%s fleeing_r_allowed=%s metrics=%s" % [distant_ok, close_ok, ideal_ok, execute_ok, empowered_ok, hysteresis_ok, filter_ok, e_w_ok, anti_dive_ok, root_reassess_ok, rooted_escape_ok, reposition_threshold_ok, closing_reject_ok, fleeing_allow_ok, debug_values_ok])
+	print("HERO_AI_FOUNDATION far=%s close=%s ideal=%s execute=%s empowered=%s hysteresis=%s filter=%s e_w=%s slot=%s/%s fast_chase_w=%s rooted_reassess=%s rooted_escape=%s reposition_threshold=%s closing_r_rejected=%s fleeing_r_allowed=%s metrics=%s" % [distant_ok, close_ok, ideal_ok, execute_ok, empowered_ok, hysteresis_ok, filter_ok, e_w_ok, warp_slot_ok, slot_gate_ok, anti_dive_ok, root_reassess_ok, rooted_escape_ok, reposition_threshold_ok, closing_reject_ok, fleeing_allow_ok, debug_values_ok])
 	target.queue_free()
 	quit(0 if passed else 1)
 

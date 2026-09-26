@@ -69,13 +69,14 @@ func _decision_still_valid(ctx: HeroAIContext, decision: HeroAIDecision) -> bool
 		return true
 	if ctx.target == null or not is_instance_valid(ctx.target):
 		return false
-	match decision.action_id:
-		&"skill_q": return ctx.q_ready
-		&"skill_w": return ctx.w_ready
-		&"skill_e": return ctx.e_ready
-		&"skill_r", &"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition": return ctx.r_ready
-		&"skill_t": return ctx.t_ready
-		&"basic_attack": return ctx.target_distance <= ctx.attack_range
+	match decision.skill_slot:
+		&"q": return ctx.q_ready
+		&"w": return ctx.w_ready
+		&"e": return ctx.e_ready
+		&"r": return ctx.r_ready
+		&"t": return ctx.t_ready
+	if decision.action_id == &"basic_attack":
+		return ctx.target_distance <= ctx.attack_range
 	return true
 
 

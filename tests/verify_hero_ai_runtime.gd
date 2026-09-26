@@ -19,17 +19,17 @@ func _initialize() -> void:
 	var red_ryze := characters.get_node("RosterRyzeRed") as CharacterBody3D
 	var blue_skills := blue_garen.get_node("SkillController")
 	var red_skills := red_garen.get_node("SkillController")
-	var roster_ok := not bool(blue_skills.get("automatic_demo")) and not bool(red_skills.get("automatic_demo"))
+	var roster_ok := blue_garen.get("ai_brain") != null and red_garen.get("ai_brain") != null and not blue_skills.has_method("try_begin_demo_skill") and not red_skills.has_method("try_begin_demo_skill")
 	roster.set_roster(&"enemy", [&"ryze"])
 	await process_frame
 	roster.set_roster(&"enemy", [&"garen", &"ryze"])
 	await process_frame
 	red_garen = characters.get_node("RosterGarenRed") as CharacterBody3D
 	red_skills = red_garen.get_node("SkillController")
-	roster_ok = roster_ok and not bool(red_skills.get("automatic_demo"))
+	roster_ok = roster_ok and red_garen.get("ai_brain") != null and not red_skills.has_method("try_begin_demo_skill")
 	roster.set_roster(&"friendly", [&"ryze"])
 	roster.set_roster(&"friendly", [&"garen", &"ryze"])
-	roster_ok = roster_ok and not bool(blue_skills.get("automatic_demo"))
+	roster_ok = roster_ok and blue_garen.get("ai_brain") != null and not blue_skills.has_method("try_begin_demo_skill")
 
 	blue_ryze.global_position = Vector3(0.0, 0.0, 0.0)
 	red_garen.global_position = Vector3(3.0, 0.0, 0.0)

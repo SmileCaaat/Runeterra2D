@@ -34,9 +34,9 @@ func _initialize() -> void:
 		ending_health += float(hero.get("current_health"))
 		brains_ok = brains_ok and hero.get("ai_brain") != null
 	var combat_progress := ending_health < initial_health - 1.0
-	var demo_off := not bool(blue_garen.get_node("SkillController").get("automatic_demo")) and not bool(red_garen.get_node("SkillController").get("automatic_demo"))
-	var passed := brains_ok and combat_progress and demo_off
-	print("HERO_AI_SCENE brains=%s combat=%s demo_off=%s hp=%.1f->%.1f" % [brains_ok, combat_progress, demo_off, initial_health, ending_health])
+	var single_ai_path := not blue_garen.get_node("SkillController").has_method("try_begin_demo_skill") and not red_garen.get_node("SkillController").has_method("try_begin_demo_skill")
+	var passed := brains_ok and combat_progress and single_ai_path
+	print("HERO_AI_SCENE brains=%s combat=%s single_ai_path=%s hp=%.1f->%.1f" % [brains_ok, combat_progress, single_ai_path, initial_health, ending_health])
 	stage.queue_free()
 	await process_frame
 	quit(0 if passed else 1)

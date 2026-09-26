@@ -1,12 +1,13 @@
 [gd_scene format=3 uid="uid://b05cxt20dfbt6"]
 
-[ext_resource type="Script" uid="uid://j7fa0rm30lbk" path="res://scripts/characters/ryze_combat_ai.gd" id="1"]
+[ext_resource type="Script" uid="uid://j7fa0rm30lbk" path="res://scripts/characters/ryze_actor.gd" id="1"]
 [ext_resource type="SpriteFrames" uid="uid://bjujrhb8prp6w" path="res://assets/vfx/ryze_skills/ryze_skill_vfx_frames.tres" id="3"]
 [ext_resource type="Texture2D" uid="uid://s6tqtqunb51r" path="res://assets/fx/soft_ground_shadow.svg" id="4"]
 [ext_resource type="Script" path="res://scripts/rendering/unit_readability_layers.gd" id="5_readability"]
 [ext_resource type="PackedScene" path="res://assets/characters/rune_mage_ryze_3d/rune_mage_ryze.glb" id="6_ryze_model"]
 [ext_resource type="Script" path="res://scripts/characters/actor_model_animator.gd" id="7_model_animator"]
 [ext_resource type="Script" path="res://scripts/presentation/mesh_outline_highlight_3d.gd" id="8_outline"]
+[ext_resource type="Script" path="res://scripts/characters/ryze_skill_controller.gd" id="9_skills"]
 
 [sub_resource type="CapsuleShape3D" id="shape"]
 radius = 0.42
@@ -17,6 +18,9 @@ collision_layer = 2
 collision_mask = 3
 floor_snap_length = 0.3
 script = ExtResource("1")
+
+[node name="RyzeSkillController" type="Node" parent="."]
+script = ExtResource("9_skills")
 
 [node name="Collision" type="CollisionShape3D" parent="." unique_id=1705383510]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)

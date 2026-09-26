@@ -1,0 +1,47 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="StyleBoxFlat" id="ReserveStyle"]
+bg_color = Color(0, 0, 0, 0.16)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="EquipContent" type="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="EquipCluster" type="VBoxContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 4
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="EquipRow1" type="HBoxContainer" parent="EquipCluster"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="EquipRow2" type="HBoxContainer" parent="EquipCluster"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="AttrReserve" type="PanelContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("ReserveStyle")
+
+[node name="AttrPlaceholder" type="Label" parent="AttrReserve"]
+modulate = Color(1, 1, 1, 0.35)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "属性"
+horizontal_alignment = 1
+vertical_alignment = 1

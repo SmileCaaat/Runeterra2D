@@ -1,0 +1,238 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="StyleBoxFlat" id="PortraitStyle"]
+bg_color = Color(0.02, 0.05, 0.07, 0.35)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.24)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxFlat" id="BuffStyle"]
+bg_color = Color(0.25, 0.5, 0.32, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="DebuffStyle"]
+bg_color = Color(0.55, 0.27, 0.29, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="EmptyStyle"]
+bg_color = Color(0.12, 0.12, 0.14, 0.55)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[node name="SelectedContent" type="HBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+alignment = 1
+theme_override_constants/separation = 6
+
+[node name="HeroPortraitFrame" type="AspectRatioContainer" parent="."]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_vertical = 3
+ratio = 1.0
+
+[node name="HeroPortrait" type="PanelContainer" parent="HeroPortraitFrame"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("PortraitStyle")
+
+[node name="PortraitTexture" type="TextureRect" parent="HeroPortraitFrame/HeroPortrait"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 6
+clip_contents = true
+
+[node name="PortraitFallback" type="Label" parent="HeroPortraitFrame/HeroPortrait"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="NameLevel" type="VBoxContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.85
+alignment = 1
+theme_override_constants/separation = 2
+
+[node name="NameRow" type="HBoxContainer" parent="NameLevel"]
+layout_mode = 2
+
+[node name="HeroName" type="Label" parent="NameLevel/NameRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+
+[node name="HeroLevel" type="Label" parent="NameLevel/NameRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+
+[node name="ControlMode" type="Label" parent="NameLevel/NameRow"]
+layout_mode = 2
+tooltip_text = "方向键移动 · X普攻 · QWERT技能 · ` 自动/手动"
+theme_override_font_sizes/font_size = 10
+
+[node name="HeroRole" type="Label" parent="NameLevel"]
+modulate = Color(0.84, 0.8, 0.89, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+
+[node name="HPBar" type="ColorRect" parent="NameLevel"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0, 0, 0, 0.32)
+
+[node name="Fill" type="ColorRect" parent="NameLevel/HPBar"]
+layout_mode = 1
+anchors_preset = 4
+anchor_right = 0.5
+anchor_bottom = 1.0
+grow_vertical = 2
+color = Color(0.35, 0.87, 0.56, 1)
+
+[node name="Label" type="Label" parent="NameLevel/HPBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MPBar" type="ColorRect" parent="NameLevel"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0, 0, 0, 0.32)
+
+[node name="Fill" type="ColorRect" parent="NameLevel/MPBar"]
+layout_mode = 1
+anchors_preset = 4
+anchor_right = 0.5
+anchor_bottom = 1.0
+grow_vertical = 2
+color = Color(0.35, 0.68, 1, 1)
+
+[node name="Label" type="Label" parent="NameLevel/MPBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BuffDebuffRow" type="HBoxContainer" parent="NameLevel"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="BuffContainer" type="HBoxContainer" parent="NameLevel/BuffDebuffRow"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="DebuffContainer" type="HBoxContainer" parent="NameLevel/BuffDebuffRow"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="BuffUp" type="PanelContainer" parent="NameLevel/BuffDebuffRow/BuffContainer"]
+custom_minimum_size = Vector2(14, 14)
+layout_mode = 2
+theme_override_styles/panel = SubResource("BuffStyle")
+
+[node name="Label" type="Label" parent="NameLevel/BuffDebuffRow/BuffContainer/BuffUp"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "↑"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BuffStar" type="PanelContainer" parent="NameLevel/BuffDebuffRow/BuffContainer"]
+custom_minimum_size = Vector2(14, 14)
+layout_mode = 2
+theme_override_styles/panel = SubResource("BuffStyle")
+
+[node name="Label" type="Label" parent="NameLevel/BuffDebuffRow/BuffContainer/BuffStar"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "✦"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DebuffDown" type="PanelContainer" parent="NameLevel/BuffDebuffRow/DebuffContainer"]
+custom_minimum_size = Vector2(14, 14)
+layout_mode = 2
+theme_override_styles/panel = SubResource("DebuffStyle")
+
+[node name="Label" type="Label" parent="NameLevel/BuffDebuffRow/DebuffContainer/DebuffDown"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "↓"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DebuffEmpty" type="PanelContainer" parent="NameLevel/BuffDebuffRow/DebuffContainer"]
+custom_minimum_size = Vector2(14, 14)
+layout_mode = 2
+theme_override_styles/panel = SubResource("EmptyStyle")
+
+[node name="Label" type="Label" parent="NameLevel/BuffDebuffRow/DebuffContainer/DebuffEmpty"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "·"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SkillContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+size_flags_stretch_ratio = 1.15
+alignment = 1
+theme_override_constants/separation = 4

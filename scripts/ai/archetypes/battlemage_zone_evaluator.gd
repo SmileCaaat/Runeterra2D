@@ -27,7 +27,7 @@ func build_candidates(ctx: HeroAIContext, output: Array[HeroAIDecision]) -> void
 	var retreat_score := 10.0 + too_close * 70.0
 	if ctx.target_closing_speed > 0.0:
 		retreat_score += AIUtilityScore.saturate(ctx.target_closing_speed / 4.0) * 15.0
-	retreat_score += minf(float(ctx.extras.get(&"recent_damage_ratio", 0.0)) * 80.0, 20.0)
+	retreat_score += minf(ctx.recent_damage_ratio * 80.0, 20.0)
 	var retreat := HeroAIDecision.make(&"retreat", retreat_score, "battlemage spacing")
 	var hold := HeroAIDecision.make(&"hold", 15.0 + ideal * 45.0, "battlemage casting zone")
 	for decision: HeroAIDecision in [approach, retreat, hold]:

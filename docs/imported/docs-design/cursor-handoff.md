@@ -21,7 +21,7 @@
 
 - 工作目录 `D:/godot_projects/gemheart2d`；最近提交 `a7bdf1a feat: refine Garen combat presentation`。交接时工作树有大量修改及未跟踪文件。
 - `addons/godot_ai/plugin.cfg` 版本 `3.2.5`。约定 HTTP 8000、WS 9500；本轮文档整理未启动编辑器，也未验证实时连接。
-- 主训练场：`DNF_Style_Prototype.tscn`；瑞兹：`scenes/units/ryze.tscn`；AI/技能：`scripts/characters/ryze_combat_ai.gd`；英雄选择 UI：`scripts/ui/training_roster_panel.gd`。
+- 主训练场：`DNF_Style_Prototype.tscn`；瑞兹：`scenes/units/ryze.tscn`；AI/技能：`scripts/characters/ryze_actor.gd`；英雄选择 UI：`scripts/ui/training_roster_panel.gd`。
 - CSV 源表位于 `data/source/`；构建入口 `scripts/tools/build_combat_database.gd`；产物 `data/generated/combat_database.tres` 不手改。
 - 瑞兹代码和配表已经存在，但还不能称为全部表驱动。代码中仍可见 Q/W/E/T/R 冷却的数字字面量，以及被动减冷却 `4.0`，需要按任务范围检查与源表一致性。
 - `_target_visual_position(victim)` 当前返回 `victim.global_position + impact_template.position`，并未实现真正的目标独立 HitAnchor。`_update_projectile_facing` 当前只按 X 方向翻转贴图。这是继续调查命中偏移、弹射僵硬的具体入口。

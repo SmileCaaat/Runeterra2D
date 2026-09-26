@@ -3,6 +3,7 @@ extends RefCounted
 
 const DATABASE_PATH := "res://data/generated/combat_database.tres"
 static var _database: CombatDatabase
+static var _missing_reported := false
 
 
 static func database() -> CombatDatabase:
@@ -10,6 +11,9 @@ static func database() -> CombatDatabase:
 		_database = load(DATABASE_PATH) as CombatDatabase
 		if _database != null:
 			_database.rebuild_indexes()
+		elif not _missing_reported:
+			push_error("Required combat database is missing: %s. Build data before running gameplay." % DATABASE_PATH)
+			_missing_reported = true
 	return _database
 
 

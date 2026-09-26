@@ -10,6 +10,8 @@ extends Resource
 @export_range(1, 5, 1) var max_rank := 1
 @export var display_name := ""
 @export_enum("self", "unit", "direction", "ground_area", "self_area") var target_type := "unit"
+## Relationship required when target_type is unit; independent of cast shape.
+@export_enum("none", "hostile", "friendly", "self_or_friendly", "any") var target_relation := "none"
 @export_enum("instant", "cast", "channel", "empower", "travel") var cast_type := "instant"
 @export var cooldown := 0.0
 @export var cast_time := 0.0

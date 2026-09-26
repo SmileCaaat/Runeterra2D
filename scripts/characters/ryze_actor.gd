@@ -1,6 +1,6 @@
 extends "res://scripts/actors/hero_instance.gd"
 
-## Training implementation of the data-authored Ryze kit.  It intentionally
+## Ryze runtime actor for movement, authority, targeting, and AI adaptation. It intentionally
 ## keeps targeting and all authored ranges in meters, so later player input can
 ## reuse the same Q/W/E/T/R calls without changing combat numbers.
 
@@ -40,15 +40,33 @@ var armor_shred_ratio := 0.0
 var base_armor := 22.0
 var base_magic_resistance := 32.0
 var magic_resist_shred_timer := 0.0
-var cooldowns := {&"q": 0.0, &"w": 0.0, &"e": 0.0, &"r": 0.0, &"t": 0.0}
-var arcane_stacks := 0
-var arcane_timer := 0.0
-var supercharged_casts := 0
-var supercharged_timer := 0.0
-var desperate_timer := 0.0
-var attack_index := 0
-var attack_timer := 0.0
-var action_lock := 0.0
+var cooldowns: Dictionary:
+	get: return skill_controller.cooldowns
+	set(value): skill_controller.cooldowns = value
+var arcane_stacks: int:
+	get: return skill_controller.arcane_stacks
+	set(value): skill_controller.arcane_stacks = value
+var arcane_timer: float:
+	get: return skill_controller.arcane_timer
+	set(value): skill_controller.arcane_timer = value
+var supercharged_casts: int:
+	get: return skill_controller.supercharged_casts
+	set(value): skill_controller.supercharged_casts = value
+var supercharged_timer: float:
+	get: return skill_controller.supercharged_timer
+	set(value): skill_controller.supercharged_timer = value
+var desperate_timer: float:
+	get: return skill_controller.desperate_timer
+	set(value): skill_controller.desperate_timer = value
+var attack_index: int:
+	get: return skill_controller.attack_index
+	set(value): skill_controller.attack_index = value
+var attack_timer: float:
+	get: return skill_controller.attack_timer
+	set(value): skill_controller.attack_timer = value
+var action_lock: float:
+	get: return skill_controller.action_lock
+	set(value): skill_controller.action_lock = value
 var ai_profile: Resource
 var ai_archetype: Resource
 var ai_brain: HeroBrain
@@ -60,19 +78,32 @@ var ai_recent_damage_hold_timer := 0.0
 @export var ai_debug := false
 var arena_min := Vector2(-14.5, -3.4)
 var arena_max := Vector2(14.5, 3.4)
-var super_armor_timer := 0.0
+var super_armor_timer: float:
+	get: return skill_controller.super_armor_timer
+	set(value): skill_controller.super_armor_timer = value
 var r_winddown_authored_position := Vector3.ZERO
 var r_winddown_authored_scale := Vector3.ONE
 var supercharge_mesh_afterimage: Node
 var e_orb_from_center_px := Vector2(126.5, 622.5)
-var _r_landing_resolving := false
-var _r_landing_zapped: Dictionary = {}
+var _r_landing_resolving: bool:
+	get: return skill_controller.r_landing_resolving
+	set(value): skill_controller.r_landing_resolving = value
+var _r_landing_zapped: Dictionary:
+	get: return skill_controller.r_landing_zapped
+	set(value): skill_controller.r_landing_zapped = value
 var _faces_left := false
 
 @export_category("Scene VFX Preview")
 @export var cast_vfx_preview_enabled := false
 
 @onready var character_model: Node3D = $RyzeModel
+var _skill_controller_cache: RyzeSkillController
+var skill_controller: RyzeSkillController:
+	get:
+		if _skill_controller_cache == null:
+			_skill_controller_cache = get_node_or_null("RyzeSkillController") as RyzeSkillController
+		return _skill_controller_cache
+	set(value): _skill_controller_cache = value
 @onready var label: Label3D = $AIStateLabel
 @onready var shield: AnimatedSprite3D = $Shield
 @onready var t_buff: AnimatedSprite3D = $TBuff
@@ -87,19 +118,55 @@ var _faces_left := false
 @onready var impact_template: AnimatedSprite3D = $CastVFXPreview/Impact
 
 
+func _enter_tree() -> void:
+	skill_controller = get_node_or_null("RyzeSkillController") as RyzeSkillController
+	if skill_controller == null:
+		push_error("Ryze actor requires an authored RyzeSkillController child")
+
+
 func _ready() -> void:
+	if skill_controller == null:
+		process_mode = Node.PROCESS_MODE_DISABLED
+		return
 	database = CombatData.database()
-	definition = database.get_unit(&"ryze") if database != null else null
-	if definition != null:
-		bind_hero_instance(database, definition)
-		_bind_ai_profile()
-		_bind_playable_bounds()
-		max_health = definition.max_health
-		current_health = max_health
-		armor = definition.armor
-		base_armor = definition.armor
-		magic_resistance = definition.magic_resistance
-		base_magic_resistance = definition.magic_resistance
+	if database == null:
+		push_error("Ryze requires CombatDatabase")
+		process_mode = Node.PROCESS_MODE_DISABLED
+		return
+	definition = database.get_unit(&"ryze")
+	if definition == null:
+		push_error("Ryze requires unit definition ryze")
+		process_mode = Node.PROCESS_MODE_DISABLED
+		return
+	for skill_id: StringName in [&"ryze_overload", &"ryze_rune_prison", &"ryze_spell_flux", &"ryze_realm_warp", &"ryze_desperate_power"]:
+		if database.get_skill(skill_id) == null or database.get_skill_rank(skill_id, 1) == null:
+			push_error("Ryze requires skill and rank data %s" % skill_id)
+			process_mode = Node.PROCESS_MODE_DISABLED
+			return
+	for effect_id: StringName in [&"ryze_q_damage", &"ryze_w_damage", &"ryze_w_root", &"ryze_e_damage"]:
+		if database.get_skill_effect_rank(effect_id, 1) == null:
+			push_error("Ryze requires effect rank %s" % effect_id)
+			process_mode = Node.PROCESS_MODE_DISABLED
+			return
+	for buff_id: StringName in [&"ryze_flux", &"ryze_arcane_mastery", &"ryze_supercharged", &"ryze_desperate_power"]:
+		if database.get_buff(buff_id) == null:
+			push_error("Ryze requires buff %s" % buff_id)
+			process_mode = Node.PROCESS_MODE_DISABLED
+			return
+	for template: AnimatedSprite3D in [basic_projectile_template, q_projectile_template, w_effect_template, e_projectile_template, r_winddown_template, w_loop_template, impact_template]:
+		if template == null:
+			push_error("Ryze requires all authored CastVFXPreview templates")
+			process_mode = Node.PROCESS_MODE_DISABLED
+			return
+	bind_hero_instance(database, definition)
+	_bind_ai_profile()
+	_bind_playable_bounds()
+	max_health = definition.max_health
+	current_health = max_health
+	armor = definition.armor
+	base_armor = definition.armor
+	magic_resistance = definition.magic_resistance
+	base_magic_resistance = definition.magic_resistance
 	add_to_group(&"combat_target")
 	_build_hit_feedback()
 	_configure_team_groups()
@@ -205,16 +272,7 @@ func _physics_process(delta: float) -> void:
 	ai_recent_damage_hold_timer = maxf(0.0, ai_recent_damage_hold_timer - delta)
 	if ai_recent_damage_hold_timer <= 0.0:
 		ai_recent_damage_accumulator = 0.0
-	for key: StringName in cooldowns:
-		cooldowns[key] = maxf(0.0, float(cooldowns[key]) - delta)
-	arcane_timer = maxf(0.0, arcane_timer - delta)
-	if arcane_timer <= 0.0 and arcane_stacks > 0:
-		arcane_stacks = 0
-	supercharged_timer = maxf(0.0, supercharged_timer - delta)
-	if supercharged_timer <= 0.0:
-		supercharged_casts = 0
-	desperate_timer = maxf(0.0, desperate_timer - delta)
-	super_armor_timer = maxf(0.0, super_armor_timer - delta)
+	skill_controller.tick_effects(delta)
 	silence_timer = maxf(0.0, silence_timer - delta)
 	_update_armor_shred(delta)
 	_update_magic_resist_shred(delta)
@@ -231,7 +289,7 @@ func _physics_process(delta: float) -> void:
 	if not enabled:
 		return
 	_refresh_target()
-	action_lock = maxf(0.0, action_lock - delta)
+	skill_controller.tick_action_lock(delta)
 	if action_lock > 0.0:
 		return
 	if is_player_controlled():
@@ -314,49 +372,19 @@ func _request_player_action(
 	if direction_input.is_finite() and direction_input.length_squared() > 0.0001:
 		player_facing_direction = direction_input.normalized()
 		_face(Vector3(player_facing_direction.x, 0.0, player_facing_direction.y))
-	if action == &"basic_attack":
-		if not _is_player_combat_action_ready(&"basic_attack"):
-			return false
-		var basic_aim := _player_aim_vector3()
-		_face(basic_aim)
-		_basic_attack_directional(basic_aim)
-		return true
-	var slot := StringName(String(action).trim_prefix("skill_"))
-	var skill := database.get_skill_by_slot(&"ryze", _player_skill_index(slot)) if database != null else null
-	if skill == null or silence_timer > 0.0 or cooldowns.get(slot, 0.0) > 0.0:
-		return false
-	var skill_target: CharacterBody3D
-	if skill.target_type == "unit":
-		_refresh_target()
-		if not _can_harm(target) or _current_target_distance() > skill.cast_range:
-			return false
-		skill_target = target
-		if skill.facing_policy != "none":
-			_face(target.global_position - global_position)
-	elif skill.target_type == "ground_area":
-		if not has_destination or not destination.is_finite() or destination.distance_to(global_position) > _warp_range() + 0.01:
-			return false
-		if _clamp_to_arena(destination).distance_to(destination) > 0.01:
-			return false
-		if is_rooted():
-			return false
-		_face(destination - global_position)
-	elif skill.target_type == "direction":
-		_face(_player_aim_vector3())
-	else:
-		# Self and directional casts intentionally do not acquire or face the AI target.
-		pass
-	if not _is_player_combat_action_ready(slot):
-		return false
-	velocity = Vector3.ZERO
-	match slot:
-		&"q": _cast_q_directional(_player_aim_vector3())
-		&"w": _cast_w(skill_target)
-		&"e": _cast_e(skill_target)
-		&"r": cast_realm_warp(destination)
-		&"t": cast_desperate_power()
-		_: return false
-	return true
+	var request := HeroActionRequest.new()
+	request.source = HeroActionRequest.Source.PLAYER
+	request.action_id = action
+	request.direction = _player_aim_direction(direction_input)
+	request.ground_position = destination
+	request.has_ground_position = has_destination
+	if action != &"basic_attack":
+		request.skill_slot = StringName(String(action).trim_prefix("skill_"))
+		var skill := database.get_skill_by_slot(&"ryze", _player_skill_index(request.skill_slot)) if database != null else null
+		if skill != null and skill.target_type == "unit":
+			_refresh_target()
+			request.target = target
+	return execute_action(request)
 
 
 func _player_skill_index(slot: StringName) -> int:
@@ -443,8 +471,8 @@ func _build_ai_context() -> HeroAIContext:
 	ctx.extras[&"warp_range"] = _warp_range()
 	ctx.extras[&"r_channel_duration"] = _rulef(&"ryze.r.channel_duration", 0.9)
 	ctx.extras[&"r_cooldown_duration"] = _skill_cooldown(&"ryze_realm_warp", 180.0)
-	ctx.extras[&"move_speed"] = _move_speed()
-	ctx.extras[&"recent_damage_ratio"] = ai_recent_damage_accumulator / maxf(max_health, 1.0)
+	ctx.move_speed = _move_speed()
+	ctx.recent_damage_ratio = ai_recent_damage_accumulator / maxf(max_health, 1.0)
 	if ctx.target != null:
 		ctx.target_position = target.global_position
 		ctx.target_velocity = target.velocity
@@ -540,12 +568,57 @@ func _current_target_distance() -> float:
 
 
 func _can_execute_ai_decision(decision: HeroAIDecision) -> bool:
-	if decision == null or is_dead or not enabled or action_lock > 0.0:
+	return can_execute_action(_ai_action_request(decision))
+
+
+func _ai_action_request(decision: HeroAIDecision) -> HeroActionRequest:
+	if decision == null:
+		return null
+	var request := HeroActionRequest.new()
+	request.source = HeroActionRequest.Source.AI
+	request.action_id = decision.action_id
+	request.skill_slot = decision.skill_slot
+	request.target = decision.target
+	request.ground_position = decision.destination
+	request.has_ground_position = decision.has_destination
+	return request
+
+
+## Final gate for both intent sources; skill effects remain in Ryze's existing
+## cast methods while manual direction and AI target tracking stay distinct.
+func can_execute_action(request: HeroActionRequest) -> bool:
+	if request == null or is_dead or not enabled or action_lock > 0.0:
 		return false
-	var action := decision.action_id
+	var action := request.action_id
+	if request.source == HeroActionRequest.Source.PLAYER:
+		if not is_player_controlled():
+			return false
+		if action == &"basic_attack":
+			return _is_player_combat_action_ready(&"basic_attack") and request.direction.is_finite() and request.direction.length_squared() > 0.0001
+		var slot := request.skill_slot
+		var skill := database.get_skill_by_slot(&"ryze", _player_skill_index(slot)) if database != null else null
+		if skill == null or action != StringName("skill_" + slot) or silence_timer > 0.0 or not _is_player_combat_action_ready(slot):
+			return false
+		match skill.target_type:
+			"unit":
+				if not CombatTargetQuery.matches_relation(self, request.target, skill.target_relation):
+					return false
+				var target_offset := request.target.global_position - global_position
+				target_offset.y = 0.0
+				return target_offset.length() <= skill.cast_range
+			"ground_area":
+				return request.has_ground_position and request.ground_position.is_finite() \
+					and request.ground_position.distance_to(global_position) <= _warp_range() + 0.01 \
+					and _clamp_to_arena(request.ground_position).distance_to(request.ground_position) <= 0.01 \
+					and not is_rooted()
+			"direction":
+				return request.direction.is_finite() and request.direction.length_squared() > 0.0001
+			"self", "self_area":
+				return true
+		return false
 	if action not in [&"hold", &"player_r"] and (not is_instance_valid(target) or not _can_harm(target)):
 		return false
-	if decision.target != null and decision.target != target:
+	if request.target != null and request.target != target:
 		return false
 	if is_rooted() and action in [&"approach", &"retreat", &"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r"]:
 		return false
@@ -558,18 +631,22 @@ func _can_execute_ai_decision(decision: HeroAIDecision) -> bool:
 		&"skill_w": return cooldowns[&"w"] <= 0.0 and distance <= _cast_range()
 		&"skill_e": return cooldowns[&"e"] <= 0.0 and distance <= _cast_range()
 		&"skill_t": return cooldowns[&"t"] <= 0.0
-		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r": return _is_valid_ai_warp_destination(decision)
+		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r": return _is_valid_warp_destination(request)
 	return true
 
 
 func _is_valid_ai_warp_destination(decision: HeroAIDecision) -> bool:
-	if cooldowns[&"r"] > 0.0 or not decision.has_destination or not decision.destination.is_finite():
+	return _is_valid_warp_destination(_ai_action_request(decision))
+
+
+func _is_valid_warp_destination(request: HeroActionRequest) -> bool:
+	if request == null or cooldowns[&"r"] > 0.0 or not request.has_ground_position or not request.ground_position.is_finite():
 		return false
-	var travel := decision.destination - global_position
+	var travel := request.ground_position - global_position
 	travel.y = 0.0
 	if travel.length() > _warp_range() + 0.01:
 		return false
-	return _clamp_to_arena(decision.destination).distance_to(decision.destination) <= 0.01
+	return _clamp_to_arena(request.ground_position).distance_to(request.ground_position) <= 0.01
 
 
 func _start_ai_one_shot(decision: HeroAIDecision) -> bool:
@@ -577,16 +654,44 @@ func _start_ai_one_shot(decision: HeroAIDecision) -> bool:
 
 
 func _start_combat_action(decision: HeroAIDecision) -> bool:
-	if not _can_execute_ai_decision(decision):
+	return execute_action(_ai_action_request(decision))
+
+
+## Executes an accepted request through the established attack and skill paths.
+func execute_action(request: HeroActionRequest) -> bool:
+	if not can_execute_action(request):
 		return false
 	velocity = Vector3.ZERO
-	match decision.action_id:
+	if request.source == HeroActionRequest.Source.PLAYER:
+		var aim := Vector3(request.direction.x, 0.0, request.direction.y)
+		match request.skill_slot:
+			&"":
+				_face(aim)
+				_basic_attack_directional(aim)
+			&"q":
+				_face(aim)
+				_cast_q_directional(aim)
+			&"w", &"e":
+				var skill := database.get_skill_by_slot(&"ryze", _player_skill_index(request.skill_slot))
+				if skill.facing_policy != "none":
+					_face(request.target.global_position - global_position)
+				if request.skill_slot == &"w":
+					_cast_w(request.target)
+				else:
+					_cast_e(request.target)
+			&"r":
+				_face(request.ground_position - global_position)
+				cast_realm_warp(request.ground_position)
+			&"t": cast_desperate_power()
+			_: return false
+		return true
+	match request.action_id:
 		&"basic_attack": _basic_attack(target)
 		&"skill_q": _cast_q(target)
 		&"skill_w": _cast_w(target)
 		&"skill_e": _cast_e(target)
 		&"skill_t": cast_desperate_power()
-		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r": cast_realm_warp(decision.destination)
+		&"ryze_r_escape", &"ryze_r_engage", &"ryze_r_reposition", &"player_r": cast_realm_warp(request.ground_position)
 		_: return false
 	return true
 
@@ -638,134 +743,43 @@ func record_ai_damage_taken(actual_health_loss: float) -> void:
 
 
 func _basic_attack(victim: CharacterBody3D) -> void:
-	var animations: Array[StringName] = [&"attack1", &"attack2", &"attack3", &"crit"]
-	var animation := animations[attack_index]
-	attack_index = (attack_index + 1) % animations.size()
-	await _play_action_to_end(animation, _cast_event_seconds(animation, 0.5), func() -> void:
-		_launch_projectile(victim, &"basic_attack", _basic_missile_speed(), &"basic")
-	)
+	skill_controller.basic_attack(victim)
 
 
 func _basic_attack_directional(direction: Vector3) -> void:
-	var animations: Array[StringName] = [&"attack1", &"attack2", &"attack3", &"crit"]
-	var animation := animations[attack_index]
-	attack_index = (attack_index + 1) % animations.size()
-	await _play_action_to_end(animation, _cast_event_seconds(animation, 0.5), func() -> void:
-		_launch_directional_projectile(animation, _basic_missile_speed(), &"basic", direction, _basic_attack_range())
-	)
+	skill_controller.basic_attack_directional(direction)
 
 
 func _cast_q(victim: CharacterBody3D) -> void:
-	cooldowns[&"q"] = _skill_cooldown(&"ryze_overload", 4.0)
-	_add_arcane_stack(true)
-	await _play_action_to_end(&"spell1", _cast_event_seconds(&"spell1", 0.3), func() -> void:
-		_launch_projectile(victim, &"Spell1_Q", _rulef(&"ryze.q.missile_speed", 17.0), &"q")
-	)
+	skill_controller.cast_q(victim)
 
 
 func _cast_q_directional(direction: Vector3) -> void:
-	cooldowns[&"q"] = _skill_cooldown(&"ryze_overload", 4.0)
-	_add_arcane_stack(true)
-	await _play_action_to_end(&"spell1", _cast_event_seconds(&"spell1", 0.3), func() -> void:
-		_launch_directional_projectile(&"Spell1_Q", _rulef(&"ryze.q.missile_speed", 17.0), &"q", direction, _skill_range(&"ryze_overload", 5.5))
-	)
+	skill_controller.cast_q_directional(direction)
 
 
 func _cast_w(victim: CharacterBody3D) -> void:
-	cooldowns[&"w"] = _skill_cooldown(&"ryze_rune_prison", 14.0)
-	_add_arcane_stack(true)
-	await _play_action_to_end(&"spell2", _cast_event_seconds(&"spell2", 0.5), func() -> void:
-		if _valid_target(victim):
-			_play_target_vfx(victim, &"Spell2_W")
-			_damage(victim, _ranked_damage(&"ryze_w_damage", 80.0), &"magic", &"ryze_w_hit")
-			var root_duration := _ranked_control(&"ryze_w_root", 1.0)
-			var applied_root_duration := float(victim.call("apply_root", root_duration))
-			_play_w_loop(victim, applied_root_duration)
-	)
+	skill_controller.cast_w(victim)
 
 
 func _cast_e(victim: CharacterBody3D) -> void:
-	cooldowns[&"e"] = _skill_cooldown(&"ryze_spell_flux", 7.0)
-	_add_arcane_stack(true)
-	await _play_action_to_end(&"spell3", _cast_event_seconds(&"spell3", 0.6), func() -> void:
-		_launch_projectile(victim, &"Spell3_E", _rulef(&"ryze.e.missile_speed", 15.0), &"e")
-	)
+	skill_controller.cast_e(victim)
 
 
 func cast_desperate_power() -> void:
-	if cooldowns[&"t"] > 0.0:
-		return
-	cooldowns[&"t"] = _skill_cooldown(&"ryze_desperate_power", 50.0)
-	character_model.call(&"play_semantic", &"taunt")
-	var channel := _rulef(&"ryze.t.channel_duration", 0.8)
-	action_lock = channel
-	super_armor_timer = channel
-	_request_awakening_cutin(&"ryze_desperate_power")
-	await get_tree().create_timer(channel).timeout
-	desperate_timer = _desperate_duration()
-	_sync_t_buff_presentation()
-	if _rulei(&"ryze.t.grant_supercharge", 1) != 0:
-		_grant_supercharge()
-	else:
-		_add_arcane_stack(false)
+	skill_controller.cast_desperate_power()
 
 
 func _request_awakening_cutin(skill_id: StringName) -> void:
-	var manager := get_node_or_null("/root/AwakeningCutIn")
-	if manager == null:
-		manager = get_tree().get_first_node_in_group(&"awakening_cutin_manager")
-	if manager == null or not manager.has_method("request_skill"):
-		return
-	manager.call("request_skill", skill_id, {"source": self})
+	skill_controller._request_awakening_cutin(skill_id)
 
 
 func cast_realm_warp(destination: Vector3) -> void:
-	if cooldowns[&"r"] > 0.0:
-		return
-	cooldowns[&"r"] = _skill_cooldown(&"ryze_realm_warp", 180.0)
-	var channel := _rulef(&"ryze.r.channel_duration", 0.9)
-	var previous_animation_speed := _play_realm_warp_windup(channel)
-	action_lock = channel
-	await get_tree().create_timer(channel).timeout
-	character_model.call(&"set_animation_speed", previous_animation_speed)
-	# Capture allies at the portal origin before Ryze moves, then share the same planar delta.
-	var origin := global_position
-	var planar := _clamp_to_arena(destination) - origin
-	planar.y = 0.0
-	var delta := planar.limit_length(_warp_range())
-	var ally_radius := _skill_radius(&"ryze_realm_warp", 5.5)
-	var allies := _collect_warp_allies(ally_radius)
-	_teleport_actor(self, origin + delta)
-	for ally: CharacterBody3D in allies:
-		_teleport_actor(ally, ally.global_position + delta)
-	character_model.call(&"play_semantic", &"spell4_winddown")
-	# Query the requested semantic clip directly. Reading the player's current
-	# length during a blend can still return the prior 2.333s Spell4_Idle clip.
-	# The completion signal below remains the authoritative early release.
-	action_lock = float(character_model.call(&"get_semantic_animation_length", &"spell4_winddown"))
-	_play_r_winddown()
-	_r_landing_resolving = true
-	_r_landing_zapped.clear()
-	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		var candidate := candidate_node as CharacterBody3D
-		if candidate == null or candidate == self or not _is_enemy_candidate(candidate):
-			continue
-		if candidate.global_position.distance_to(global_position) <= ally_radius:
-			_play_r_landing_zap_once(candidate)
-			for _i in _rulei(&"ryze.r.landing_e_hits", 3):
-				_apply_e(candidate)
-	_r_landing_resolving = false
-	_r_landing_zapped.clear()
-	_add_arcane_stack(true)
+	skill_controller.cast_realm_warp(destination)
 
 
 func _play_realm_warp_windup(channel_duration: float) -> float:
-	var previous_speed := float(character_model.get("animation_speed_scale"))
-	var animation_duration := float(character_model.call("get_semantic_animation_length", &"spell4"))
-	if channel_duration > 0.0 and animation_duration > 0.0:
-		character_model.call("set_animation_speed", previous_speed * animation_duration / channel_duration)
-	character_model.call(&"play_semantic", &"spell4")
-	return previous_speed
+	return skill_controller._play_realm_warp_windup(channel_duration)
 
 
 func _on_character_model_animation_finished(animation_name: StringName) -> void:
@@ -773,44 +787,6 @@ func _on_character_model_animation_finished(animation_name: StringName) -> void:
 		action_lock = 0.0
 
 
-func _collect_warp_allies(radius: float) -> Array[CharacterBody3D]:
-	var allies: Array[CharacterBody3D] = []
-	var seen: Dictionary = {}
-	for group_name: StringName in [&"combat_target", &"friendly_actor", &"enemy_actor", &"player_actor", &"hero_actor"]:
-		for node: Node in get_tree().get_nodes_in_group(group_name):
-			var candidate := node as CharacterBody3D
-			if candidate == null or seen.has(candidate.get_instance_id()):
-				continue
-			if not _is_warp_ally(candidate):
-				continue
-			var offset := candidate.global_position - global_position
-			offset.y = 0.0
-			if offset.length() > radius:
-				continue
-			seen[candidate.get_instance_id()] = true
-			allies.append(candidate)
-	return allies
-
-
-func _is_warp_ally(candidate: CharacterBody3D) -> bool:
-	if candidate == null or candidate == self or not is_instance_valid(candidate):
-		return false
-	if candidate.has_method("is_targetable") and not bool(candidate.call("is_targetable")):
-		return false
-	if candidate.has_method("get_team"):
-		return String(candidate.call("get_team")) == String(get_team())
-	if team == "friendly":
-		return candidate.is_in_group(&"friendly_actor")
-	if team == "enemy":
-		return candidate.is_in_group(&"enemy_actor")
-	return false
-
-
-func _teleport_actor(actor: CharacterBody3D, destination: Vector3) -> void:
-	if actor == null or not is_instance_valid(actor):
-		return
-	actor.global_position = _clamp_to_arena(destination)
-	actor.velocity = Vector3.ZERO
 
 
 func get_team() -> StringName:
@@ -834,7 +810,7 @@ func get_health_ratio() -> float:
 
 
 func receive_hit(attacker_position: Vector3, _attack_name: StringName, amount: float = -1.0, source_actor: Node = null) -> void:
-	var damage := amount if amount >= 0.0 else (definition.attack_damage if definition != null else 55.0)
+	var damage := amount if amount >= 0.0 else definition.attack_damage
 	receive_skill_damage(damage, "普攻", true, attacker_position, &"physical", &"basic_melee", source_actor)
 
 
@@ -949,97 +925,18 @@ func _update_magic_resist_shred(delta: float) -> void:
 		magic_resistance = base_magic_resistance
 
 
-func _play_action_to_end(animation: StringName, cast_event_seconds: float, event: Callable) -> void:
-	# Event times are authored directly in seconds and remain independent of the GLB clip name.
-	action_lock = INF
-	var supercharged := _is_supercharged() and _is_supercharge_cast_animation(animation)
-	var speed := _supercharge_cast_speed() if supercharged else _cast_speed()
-	character_model.call(&"set_animation_speed", speed)
-	character_model.call(&"play_semantic", animation)
-	var event_sent := false
-	var event_elapsed := -1.0
-	var event_time := cast_event_seconds / speed
-	var recovery := _rulef(&"ryze.cast.recovery_seconds", 0.35)
-	var min_lock := _rulef(&"ryze.supercharge.min_lock_seconds", 0.70) if supercharged else _rulef(&"ryze.cast.min_lock_seconds", 0.90)
-	while StringName(character_model.get(&"current_animation")) == animation and bool(character_model.call(&"is_playing")):
-		var elapsed := _animation_elapsed_seconds()
-		if not event_sent and elapsed >= event_time:
-			event_sent = true
-			event_elapsed = elapsed
-			if supercharged and supercharge_mesh_afterimage != null:
-				supercharge_mesh_afterimage.capture(character_model)
-			event.call()
-		var unlock_at := min_lock
-		if event_sent:
-			unlock_at = maxf(event_elapsed + recovery, min_lock)
-		if elapsed >= unlock_at:
-			break
-		await get_tree().process_frame
-	if not event_sent:
-		if supercharged and supercharge_mesh_afterimage != null:
-			supercharge_mesh_afterimage.capture(character_model)
-		event.call()
-	action_lock = 0.0
 
 
 func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: float, payload: StringName) -> void:
-	if not is_instance_valid(victim) or not _valid_target(victim):
-		return
-	var projectile := _create_projectile(payload, animation)
-	_update_projectile_facing(projectile, _skill_travel_point(victim, payload) - projectile.global_position)
-	projectile.frame = 0
-	projectile.play()
-	var e_shell: Node3D = _attach_e_voxel_shell(projectile, false) if payload == &"e" else null
-	var q_base_scale := projectile.scale
-	var q_elapsed := 0.0
-	if payload == &"q":
-		_update_q_travel_deform(projectile, q_base_scale, _skill_travel_point(victim, payload) - projectile.global_position, 0.0)
-	while is_instance_valid(projectile) and is_instance_valid(victim) and _valid_target(victim):
-		var hit_point := _skill_travel_point(victim, payload)
-		var direction := hit_point - projectile.global_position
-		var stop_distance := _rulef(&"ryze.basic.stop_distance", 0.45) if payload == &"basic" else _rulef(&"ryze.skill.stop_distance", 0.08)
-		if direction.length() <= stop_distance:
-			if payload != &"basic":
-				projectile.global_position = hit_point
-			break
-		_update_projectile_facing(projectile, direction)
-		if e_shell != null:
-			_sync_e_voxel_shell(projectile, e_shell)
-			if e_shell.has_method("set_travel"):
-				e_shell.call("set_travel", direction)
-		if payload == &"q":
-			_update_q_travel_deform(projectile, q_base_scale, direction, q_elapsed)
-			q_elapsed += 1.0 / 60.0
-		var step := speed / 60.0
-		if payload != &"basic" and direction.length() <= step:
-			projectile.global_position = hit_point
-			break
-		projectile.global_position += direction.normalized() * step
-		if not projectile.is_playing():
-			projectile.play()
-		await get_tree().physics_frame
-	if is_instance_valid(projectile):
-		projectile.queue_free()
-	if not is_instance_valid(victim) or not _valid_target(victim):
-		return
-	match payload:
-		&"basic":
-			_damage(victim, definition.attack_damage if definition != null else 55.0, &"physical", &"ryze_basic_hit")
-		&"q":
-			_damage(victim, _ranked_damage(&"ryze_q_damage", 60.0), &"magic", &"ryze_q_hit")
-		&"e": _resolve_e_chain(victim)
+	skill_controller.launch_projectile(victim, animation, speed, payload)
 
 
 func _create_projectile(payload: StringName, animation: StringName) -> AnimatedSprite3D:
 	var template := _projectile_template(payload)
-	var projectile := template.duplicate() as AnimatedSprite3D if template != null else AnimatedSprite3D.new()
 	if template == null:
-		projectile.sprite_frames = VFX_FRAMES
-		projectile.animation = animation
-		projectile.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		projectile.pixel_size = _character_pixel_size()
-		projectile.no_depth_test = true
-		projectile.render_priority = 3
+		push_error("Ryze projectile template missing for %s" % payload)
+		return null
+	var projectile := template.duplicate() as AnimatedSprite3D
 	projectile.visible = true
 	projectile.set_meta(&"authored_offset", projectile.offset)
 	get_tree().current_scene.add_child(projectile)
@@ -1047,89 +944,16 @@ func _create_projectile(payload: StringName, animation: StringName) -> AnimatedS
 	return projectile
 
 
-func _launch_directional_projectile(
-	animation: StringName,
-	speed: float,
-	payload: StringName,
-	direction: Vector3,
-	max_range: float
-) -> void:
-	var planar_direction := Vector3(direction.x, 0.0, direction.z)
-	if planar_direction.length_squared() <= 0.0001 or speed <= 0.0 or max_range <= 0.0:
-		return
-	planar_direction = planar_direction.normalized()
-	var projectile := _create_projectile(payload, animation)
-	projectile.add_to_group(&"ryze_directional_projectile")
-	_update_projectile_facing(projectile, planar_direction)
-	projectile.frame = 0
-	projectile.play()
-	var base_scale := projectile.scale
-	var elapsed := 0.0
-	var traveled := 0.0
-	var hit_target: CharacterBody3D
-	while is_instance_valid(projectile) and traveled < max_range:
-		var delta := get_physics_process_delta_time()
-		if delta <= 0.0:
-			delta = 1.0 / 60.0
-		var step_length := minf(speed * delta, max_range - traveled)
-		var previous_position := projectile.global_position
-		var next_position := previous_position + planar_direction * step_length
-		hit_target = _first_enemy_on_projectile_segment(previous_position, next_position)
-		var travel_direction := next_position - previous_position
-		if hit_target != null:
-			var hit_point := _target_visual_position(hit_target)
-			projectile.global_position = Vector3(hit_point.x, previous_position.y, hit_point.z)
-			travel_direction = projectile.global_position - previous_position
-		else:
-			projectile.global_position = next_position
-		_update_projectile_facing(projectile, travel_direction)
-		if payload == &"q":
-			_update_q_travel_deform(projectile, base_scale, planar_direction * speed, elapsed)
-			elapsed += delta
-		traveled += step_length
-		if not projectile.is_playing():
-			projectile.play()
-		if hit_target != null:
-			break
-		await get_tree().physics_frame
-	if is_instance_valid(projectile):
-		projectile.queue_free()
-	if not is_instance_valid(hit_target) or not _can_harm(hit_target):
-		return
-	match payload:
-		&"basic":
-			_damage(hit_target, definition.attack_damage if definition != null else 55.0, &"physical", &"ryze_basic_hit")
-		&"q":
-			_damage(hit_target, _ranked_damage(&"ryze_q_damage", 60.0), &"magic", &"ryze_q_hit")
+func _launch_directional_projectile(animation: StringName, speed: float, payload: StringName, direction: Vector3, max_range: float) -> void:
+	skill_controller.launch_directional_projectile(animation, speed, payload, direction, max_range)
 
 
 func _first_enemy_on_projectile_segment(from: Vector3, to: Vector3) -> CharacterBody3D:
-	var start := Vector2(from.x, from.z)
-	var segment := Vector2(to.x - from.x, to.z - from.z)
-	var length_squared := segment.length_squared()
-	var best_progress := INF
-	var best_target: CharacterBody3D
-	var hit_radius := _rulef(&"ryze.projectile.hit_radius", 0.62)
-	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		var candidate := candidate_node as CharacterBody3D
-		if candidate == null or not _can_harm(candidate):
-			continue
-		var contact := _target_visual_position(candidate)
-		var target_point := Vector2(contact.x, contact.z)
-		var progress := clampf((target_point - start).dot(segment) / length_squared, 0.0, 1.0) if length_squared > 0.0001 else 0.0
-		if start.lerp(Vector2(to.x, to.z), progress).distance_to(target_point) > hit_radius:
-			continue
-		if progress < best_progress:
-			best_progress = progress
-			best_target = candidate
-	return best_target
+	return skill_controller.first_enemy_on_projectile_segment(from, to)
 
 
 func _basic_attack_range() -> float:
-	if database == null:
-		return 5.5
-	var range := database.get_unit_stat_value(&"ryze", &"attack_range", level)
-	return range if range > 0.0 else 5.5
+	return skill_controller.basic_attack_range()
 
 
 func _update_q_travel_deform(
@@ -1159,7 +983,8 @@ func _projectile_origin(payload: StringName) -> Vector3:
 	# local X is mirrored with the character, so one placement serves both sides.
 	var template := _projectile_template(payload)
 	if template == null:
-		return global_position + Vector3.UP * _rulef(&"ryze.hit.fallback_height", 1.15)
+		push_error("Ryze requires projectile template for %s" % payload)
+		return global_position
 	var local := template.position
 	if _facing_left():
 		local.x = -local.x
@@ -1172,17 +997,13 @@ func _play_target_vfx(victim: CharacterBody3D, animation: StringName) -> void:
 	# W is authored against Ryze in the scene as a convenient stand-in target;
 	# its local transform is then transferred to the real victim at runtime.
 	var template: AnimatedSprite3D = w_effect_template if animation == &"Spell2_W" else null
-	var effect := template.duplicate() as AnimatedSprite3D if template != null else AnimatedSprite3D.new()
 	if template == null:
-		effect.sprite_frames = VFX_FRAMES
-		effect.animation = animation
-		effect.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		effect.pixel_size = _character_pixel_size()
-		effect.no_depth_test = true
-		effect.render_priority = 3
+		push_error("Ryze target VFX template missing for %s" % animation)
+		return
+	var effect := template.duplicate() as AnimatedSprite3D
 	effect.visible = true
 	get_tree().current_scene.add_child(effect)
-	effect.global_position = victim.global_position + (template.position if template != null else Vector3.UP * _rulef(&"ryze.w.fallback_height", 1.1))
+	effect.global_position = victim.global_position + template.position
 	effect.frame = 0
 	effect.play()
 	effect.animation_finished.connect(effect.queue_free)
@@ -1329,16 +1150,7 @@ func _update_projectile_facing(projectile: AnimatedSprite3D, direction: Vector3)
 
 
 func _resolve_e_chain(victim: CharacterBody3D) -> void:
-	_apply_e(victim)
-	var chain: Array[CharacterBody3D] = []
-	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		var candidate := candidate_node as CharacterBody3D
-		if candidate != null and candidate != victim and _valid_target(candidate) and candidate.global_position.distance_to(victim.global_position) <= _skill_radius(&"ryze_spell_flux", 3.5):
-			chain.append(candidate)
-	for candidate: CharacterBody3D in chain.slice(0, _rulei(&"ryze.e.max_bounce_targets", 6)):
-		_launch_e_bounce(victim, candidate, 1.0, victim)
-	if chain.is_empty():
-		_launch_e_bounce(victim, victim, _rulef(&"ryze.e.bounce_damage_ratio", 0.5), null)
+	skill_controller.resolve_e_chain(victim)
 
 
 func _cache_e_orb_from_center() -> void:
@@ -1390,98 +1202,23 @@ func _attach_e_voxel_shell(projectile: AnimatedSprite3D, bounce: bool) -> Node3D
 
 
 func _launch_e_bounce(source: CharacterBody3D, victim: CharacterBody3D, damage_multiplier: float, return_target: CharacterBody3D) -> void:
-	if not is_instance_valid(source) or not _valid_target(source) or not is_instance_valid(victim) or not _valid_target(victim):
-		return
-	var projectile := e_projectile_template.duplicate() as AnimatedSprite3D
-	projectile.visible = true
-	projectile.set_meta(&"authored_offset", projectile.offset)
-	get_tree().current_scene.add_child(projectile)
-	var start := _skill_travel_point(source, &"e")
-	var destination := _skill_travel_point(victim, &"e")
-	projectile.global_position = start
-	projectile.frame = 0
-	projectile.play()
-	var authored_scale := projectile.scale
-	var e_shell := _attach_e_voxel_shell(projectile, true)
-	var distance := start.distance_to(destination)
-	var duration := maxf(distance / maxf(_rulef(&"ryze.e.missile_speed", 15.0), 0.01), _rulef(&"ryze.e.min_travel_seconds", 0.08))
-	var elapsed := 0.0
-	var landing_pulse := false
-	while is_instance_valid(projectile) and is_instance_valid(victim) and _valid_target(victim) and elapsed < duration:
-		var step := minf(1.0 / 60.0, duration - elapsed)
-		elapsed += step
-		var progress := elapsed / duration
-		var eased := ease(progress, _rulef(&"ryze.e.bounce_ease", -2.2))
-		var hop := sin(progress * PI) + sin(progress * PI * 2.0) * _rulef(&"ryze.e.bounce_hop", 0.14)
-		var arc := hop * minf(_rulef(&"ryze.e.bounce_arc_cap", 0.85), distance * _rulef(&"ryze.e.bounce_arc_ratio", 0.26))
-		var next_position := start.lerp(destination, eased) + Vector3.UP * maxf(arc, 0.0)
-		var travel := next_position - projectile.global_position
-		_update_projectile_facing(projectile, travel)
-		_sync_e_voxel_shell(projectile, e_shell)
-		projectile.global_position = next_position
-		var apex := sin(progress * PI)
-		projectile.scale = Vector3(
-			authored_scale.x * (_rulef(&"ryze.e.bounce_scale_x", 1.16) - apex * _rulef(&"ryze.e.bounce_squash_x", 0.30)),
-			authored_scale.y * (_rulef(&"ryze.e.bounce_scale_y", 0.76) + apex * _rulef(&"ryze.e.bounce_squash_y", 0.40)),
-			authored_scale.z
-		)
-		if e_shell != null:
-			if e_shell.has_method("set_travel"):
-				e_shell.call("set_travel", travel)
-			if e_shell.has_method("set_apex_stretch"):
-				e_shell.call("set_apex_stretch", apex)
-			if not landing_pulse and progress >= _rulef(&"ryze.e.landing_pulse_progress", 0.78) and e_shell.has_method("pulse_elastic"):
-				e_shell.call("pulse_elastic", _rulef(&"ryze.e.landing_pulse", 1.15))
-				landing_pulse = true
-		if not projectile.is_playing():
-			projectile.play()
-		await get_tree().physics_frame
-	if is_instance_valid(projectile):
-		projectile.queue_free()
-	if not is_instance_valid(victim) or not _valid_target(victim):
-		return
-	_apply_e(victim, damage_multiplier)
-	if is_instance_valid(return_target) and _valid_target(return_target):
-		_launch_e_bounce(victim, return_target, _rulef(&"ryze.e.bounce_damage_ratio", 0.5), null)
+	skill_controller.launch_e_bounce(source, victim, damage_multiplier, return_target)
 
 
 func _apply_e(victim: CharacterBody3D, damage_multiplier: float = 1.0) -> void:
-	if not _can_harm(victim):
-		return
-	_damage(victim, _ranked_damage(&"ryze_e_damage", 36.0) * damage_multiplier, &"magic", &"ryze_e_hit")
-	if victim.has_method("apply_magic_resistance_shred"):
-		victim.call("apply_magic_resistance_shred", _flux_remain_multiplier(), _flux_duration())
+	skill_controller.apply_e(victim, damage_multiplier)
 
 
 func _damage(victim: CharacterBody3D, amount: float, type: StringName, hit_profile: StringName) -> void:
-	if not _can_harm(victim):
-		return
-	_deal_hit(victim, amount, type, hit_profile)
-	if desperate_timer <= 0.0:
-		return
-	_play_t_overflow_lightning(victim)
-	_spill_desperate(victim, amount, type, hit_profile)
+	skill_controller.damage(victim, amount, type, hit_profile)
 
 
 func _deal_hit(victim: CharacterBody3D, amount: float, type: StringName, hit_profile: StringName) -> void:
-	if not _can_harm(victim):
-		return
-	if victim.has_method("receive_skill_damage"):
-		victim.call("receive_skill_damage", amount, "瑞兹", false, global_position, type, hit_profile, self)
-	_play_impact(victim)
+	skill_controller.deal_hit(victim, amount, type, hit_profile)
 
 
 func _spill_desperate(primary: CharacterBody3D, amount: float, type: StringName, hit_profile: StringName) -> void:
-	for node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		var candidate := node as CharacterBody3D
-		if candidate == null or candidate == primary or not _can_harm(candidate):
-			continue
-		var offset := candidate.global_position - primary.global_position
-		offset.y = 0.0
-		if offset.length() <= _skill_radius(&"ryze_desperate_power", 3.5):
-			_deal_hit(candidate, amount * _rulef(&"ryze.t.spill_damage_ratio", 0.5), type, hit_profile)
-			if _r_landing_resolving:
-				_play_r_landing_zap_once(candidate)
+	skill_controller.spill_desperate(primary, amount, type, hit_profile)
 
 
 func _hit_vfx_contact(victim: CharacterBody3D) -> Vector3:
@@ -1547,32 +1284,19 @@ func _play_impact(victim: CharacterBody3D) -> void:
 
 
 func _grant_supercharge() -> void:
-	supercharged_casts = _rulei(&"ryze.supercharge.max_casts", 5)
-	supercharged_timer = _rulef(&"ryze.supercharge.duration", 2.5)
-	arcane_stacks = 0
+	skill_controller.grant_supercharge()
 
 
 func _add_arcane_stack(consumes_supercharge: bool) -> void:
-	var max_stacks := _buff_max_stacks(&"ryze_arcane_mastery", 5)
-	arcane_stacks = mini(max_stacks, arcane_stacks + 1)
-	arcane_timer = _buff_duration(&"ryze_arcane_mastery", 6.0)
-	if arcane_stacks == max_stacks:
-		_grant_supercharge()
-	if consumes_supercharge and supercharged_casts > 0:
-		supercharged_casts -= 1
-		var refund := _rulef(&"ryze.supercharge.cooldown_refund", 4.0)
-		for key: StringName in cooldowns:
-			cooldowns[key] = maxf(0.0, float(cooldowns[key]) - refund)
+	skill_controller.add_arcane_stack(consumes_supercharge)
 
 
-func _ranked_damage(effect: StringName, fallback: float) -> float:
-	var row := database.get_skill_effect_rank(effect, 1) if database != null else null
-	return row.base_value if row != null else fallback
+func _ranked_damage(effect: StringName, _fallback: float) -> float:
+	return skill_controller.ranked_damage(effect)
 
 
-func _ranked_control(effect: StringName, fallback: float) -> float:
-	var row := database.get_skill_effect_rank(effect, 1) if database != null else null
-	return row.control_duration if row != null else fallback
+func _ranked_control(effect: StringName, _fallback: float) -> float:
+	return skill_controller.ranked_control(effect)
 
 
 func _cast_event_seconds(animation: StringName, fallback: float) -> float:
@@ -1619,24 +1343,7 @@ func _set_target_outline(candidate: Node, active: bool) -> void:
 
 
 func _find_preferred_hostile() -> CharacterBody3D:
-	var closest_hero: CharacterBody3D
-	var closest_hero_distance := INF
-	var closest_any: CharacterBody3D
-	var closest_any_distance := INF
-	for node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		if not is_instance_valid(node):
-			continue
-		var candidate := node as CharacterBody3D
-		if candidate == null or candidate == self or not _can_harm(candidate):
-			continue
-		var distance := global_position.distance_squared_to(candidate.global_position)
-		if distance < closest_any_distance:
-			closest_any = candidate
-			closest_any_distance = distance
-		if candidate.is_in_group(&"hero_actor") and distance < closest_hero_distance:
-			closest_hero = candidate
-			closest_hero_distance = distance
-	return closest_hero if closest_hero != null else closest_any
+	return CombatTargetQuery.nearest_hostile(get_tree(), self, global_position, INF, true)
 
 
 func _valid_target(candidate: Variant) -> bool:
@@ -1698,21 +1405,15 @@ func _find_ground_mesh() -> MeshInstance3D:
 
 
 func has_super_armor() -> bool:
-	return super_armor_timer > 0.0
+	return skill_controller.super_armor_timer > 0.0
 
 
 func _desperate_duration() -> float:
-	if database == null:
-		return 6.0
-	var rank := database.get_skill_rank(&"ryze_desperate_power", 1)
-	if rank != null and rank.duration > 0.0:
-		return rank.duration
-	var skill := database.get_skill(&"ryze_desperate_power")
-	return skill.duration if skill != null and skill.duration > 0.0 else 6.0
+	return skill_controller.desperate_duration()
 
 
 func _sync_t_buff_presentation() -> void:
-	_sync_self_vfx_node(t_buff, t_buff_flip, &"T_Buff", desperate_timer > 0.0)
+	_sync_self_vfx_node(t_buff, t_buff_flip, &"T_Buff", desperate_timer > 0.0, false)
 
 
 func _sync_shield_presentation() -> void:
@@ -1723,28 +1424,23 @@ func _sync_shield_presentation() -> void:
 
 
 func _is_supercharged() -> bool:
-	return supercharged_casts > 0 and supercharged_timer > 0.0
+	return skill_controller.is_supercharged()
 
 
 func _ready_basic_spell_count() -> int:
-	var count := 0
-	for key: StringName in [&"q", &"w", &"e"]:
-		if float(cooldowns[key]) <= 0.0:
-			count += 1
-	return count
+	return skill_controller.ready_basic_spell_count()
 
 
 func _is_supercharge_cast_animation(animation: StringName) -> bool:
-	return animation == &"spell1" or animation == &"spell2" or animation == &"spell3" \
-		or animation == &"attack1" or animation == &"attack2" or animation == &"attack3" or animation == &"crit"
+	return skill_controller.is_supercharge_cast_animation(animation)
 
 
 func _cast_speed() -> float:
-	return _rulef(&"ryze.cast.speed_scale", 1.35)
+	return skill_controller.cast_speed()
 
 
 func _supercharge_cast_speed() -> float:
-	return _rulef(&"ryze.supercharge.cast_speed_scale", 1.8)
+	return skill_controller.supercharge_cast_speed()
 
 
 func _animation_elapsed_seconds() -> float:
@@ -1788,13 +1484,7 @@ func _is_enemy_candidate(candidate: CharacterBody3D) -> bool:
 
 
 func _can_harm(candidate: CharacterBody3D) -> bool:
-	if candidate == null or candidate == self or not _valid_target(candidate):
-		return false
-	if candidate.has_method("get_team") and String(candidate.call("get_team")) == String(get_team()):
-		return false
-	if candidate.has_method("is_enemy_of"):
-		return bool(candidate.call("is_enemy_of", get_team()))
-	return true
+	return CombatTargetQuery.matches_relation(self, candidate, "hostile")
 
 
 func _escape_destination(away_from_target: Vector3) -> Vector3:
@@ -1837,11 +1527,11 @@ func _update_label() -> void:
 
 
 func _rulef(rule_id: StringName, fallback: float) -> float:
-	return float(database.get_rule(rule_id, fallback)) if database != null else fallback
+	return skill_controller.rulef(rule_id, fallback)
 
 
 func _rulei(rule_id: StringName, fallback: int) -> int:
-	return int(database.get_rule(rule_id, fallback)) if database != null else fallback
+	return skill_controller.rulei(rule_id, fallback)
 
 
 func _cast_range() -> float:
@@ -1853,17 +1543,17 @@ func _warp_range() -> float:
 
 
 func _move_speed() -> float:
-	if database == null:
-		return 3.4
-	var speed := database.get_unit_stat_value(&"ryze", &"move_speed", level)
-	return speed if speed > 0.0 else 3.4
+	var speed := database.get_unit_stat_value(&"ryze", &"move_speed", level) if database != null else 0.0
+	if speed <= 0.0:
+		push_error("Ryze requires positive move_speed unit stat")
+	return speed
 
 
 func _basic_missile_speed() -> float:
-	if database == null:
-		return 13.0
-	var speed := database.get_unit_stat_value(&"ryze", &"missile_speed", level)
-	return speed if speed > 0.0 else 13.0
+	var speed := database.get_unit_stat_value(&"ryze", &"missile_speed", level) if database != null else 0.0
+	if speed <= 0.0:
+		push_error("Ryze requires positive missile_speed unit stat")
+	return speed
 
 
 func _character_pixel_size() -> float:
@@ -1874,82 +1564,36 @@ func _character_pixel_size() -> float:
 	return DEFAULT_PIXEL_SIZE
 
 
-func _skill_cooldown(skill_id: StringName, fallback: float) -> float:
-	if database == null:
-		return fallback
-	var rank := database.get_skill_rank(skill_id, 1)
-	if rank != null and rank.cooldown > 0.0:
-		return rank.cooldown
-	var skill := database.get_skill(skill_id)
-	return skill.cooldown if skill != null and skill.cooldown > 0.0 else fallback
+func _skill_cooldown(skill_id: StringName, _fallback: float) -> float:
+	return skill_controller.skill_cooldown(skill_id)
 
 
 func get_skill_cooldown_state(slot: StringName) -> Dictionary:
-	var cooldown_data: Dictionary = {
-		&"q": [&"ryze_overload", 4.0],
-		&"w": [&"ryze_rune_prison", 14.0],
-		&"e": [&"ryze_spell_flux", 7.0],
-		&"r": [&"ryze_realm_warp", 180.0],
-		&"t": [&"ryze_desperate_power", 50.0],
-	}
-	if not cooldown_data.has(slot):
-		return {"remaining": 0.0, "total": 0.0}
-	var skill_data: Array = cooldown_data[slot]
-	return {
-		"remaining": float(cooldowns.get(slot, 0.0)),
-		"total": _skill_cooldown(skill_data[0], float(skill_data[1])),
-	}
+	return skill_controller.get_skill_cooldown_state(slot)
 
 
-func _skill_range(skill_id: StringName, fallback: float) -> float:
-	if database == null:
-		return fallback
-	var rank := database.get_skill_rank(skill_id, 1)
-	if rank != null and rank.cast_range > 0.0:
-		return rank.cast_range
-	var skill := database.get_skill(skill_id)
-	return skill.cast_range if skill != null and skill.cast_range > 0.0 else fallback
+func _skill_range(skill_id: StringName, _fallback: float) -> float:
+	return skill_controller.skill_range(skill_id)
 
 
-func _skill_radius(skill_id: StringName, fallback: float) -> float:
-	if database == null:
-		return fallback
-	var rank := database.get_skill_rank(skill_id, 1)
-	if rank != null and rank.radius > 0.0:
-		return rank.radius
-	var skill := database.get_skill(skill_id)
-	return skill.radius if skill != null and skill.radius > 0.0 else fallback
+func _skill_radius(skill_id: StringName, _fallback: float) -> float:
+	return skill_controller.skill_radius(skill_id)
 
 
-func _skill_cast_time(skill_id: StringName, fallback: float) -> float:
-	if database == null:
-		return fallback
-	var rank := database.get_skill_rank(skill_id, 1)
-	if rank != null and rank.cast_time > 0.0:
-		return rank.cast_time
-	var skill := database.get_skill(skill_id)
-	return skill.cast_time if skill != null and skill.cast_time > 0.0 else fallback
+func _skill_cast_time(skill_id: StringName, _fallback: float) -> float:
+	return skill_controller.skill_cast_time(skill_id)
 
 
-func _buff_duration(buff_id: StringName, fallback: float) -> float:
-	if database == null:
-		return fallback
-	var buff := database.get_buff(buff_id)
-	return buff.duration if buff != null and buff.duration > 0.0 else fallback
+func _buff_duration(buff_id: StringName, _fallback: float) -> float:
+	return skill_controller.buff_duration(buff_id)
 
 
-func _buff_max_stacks(buff_id: StringName, fallback: int) -> int:
-	if database == null:
-		return fallback
-	var buff := database.get_buff(buff_id)
-	return buff.max_stacks if buff != null and buff.max_stacks > 0 else fallback
+func _buff_max_stacks(buff_id: StringName, _fallback: int) -> int:
+	return skill_controller.buff_max_stacks(buff_id)
 
 
 func _flux_remain_multiplier() -> float:
-	if database == null:
-		return _rulef(&"ryze.e.mr_remain_multiplier", 0.92)
-	var modifier := database.get_buff_modifier(&"ryze_flux", &"magic_resistance")
-	return modifier.value if modifier != null else _rulef(&"ryze.e.mr_remain_multiplier", 0.92)
+	return skill_controller.flux_remain_multiplier()
 
 
 func _flux_duration() -> float:

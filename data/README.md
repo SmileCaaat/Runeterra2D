@@ -35,7 +35,7 @@ Never edit `data/generated/combat_database.tres` by hand. Runtime timers, cooldo
 - `stats.csv`: canonical stat IDs, units, valid ranges and default modifier operation.
 - `units.csv`: hero, monster, summon and training-dummy identity, reusable `instance_template_id`（当前为 `hero` 或 `monster`）, role, resource type, skill, AI and optional `portrait_profile_id` references (required for heroes).
 - `unit_stats.csv`: level-1 values, growth coefficients, growth formula, auditable source values and world-unit conversion.
-- `skills.csv`: targeting, cast model, cooldown, range, radius, duration, movement/facing policy and animation/presentation references.
+- `skills.csv`: `target_type` describes cast shape; `target_relation` describes the required unit relationship (`none`, `hostile`, `friendly`, `self_or_friendly`, `any`). Unit casts require an explicit relation; other casts use `none`. The table also owns cast model, cooldown, range, radius, duration, movement/facing policy and animation/presentation references.
 - `skill_effects.csv`: ordered damage, buff, control, cleanse, delayed-damage and shield operations.
 - `skill_ranks.csv`: typed per-rank cast shell values. Do not encode rank arrays in scalar cells.
 - `skill_effect_ranks.csv`: typed per-rank damage, coefficient, interval and control values for an effect.

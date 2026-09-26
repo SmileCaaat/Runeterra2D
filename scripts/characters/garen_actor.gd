@@ -1,5 +1,7 @@
 extends "res://scripts/actors/hero_instance.gd"
 
+## Garen runtime actor; skill mechanics live in GarenSkillController.
+
 signal attack_landed(animation_name: StringName)
 
 enum CombatState { IDLE, CHASE, ATTACK }
@@ -54,14 +56,14 @@ var arena_max := Vector2(14.5, 4.3)
 var external_move_speed_modifiers: Dictionary = {}
 var attack_pitches: Array[float] = [1.08, 1.0, 0.88]
 var breaker_lunge_pending := false
-var automatic_demo_before_manual_control := true
 var is_dead := false
 var hit_feedback: HeroHitFeedback3D
 
 
 func _ready() -> void:
-	_apply_combat_data()
-	skill_controller.set("automatic_demo", false)
+	if not _apply_combat_data():
+		process_mode = Node.PROCESS_MODE_DISABLED
+		return
 	_setup_ai_brain()
 	bind_hero_instance(combat_database, garen_definition)
 	_build_hit_feedback()
@@ -109,12 +111,12 @@ func _physics_process(delta: float) -> void:
 	_refresh_target()
 	if state == CombatState.ATTACK:
 		_check_attack_audio()
+	if not _is_target_available(target) and bool(skill_controller.call("allows_movement_while_casting")):
+		skill_controller.call("cancel_ocean_storm")
 	if is_player_controlled():
 		_physics_process_player(delta, rooted)
 		return
 	if not _is_target_available(target):
-		if bool(skill_controller.call("allows_movement_while_casting")):
-			skill_controller.call("cancel_ocean_storm")
 		_set_state(CombatState.IDLE)
 		_slow_down(delta)
 		_apply_gravity(delta)
@@ -213,53 +215,29 @@ func _request_player_action(action: StringName, direction_input := Vector2.ZERO)
 	if direction_input.is_finite() and direction_input.length_squared() > 0.0001:
 		player_facing_direction = direction_input.normalized()
 		_face_direction(Vector3(player_facing_direction.x, 0.0, player_facing_direction.y))
-	if state == CombatState.ATTACK:
-		return false
-	if action == &"basic_attack":
-		if bool(skill_controller.get("is_casting")):
+	var request := HeroActionRequest.new()
+	request.source = HeroActionRequest.Source.PLAYER
+	request.action_id = action
+	request.direction = _player_aim_direction(direction_input)
+	if action != &"basic_attack":
+		var skill_index := _player_skill_index(action)
+		if skill_index == 0 or combat_database == null:
 			return false
-		var attack_aim := _player_aim_direction(Vector2.ZERO)
-		_face_direction(Vector3(attack_aim.x, 0.0, attack_aim.y))
-		_start_next_attack(true)
-		return true
-	var skill_index := _player_skill_index(action)
-	if skill_index == 0 or combat_database == null:
-		return false
-	var skill := combat_database.get_skill_by_slot(&"garen", skill_index)
-	if skill == null:
-		return false
-	var casting := bool(skill_controller.get("is_casting"))
-	if casting and not (skill_index == SKILL_W and int(skill_controller.get("current_skill")) == SKILL_E):
-		return false
-	var skill_target: CharacterBody3D
-	var face_target_on_cast := false
-	var ground_point := Vector3.INF
-	match skill.target_type:
-		"unit":
-			_refresh_target()
-			if not _is_target_available(target):
-				return false
-			var target_offset := target.global_position - global_position
-			target_offset.y = 0.0
-			if target_offset.length() > skill.cast_range:
-				return false
-			skill_target = target
-			face_target_on_cast = skill.facing_policy != "none"
-		"ground_area":
-			var aim := _player_aim_direction(direction_input)
-			player_facing_direction = aim
-			_face_direction(Vector3(aim.x, 0.0, aim.y))
-			ground_point = global_position + Vector3(aim.x, 0.0, aim.y) * skill.cast_range
-			ground_point.x = clampf(ground_point.x, arena_min.x, arena_max.x)
-			ground_point.z = clampf(ground_point.z, arena_min.y, arena_max.y)
-			if not ground_point.is_finite() or global_position.distance_to(ground_point) < 0.05:
-				return false
-		_: # self and self_area actions deliberately do not acquire or face a target.
-			pass
-	var started := bool(skill_controller.call("begin_skill", skill_index, skill_target, ground_point))
-	if started and face_target_on_cast and is_instance_valid(skill_target):
-		_face_direction(skill_target.global_position - global_position)
-	return started
+		request.skill_slot = StringName(String(action).trim_prefix("skill_"))
+		var skill := combat_database.get_skill_by_slot(&"garen", skill_index)
+		if skill == null:
+			return false
+		match skill.target_type:
+			"unit":
+				_refresh_target()
+				request.target = target
+			"ground_area":
+				var aim := request.direction
+				request.ground_position = global_position + Vector3(aim.x, 0.0, aim.y) * skill.cast_range
+				request.ground_position.x = clampf(request.ground_position.x, arena_min.x, arena_max.x)
+				request.ground_position.z = clampf(request.ground_position.z, arena_min.y, arena_max.y)
+				request.has_ground_position = true
+	return execute_action(request)
 
 
 func _player_skill_index(action: StringName) -> int:
@@ -322,7 +300,7 @@ func _check_attack_hit(distance: float) -> void:
 			skill_controller.call("resolve_breaker_attack", hit_target)
 			current_attack_is_breaker = false
 		else:
-			var damage := garen_definition.attack_damage if garen_definition != null else 69.0
+			var damage := garen_definition.attack_damage
 			var hit_profile_id: StringName = hit_event.payload_id if hit_event != null else &"basic_melee"
 			if hit_target.has_method("receive_hit"):
 				hit_target.call("receive_hit", global_position, character_model.current_animation, damage, self)
@@ -335,21 +313,7 @@ func _check_attack_hit(distance: float) -> void:
 
 func _find_manual_attack_target() -> CharacterBody3D:
 	var facing := Vector3(current_attack_facing_direction.x, 0.0, current_attack_facing_direction.y).normalized()
-	var best: CharacterBody3D
-	var best_distance := INF
-	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		var candidate := candidate_node as CharacterBody3D
-		if candidate == null or candidate == self or not _is_target_available(candidate) or not _is_hostile_candidate(candidate):
-			continue
-		var offset := candidate.global_position - global_position
-		offset.y = 0.0
-		var distance := offset.length()
-		if distance > get_current_attack_hit_range() or (distance > 0.001 and facing.dot(offset.normalized()) < 0.15):
-			continue
-		if distance < best_distance:
-			best = candidate
-			best_distance = distance
-	return best
+	return CombatTargetQuery.first_hostile_in_facing_arc(get_tree(), self, global_position, facing, get_current_attack_hit_range(), 0.15)
 
 
 func _check_attack_audio() -> void:
@@ -404,18 +368,6 @@ func _on_animation_finished(_animation_name: StringName) -> void:
 	_set_state(CombatState.CHASE)
 
 
-func select_ai_skill() -> int:
-	if ai_decision == null:
-		return 0
-	match ai_decision.action_id:
-		&"skill_q": return SKILL_Q
-		&"skill_w": return SKILL_W
-		&"skill_e": return SKILL_E
-		&"skill_r": return SKILL_R
-		&"skill_t": return SKILL_T
-	return 0
-
-
 func uses_hero_brain() -> bool:
 	return true
 
@@ -426,12 +378,6 @@ func supports_player_control() -> bool:
 
 func _on_control_authority_changed(_authority: ControlAuthority) -> void:
 	player_move_input = Vector2.ZERO
-	if skill_controller != null:
-		if _authority == ControlAuthority.PLAYER:
-			automatic_demo_before_manual_control = bool(skill_controller.get("automatic_demo"))
-			skill_controller.set("automatic_demo", false)
-		else:
-			skill_controller.set("automatic_demo", automatic_demo_before_manual_control)
 	_invalidate_ai_decision("control authority changed")
 
 
@@ -473,8 +419,8 @@ func _build_ai_context() -> HeroAIContext:
 	ctx.extras[&"t_range"] = _skill_range(SKILL_T)
 	ctx.extras[&"breaker_lunge_range"] = _breaker_lunge_range()
 	ctx.extras[&"move_speed_multiplier"] = float(skill_controller.call("get_move_speed_multiplier")) * _external_move_speed_multiplier()
-	ctx.extras[&"attack_damage"] = garen_definition.attack_damage if garen_definition != null else 69.0
-	ctx.extras[&"recent_damage_ratio"] = ai_recent_damage_accumulator / maxf(float(skill_controller.get("max_health")), 1.0)
+	ctx.extras[&"attack_damage"] = garen_definition.attack_damage
+	ctx.recent_damage_ratio = ai_recent_damage_accumulator / maxf(float(skill_controller.get("max_health")), 1.0)
 	if ctx.target != null:
 		ctx.target_position = target.global_position
 		ctx.target_velocity = target.velocity
@@ -522,28 +468,77 @@ func _invalidate_ai_decision(_reason: String = "") -> void:
 
 
 func _can_execute_ai_decision(decision: HeroAIDecision) -> bool:
-	if decision == null or is_dead:
+	return can_execute_action(_ai_action_request(decision))
+
+
+func _ai_action_request(decision: HeroAIDecision) -> HeroActionRequest:
+	if decision == null:
+		return null
+	var request := HeroActionRequest.new()
+	request.source = HeroActionRequest.Source.AI
+	request.action_id = decision.action_id
+	request.skill_slot = decision.skill_slot
+	request.target = decision.target
+	request.has_ground_position = decision.has_destination
+	request.ground_position = decision.destination
+	return request
+
+
+## Final hero-local gate for both intent sources. AI retains its chosen target
+## and range policy; manual casts follow the skill's targeting semantics.
+func can_execute_action(request: HeroActionRequest) -> bool:
+	if request == null or is_dead or process_mode == Node.PROCESS_MODE_DISABLED:
 		return false
-	var action := decision.action_id
-	if action != &"hold" and not _is_target_available(target):
-		return false
-	if decision.target != null and decision.target != target:
-		return false
+	var action := request.action_id
 	var casting := bool(skill_controller.get("is_casting"))
 	var ocean_storm := casting and int(skill_controller.get("current_skill")) == SKILL_E
+	if request.source == HeroActionRequest.Source.PLAYER:
+		if not is_player_controlled() or state == CombatState.ATTACK:
+			return false
+		if action == &"basic_attack":
+			return not casting
+		var player_skill_index := _player_skill_index(action)
+		if player_skill_index == 0 or combat_database == null:
+			return false
+		var skill := combat_database.get_skill_by_slot(&"garen", player_skill_index)
+		if skill == null or request.skill_slot != StringName(String(action).trim_prefix("skill_")):
+			return false
+		var skill_cooldowns: Array = skill_controller.get("cooldowns") as Array
+		if not _skill_ready(skill_cooldowns, player_skill_index):
+			return false
+		if float(skill_controller.get("silence_timer")) > 0.0 and player_skill_index != SKILL_W:
+			return false
+		if casting and not (player_skill_index == SKILL_W and ocean_storm):
+			return false
+		match skill.target_type:
+			"unit":
+				if not CombatTargetQuery.matches_relation(self, request.target, skill.target_relation):
+					return false
+				var target_offset := request.target.global_position - global_position
+				target_offset.y = 0.0
+				return target_offset.length() <= skill.cast_range
+			"ground_area":
+				if not request.has_ground_position or not request.ground_position.is_finite():
+					return false
+				var ground_offset := request.ground_position - global_position
+				ground_offset.y = 0.0
+				return ground_offset.length() >= 0.05 and ground_offset.length() <= skill.cast_range + 0.01
+			"direction":
+				return request.direction.is_finite() and request.direction.length_squared() > 0.0001
+			"self", "self_area":
+				return true
+		return false
+	if action != &"hold" and not _is_target_available(target):
+		return false
+	if request.target != null and request.target != target:
+		return false
 	if action == &"approach":
 		return not casting and not is_rooted() and state != CombatState.ATTACK
 	if action == &"hold":
 		return true
 	if action == &"basic_attack":
 		return not casting and state != CombatState.ATTACK and (_target_distance() <= attack_range or (bool(skill_controller.call("should_use_breaker_attack")) and _target_distance() <= _breaker_lunge_range()))
-	var skill_index := 0
-	match action:
-		&"skill_q": skill_index = SKILL_Q
-		&"skill_w": skill_index = SKILL_W
-		&"skill_e": skill_index = SKILL_E
-		&"skill_r": skill_index = SKILL_R
-		&"skill_t": skill_index = SKILL_T
+	var skill_index := _player_skill_index(action)
 	if skill_index == 0:
 		return false
 	var skill_cooldowns: Array = skill_controller.get("cooldowns") as Array
@@ -570,22 +565,31 @@ func _try_consume_ai_one_shot(decision: HeroAIDecision) -> bool:
 
 
 func _start_combat_action(decision: HeroAIDecision) -> bool:
-	if not _can_execute_ai_decision(decision):
+	return execute_action(_ai_action_request(decision))
+
+
+## Starts only requests accepted by can_execute_action; damage and cooldowns
+## remain owned by the existing attack and skill implementations.
+func execute_action(request: HeroActionRequest) -> bool:
+	if not can_execute_action(request):
 		return false
-	var started := false
-	if decision.action_id == &"basic_attack":
-		_start_next_attack()
-		started = true
-	else:
-		var skill_index := 0
-		match decision.action_id:
-			&"skill_q": skill_index = SKILL_Q
-			&"skill_w": skill_index = SKILL_W
-			&"skill_e": skill_index = SKILL_E
-			&"skill_r": skill_index = SKILL_R
-			&"skill_t": skill_index = SKILL_T
-		if skill_index > 0:
-			started = bool(skill_controller.call("begin_skill", skill_index, target))
+	if request.action_id == &"basic_attack":
+		if request.source == HeroActionRequest.Source.PLAYER:
+			_face_direction(Vector3(request.direction.x, 0.0, request.direction.y))
+		_start_next_attack(request.source == HeroActionRequest.Source.PLAYER)
+		return true
+	var skill_index := _player_skill_index(request.action_id)
+	if skill_index == 0:
+		return false
+	if request.source == HeroActionRequest.Source.AI:
+		return bool(skill_controller.call("begin_skill", skill_index, target))
+	var skill := combat_database.get_skill_by_slot(&"garen", skill_index)
+	var ground_point := request.ground_position if request.has_ground_position else Vector3.INF
+	if skill.target_type == "ground_area":
+		_face_direction(Vector3(request.direction.x, 0.0, request.direction.y))
+	var started := bool(skill_controller.call("begin_skill", skill_index, request.target, ground_point))
+	if started and skill.target_type == "unit" and skill.facing_policy != "none" and is_instance_valid(request.target):
+		_face_direction(request.target.global_position - global_position)
 	return started
 
 
@@ -647,18 +651,7 @@ func _target_health_ratio(candidate: CharacterBody3D) -> float:
 
 
 func _count_nearby_enemies(radius: float) -> int:
-	var count := 0
-	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		var candidate := candidate_node as CharacterBody3D
-		if candidate == self or not _is_target_available(candidate):
-			continue
-		if not _is_hostile_candidate(candidate):
-			continue
-		var planar := candidate.global_position - global_position
-		planar.y = 0.0
-		if planar.length() <= radius:
-			count += 1
-	return count
+	return CombatTargetQuery.hostiles_in_radius(get_tree(), self, global_position, radius).size()
 
 
 func _set_state(next_state: CombatState) -> void:
@@ -718,8 +711,8 @@ func _move_during_ocean_storm(delta: float) -> void:
 
 
 func _apply_gravity(delta: float) -> void:
-	var floor_velocity := float(combat_database.get_rule(&"combat.floor_stick_velocity", -0.1)) if combat_database != null else -0.1
-	var gravity := float(combat_database.get_rule(&"combat.gravity", 20.0)) if combat_database != null else 20.0
+	var floor_velocity := float(combat_database.get_rule(&"combat.floor_stick_velocity"))
+	var gravity := float(combat_database.get_rule(&"combat.gravity"))
 	if is_on_floor():
 		velocity.y = floor_velocity
 	else:
@@ -803,36 +796,11 @@ func _is_target_available(candidate: Node) -> bool:
 
 
 func _find_closest_target() -> CharacterBody3D:
-	var closest_hero: CharacterBody3D
-	var closest_hero_distance := INF
-	var closest_any: CharacterBody3D
-	var closest_any_distance := INF
-	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		if not is_instance_valid(candidate_node):
-			continue
-		var candidate := candidate_node as CharacterBody3D
-		if candidate == null or candidate == self or not _is_target_available(candidate):
-			continue
-		if not _is_hostile_candidate(candidate):
-			continue
-		var candidate_distance := global_position.distance_squared_to(candidate.global_position)
-		if candidate_distance < closest_any_distance:
-			closest_any = candidate
-			closest_any_distance = candidate_distance
-		if _is_hero_actor(candidate) and candidate_distance < closest_hero_distance:
-			closest_hero = candidate
-			closest_hero_distance = candidate_distance
-	return closest_hero if closest_hero != null else closest_any
+	return CombatTargetQuery.nearest_hostile(get_tree(), self, global_position, INF, true)
 
 
 func _is_hostile_candidate(candidate: CharacterBody3D) -> bool:
-	if not is_instance_valid(candidate):
-		return false
-	if candidate.has_method("is_enemy_of"):
-		return bool(candidate.call("is_enemy_of", get_team()))
-	if candidate.has_method("get_team"):
-		return StringName(candidate.call("get_team")) != get_team()
-	return false
+	return CombatTargetQuery.matches_relation(self, candidate, "hostile")
 
 
 func _is_hero_actor(candidate: Node) -> bool:
@@ -885,7 +853,7 @@ func is_targetable() -> bool:
 
 
 func receive_hit(attacker_position: Vector3, _attack_name: StringName, amount: float = -1.0, source_actor: Node = null) -> void:
-	var damage := amount if amount >= 0.0 else (garen_definition.attack_damage if garen_definition != null else 69.0)
+	var damage := amount if amount >= 0.0 else garen_definition.attack_damage
 	receive_skill_damage(damage, "普攻", true, attacker_position, &"physical", &"basic_melee", source_actor)
 
 
@@ -924,8 +892,11 @@ func _die() -> void:
 	velocity = Vector3.ZERO
 	breaker_lunge_pending = false
 	if skill_controller != null:
+		# E maintains spell3 from the skill controller's process loop. Cancel it
+		# before playing death so neither that loop nor its async cast can reclaim
+		# the model animation on a later frame.
+		skill_controller.call("interrupt_for_death")
 		skill_controller.call("set_target", null)
-		skill_controller.set("is_casting", false)
 	if is_in_group(&"combat_target"):
 		remove_from_group(&"combat_target")
 	character_model.play_semantic(&"death")
@@ -1017,13 +988,13 @@ func _perform_breaker_lunge() -> void:
 		return
 	var direction := offset.normalized()
 	_face_direction(direction)
-	var standoff := float(combat_database.get_rule(&"garen.breaker.lunge_standoff", 0.85)) if combat_database != null else 0.85
+	var standoff := float(combat_database.get_rule(&"garen.breaker.lunge_standoff"))
 	var destination := target.global_position - direction * standoff
 	destination.y = global_position.y
 	destination.x = clampf(destination.x, arena_min.x, arena_max.x)
 	destination.z = clampf(destination.z, arena_min.y, arena_max.y)
 	var origin := global_position
-	var duration := float(combat_database.get_rule(&"garen.breaker.lunge_duration", 0.12)) if combat_database != null else 0.12
+	var duration := float(combat_database.get_rule(&"garen.breaker.lunge_duration"))
 	var elapsed := 0.0
 	while elapsed < duration and not is_rooted() and _is_target_available(target):
 		await get_tree().process_frame
@@ -1031,38 +1002,57 @@ func _perform_breaker_lunge() -> void:
 		global_position = origin.lerp(destination, ease(clampf(elapsed / duration, 0.0, 1.0), -1.6))
 
 
-func _apply_combat_data() -> void:
+func _apply_combat_data() -> bool:
 	combat_database = CombatData.database()
 	if combat_database == null:
-		push_warning("Combat database is unavailable; using inspector fallback values")
-		return
+		push_error("Garen requires CombatDatabase")
+		return false
 	garen_definition = combat_database.get_unit(&"garen")
+	if garen_definition == null:
+		push_error("Garen requires unit definition garen")
+		return false
+	for rule_id: StringName in [&"combat.floor_stick_velocity", &"combat.gravity", &"garen.breaker.lunge_standoff", &"garen.breaker.lunge_duration"]:
+		if combat_database.get_rule(rule_id) == null:
+			push_error("Garen requires combat rule %s" % rule_id)
+			return false
 	var configured_combo: Array[StringName] = []
 	for event: AnimationEventDefinition in combat_database.animation_events:
 		if event.owner_id == &"garen" and event.event_type == "hit" and event.payload_id == &"basic_melee" and not configured_combo.has(event.animation_name):
 			configured_combo.append(event.animation_name)
-	if not configured_combo.is_empty():
-		attack_combo = configured_combo
-	if garen_definition != null:
-		move_speed = garen_definition.move_speed
-		acceleration = garen_definition.acceleration
-		attack_range = garen_definition.attack_range
-		fighter_ai = combat_database.get_ai_profile(garen_definition.ai_profile_id)
-	if fighter_ai != null:
-		arena_min = fighter_ai.arena_min
-		arena_max = fighter_ai.arena_max
-		ai_archetype = combat_database.get_ai_archetype(fighter_ai.archetype_id)
+	if configured_combo.is_empty():
+		push_error("Garen requires authored basic melee animation events")
+		return false
+	attack_combo = configured_combo
+	move_speed = garen_definition.move_speed
+	acceleration = garen_definition.acceleration
+	attack_range = garen_definition.attack_range
+	fighter_ai = combat_database.get_ai_profile(garen_definition.ai_profile_id)
+	if fighter_ai == null:
+		push_error("Garen requires AI profile %s" % garen_definition.ai_profile_id)
+		return false
+	arena_min = fighter_ai.arena_min
+	arena_max = fighter_ai.arena_max
+	ai_archetype = combat_database.get_ai_archetype(fighter_ai.archetype_id)
+	if ai_archetype == null:
+		push_error("Garen requires archetype %s" % fighter_ai.archetype_id)
+		return false
 	var hit_profile := combat_database.get_hit_profile(&"basic_melee")
-	if hit_profile != null:
-		attack_hit_range = hit_profile.size.x
 	var breaker_profile := combat_database.get_hit_profile(&"breaker_hit")
-	if breaker_profile != null:
-		breaker_hit_range = breaker_profile.size.x
+	if hit_profile == null or breaker_profile == null:
+		push_error("Garen requires basic_melee and breaker_hit profiles")
+		return false
+	attack_hit_range = hit_profile.size.x
+	breaker_hit_range = breaker_profile.size.x
 	var attack_profile := combat_database.get_asset_profile(&"garen_attack_audio")
-	if attack_profile != null:
-		var stream := load(attack_profile.audio_path) as AudioStream
-		if stream != null:
-			attack_audio.stream = stream
-		attack_audio.volume_db = attack_profile.volume_db
-		attack_audio.max_distance = attack_profile.max_distance
-		attack_pitches = [attack_profile.pitch_max, 1.0, attack_profile.pitch_min]
+	if attack_profile == null:
+		push_error("Garen requires attack audio profile")
+		return false
+	var stream := load(attack_profile.audio_path) as AudioStream
+	if stream == null:
+		push_error("Garen requires attack audio stream %s" % attack_profile.audio_path)
+		return false
+	attack_audio.stream = stream
+	attack_audio.volume_db = attack_profile.volume_db
+	attack_audio.max_distance = attack_profile.max_distance
+	attack_pitches = [attack_profile.pitch_max, 1.0, attack_profile.pitch_min]
+	return true
