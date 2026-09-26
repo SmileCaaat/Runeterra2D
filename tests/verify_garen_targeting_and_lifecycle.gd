@@ -42,14 +42,26 @@ func _initialize() -> void:
 			and friendly_dummy.is_in_group(&"combat_target") \
 			and String(spawner.get("scene_mode")) == "training"
 
-	blue.call("receive_skill_damage", 99999.0, "TEST", false, red.global_position, &"true", &"judgment_hit")
+	var skills := blue.get_node("SkillController")
+	var ocean_storm := skills.get_node("OceanStorm") as AnimatedSprite3D
+	var model := blue.get_node("GarenModel") as GarenModelAnimator
+	var cast_generation_before_death := int(skills.get("_cast_generation"))
+	var e_started := bool(skills.call("begin_skill", 3))
 	await process_frame
-	var model := blue.get_node("GarenModel") as Node3D
+	e_started = e_started and bool(skills.get("is_casting")) \
+		and bool(skills.get("ocean_storm_loop_active")) \
+		and StringName(model.get("current_animation")) == &"spell3"
+	blue.call("receive_skill_damage", 99999.0, "TEST", false, red.global_position, &"true", &"judgment_hit")
+	await create_timer(0.55).timeout
 	var death_ok := bool(blue.get("is_dead")) \
 		and not blue.is_in_group(&"combat_target") \
 		and not bool(blue.call("is_targetable")) \
 		and is_zero_approx(float(blue.get("current_health"))) \
-		and model != null and StringName(model.get("current_animation")) == &"death"
+		and model != null and StringName(model.get("current_animation")) == &"death" \
+		and not bool(skills.get("ocean_storm_loop_active")) \
+		and not bool(skills.get("is_casting")) \
+		and int(skills.get("_cast_generation")) == cast_generation_before_death + 2 \
+		and not ocean_storm.visible and not ocean_storm.is_playing()
 
 	blue.call("revive_for_training")
 	await process_frame
@@ -57,6 +69,6 @@ func _initialize() -> void:
 		and blue.is_in_group(&"combat_target") \
 		and bool(blue.call("is_targetable")) \
 		and is_equal_approx(float(blue.get("current_health")), float(blue.get("max_health")))
-	print("GAREN_TARGETING_LIFECYCLE hero_priority=%s unit_controls=%s death=%s revive=%s" % [hero_priority_ok, unit_controls_ok, death_ok, revive_ok])
+	print("GAREN_TARGETING_LIFECYCLE hero_priority=%s unit_controls=%s e_started=%s death=%s e_death_cancel=%s revive=%s" % [hero_priority_ok, unit_controls_ok, e_started, death_ok, not bool(skills.get("ocean_storm_loop_active")), revive_ok])
 	stage.queue_free()
-	quit(0 if hero_priority_ok and unit_controls_ok and death_ok and revive_ok else 1)
+	quit(0 if hero_priority_ok and unit_controls_ok and e_started and death_ok and revive_ok else 1)

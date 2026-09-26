@@ -924,8 +924,11 @@ func _die() -> void:
 	velocity = Vector3.ZERO
 	breaker_lunge_pending = false
 	if skill_controller != null:
+		# E maintains spell3 from the skill controller's process loop. Cancel it
+		# before playing death so neither that loop nor its async cast can reclaim
+		# the model animation on a later frame.
+		skill_controller.call("interrupt_for_death")
 		skill_controller.call("set_target", null)
-		skill_controller.set("is_casting", false)
 	if is_in_group(&"combat_target"):
 		remove_from_group(&"combat_target")
 	character_model.play_semantic(&"death")

@@ -1320,12 +1320,30 @@ func _cast_ocean_storm(cast_generation: int) -> void:
 
 
 func cancel_ocean_storm() -> void:
-	if not is_casting or current_skill != SKILL_OCEAN_STORM:
+	var ocean_storm_active := current_skill == SKILL_OCEAN_STORM \
+		or ocean_storm_loop_active \
+		or ocean_storm.visible \
+		or ocean_storm.is_playing() \
+		or ocean_audio.is_playing()
+	if not ocean_storm_active:
 		return
+	_cast_generation += 1
+	if current_skill == SKILL_OCEAN_STORM:
+		is_casting = false
+		current_skill = 0
+	demo_timer = demo_gap
+	ocean_storm_loop_active = false
+	ocean_storm.visible = false
+	ocean_storm.stop()
+	ocean_audio.stop()
+
+
+func interrupt_for_death() -> void:
+	# Death invalidates any pending async cast even if the public cast flags have
+	# already drifted out of sync with E's animation/VFX loop.
 	_cast_generation += 1
 	is_casting = false
 	current_skill = 0
-	demo_timer = demo_gap
 	ocean_storm_loop_active = false
 	ocean_storm.visible = false
 	ocean_storm.stop()
