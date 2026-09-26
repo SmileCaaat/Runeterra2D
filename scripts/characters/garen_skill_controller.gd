@@ -273,17 +273,38 @@ func set_target(next_target: CharacterBody3D) -> void:
 	target = next_target
 
 
-func begin_skill(skill_index: int, skill_target: CharacterBody3D) -> bool:
+func begin_skill(
+	skill_index: int,
+	skill_target: CharacterBody3D = null,
+	ground_target_position: Vector3 = Vector3.INF
+) -> bool:
 	if skill_index < SKILL_BREAKER or skill_index > SKILL_SEVEN_SEAS:
+		return false
+	var definition := _definition(skill_index)
+	if definition == null:
 		return false
 	if silence_timer > 0.0 and skill_index != SKILL_BLACK_SAIL:
 		return false
-	if cooldowns[skill_index] > 0.0 or not is_instance_valid(skill_target):
+	if cooldowns[skill_index] > 0.0:
 		return false
-	target = skill_target
+	var cast_point := ground_target_position
+	if definition.target_type == "ground_area" and not cast_point.is_finite() and _is_valid_skill_target(skill_target):
+		cast_point = skill_target.global_position
+	match definition.target_type:
+		"unit":
+			if not _is_valid_skill_target(skill_target):
+				return false
+		"ground_area":
+			if not cast_point.is_finite():
+				return false
+			var ground_offset := cast_point - fighter.global_position
+			ground_offset.y = 0.0
+			if ground_offset.length() > definition.cast_range + 0.01:
+				return false
 	# W is instant and intentionally does not take the cast lock: it can be
 	# activated during E without cancelling the spin.
 	if skill_index == SKILL_BLACK_SAIL:
+		target = skill_target
 		cast_counts[skill_index] += 1
 		cooldowns[skill_index] = _get_cooldown(skill_index)
 		_cast_black_sail()
@@ -291,13 +312,18 @@ func begin_skill(skill_index: int, skill_target: CharacterBody3D) -> bool:
 		return true
 	if is_casting:
 		return false
+	target = skill_target
 	is_casting = true
 	current_skill = skill_index
 	_cast_generation += 1
 	cast_counts[skill_index] += 1
 	cooldowns[skill_index] = _get_cooldown(skill_index)
-	_cast_skill_async(skill_index, _cast_generation)
+	_cast_skill_async(skill_index, _cast_generation, cast_point)
 	return true
+
+
+func _is_valid_skill_target(skill_target: Variant) -> bool:
+	return is_instance_valid(skill_target) and skill_target is CharacterBody3D and skill_target != fighter and skill_target.is_in_group(&"combat_target") and (not skill_target.has_method("is_targetable") or bool(skill_target.call("is_targetable")))
 
 
 func try_begin_demo_skill() -> bool:
@@ -1230,7 +1256,7 @@ func prepare_ghostship_direction(destination: Vector3) -> float:
 	return horizontal_direction
 
 
-func _cast_skill_async(skill_index: int, cast_generation: int) -> void:
+func _cast_skill_async(skill_index: int, cast_generation: int, ground_target_position: Vector3) -> void:
 	match skill_index:
 		SKILL_BREAKER:
 			await _cast_breaker()
@@ -1241,7 +1267,7 @@ func _cast_skill_async(skill_index: int, cast_generation: int) -> void:
 		SKILL_TYRANT_JUDGMENT:
 			await _cast_tyrant_judgment()
 		SKILL_SEVEN_SEAS:
-			await _cast_seven_seas()
+			await _cast_seven_seas(ground_target_position)
 	if _cast_generation == cast_generation:
 		is_casting = false
 		current_skill = 0
@@ -1344,13 +1370,13 @@ func _cast_tyrant_judgment() -> void:
 	await get_tree().create_timer(_skill_float(SKILL_TYRANT_JUDGMENT, "recovery_time", 0.35)).timeout
 
 
-func _cast_seven_seas() -> void:
+func _cast_seven_seas(ground_target_position: Vector3 = Vector3.INF) -> void:
 	ghostship_last_impact_frame = -1
 	_request_awakening_cutin(SKILL_SEVEN_SEAS)
 	character_model.play_semantic(_skill_animation(SKILL_SEVEN_SEAS, &"taunt"))
 	# This is a ground-targeted area skill. The AI chooses the target's position
 	# at cast time, but the area does not continue tracking that character.
-	var area_center := target.global_position if is_instance_valid(target) else fighter.global_position
+	var area_center := ground_target_position if ground_target_position.is_finite() else (target.global_position if is_instance_valid(target) else fighter.global_position)
 	prepare_ghostship_direction(area_center)
 	ghostship.visible = true
 	ghostship.play(ghostship.animation)

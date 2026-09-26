@@ -279,40 +279,113 @@ func _apply_player_movement(rooted: bool) -> void:
 	global_position = _clamp_to_arena(global_position)
 
 
-func request_player_basic_attack() -> bool:
-	return _request_player_action(&"basic_attack")
+func request_player_basic_attack(direction_input := Vector2.ZERO) -> bool:
+	return _request_player_action(&"basic_attack", Vector3.ZERO, false, direction_input)
 
 
 func request_player_skill(slot: StringName, direction_input := Vector2.ZERO) -> bool:
-	if slot == &"r":
-		if not direction_input.is_finite() or direction_input.length_squared() < 0.04:
-			return false
-		var direction := Vector3(direction_input.x, 0.0, direction_input.y).normalized()
-		var distance := minf(_rulef(&"ryze.r.manual_warp_distance", 8.0), _warp_range())
-		var destination := _clamp_to_arena(global_position + direction * distance)
+	if slot not in [&"q", &"w", &"e", &"r", &"t"]:
+		return false
+	var slot_index := _player_skill_index(slot)
+	var skill := database.get_skill_by_slot(&"ryze", slot_index) if database != null else null
+	if skill == null:
+		return false
+	if direction_input.is_finite() and direction_input.length_squared() > 0.0001:
+		player_facing_direction = direction_input.normalized()
+		_face(Vector3(player_facing_direction.x, 0.0, player_facing_direction.y))
+	if skill.target_type == "ground_area":
+		var aim := _player_aim_direction(direction_input)
+		var distance := minf(_rulef(&"ryze.r.manual_warp_distance", 8.0), minf(_warp_range(), skill.cast_range))
+		var destination := _clamp_to_arena(global_position + Vector3(aim.x, 0.0, aim.y) * distance)
 		if destination.distance_to(global_position) < 0.01:
 			return false
-		return _request_player_action(&"player_r", destination, true)
-	if slot not in [&"q", &"w", &"e", &"t"]:
-		return false
+		return _request_player_action(&"skill_r", destination, true)
 	return _request_player_action(StringName("skill_" + slot))
 
 
-func _request_player_action(action: StringName, destination := Vector3.ZERO, has_destination := false) -> bool:
-	if not is_player_controlled():
+func _request_player_action(
+	action: StringName,
+	destination := Vector3.ZERO,
+	has_destination := false,
+	direction_input := Vector2.ZERO
+) -> bool:
+	if not is_player_controlled() or is_dead or not enabled or action_lock > 0.0:
 		return false
-	_refresh_target()
-	var decision := HeroAIDecision.make(action, 0.0, "player request")
-	decision.target = target
-	decision.destination = destination
-	decision.has_destination = has_destination
-	if not _can_execute_ai_decision(decision):
+	if direction_input.is_finite() and direction_input.length_squared() > 0.0001:
+		player_facing_direction = direction_input.normalized()
+		_face(Vector3(player_facing_direction.x, 0.0, player_facing_direction.y))
+	if action == &"basic_attack":
+		if not _is_player_combat_action_ready(&"basic_attack"):
+			return false
+		var basic_aim := _player_aim_vector3()
+		_face(basic_aim)
+		_basic_attack_directional(basic_aim)
+		return true
+	var slot := StringName(String(action).trim_prefix("skill_"))
+	var skill := database.get_skill_by_slot(&"ryze", _player_skill_index(slot)) if database != null else null
+	if skill == null or silence_timer > 0.0 or cooldowns.get(slot, 0.0) > 0.0:
 		return false
-	if has_destination:
+	var skill_target: CharacterBody3D
+	if skill.target_type == "unit":
+		_refresh_target()
+		if not _can_harm(target) or _current_target_distance() > skill.cast_range:
+			return false
+		skill_target = target
+		if skill.facing_policy != "none":
+			_face(target.global_position - global_position)
+	elif skill.target_type == "ground_area":
+		if not has_destination or not destination.is_finite() or destination.distance_to(global_position) > _warp_range() + 0.01:
+			return false
+		if _clamp_to_arena(destination).distance_to(destination) > 0.01:
+			return false
+		if is_rooted():
+			return false
 		_face(destination - global_position)
-	elif is_instance_valid(target):
-		_face(target.global_position - global_position)
-	return _start_combat_action(decision)
+	elif skill.target_type == "direction":
+		_face(_player_aim_vector3())
+	else:
+		# Self and directional casts intentionally do not acquire or face the AI target.
+		pass
+	if not _is_player_combat_action_ready(slot):
+		return false
+	velocity = Vector3.ZERO
+	match slot:
+		&"q": _cast_q_directional(_player_aim_vector3())
+		&"w": _cast_w(skill_target)
+		&"e": _cast_e(skill_target)
+		&"r": cast_realm_warp(destination)
+		&"t": cast_desperate_power()
+		_: return false
+	return true
+
+
+func _player_skill_index(slot: StringName) -> int:
+	match slot:
+		&"q": return 1
+		&"w": return 2
+		&"e": return 3
+		&"r": return 4
+		&"t": return 5
+	return -1
+
+
+func _player_aim_direction(direction_input: Vector2) -> Vector2:
+	if direction_input.is_finite() and direction_input.length_squared() > 0.0001:
+		return direction_input.normalized()
+	return player_facing_direction.normalized() if player_facing_direction.length_squared() > 0.0001 else Vector2.RIGHT
+
+
+func _player_aim_vector3() -> Vector3:
+	var aim := player_facing_direction.normalized() if player_facing_direction.length_squared() > 0.0001 else Vector2.RIGHT
+	return Vector3(aim.x, 0.0, aim.y)
+
+
+func _is_player_combat_action_ready(slot: StringName) -> bool:
+	if is_rooted() and slot == &"r":
+		return false
+	if slot == &"basic_attack":
+		return action_lock <= 0.0
+	return cooldowns.get(slot, 0.0) <= 0.0 and action_lock <= 0.0
 
 
 func supports_player_control() -> bool:
@@ -573,11 +646,28 @@ func _basic_attack(victim: CharacterBody3D) -> void:
 	)
 
 
+func _basic_attack_directional(direction: Vector3) -> void:
+	var animations: Array[StringName] = [&"attack1", &"attack2", &"attack3", &"crit"]
+	var animation := animations[attack_index]
+	attack_index = (attack_index + 1) % animations.size()
+	await _play_action_to_end(animation, _cast_event_seconds(animation, 0.5), func() -> void:
+		_launch_directional_projectile(animation, _basic_missile_speed(), &"basic", direction, _basic_attack_range())
+	)
+
+
 func _cast_q(victim: CharacterBody3D) -> void:
 	cooldowns[&"q"] = _skill_cooldown(&"ryze_overload", 4.0)
 	_add_arcane_stack(true)
 	await _play_action_to_end(&"spell1", _cast_event_seconds(&"spell1", 0.3), func() -> void:
 		_launch_projectile(victim, &"Spell1_Q", _rulef(&"ryze.q.missile_speed", 17.0), &"q")
+	)
+
+
+func _cast_q_directional(direction: Vector3) -> void:
+	cooldowns[&"q"] = _skill_cooldown(&"ryze_overload", 4.0)
+	_add_arcane_stack(true)
+	await _play_action_to_end(&"spell1", _cast_event_seconds(&"spell1", 0.3), func() -> void:
+		_launch_directional_projectile(&"Spell1_Q", _rulef(&"ryze.q.missile_speed", 17.0), &"q", direction, _skill_range(&"ryze_overload", 5.5))
 	)
 
 
@@ -895,19 +985,7 @@ func _play_action_to_end(animation: StringName, cast_event_seconds: float, event
 func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: float, payload: StringName) -> void:
 	if not is_instance_valid(victim) or not _valid_target(victim):
 		return
-	var template := _projectile_template(payload)
-	var projectile := template.duplicate() as AnimatedSprite3D if template != null else AnimatedSprite3D.new()
-	if template == null:
-		projectile.sprite_frames = VFX_FRAMES
-		projectile.animation = animation
-		projectile.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		projectile.pixel_size = _character_pixel_size()
-		projectile.no_depth_test = true
-		projectile.render_priority = 3
-	projectile.visible = true
-	projectile.set_meta(&"authored_offset", projectile.offset)
-	get_tree().current_scene.add_child(projectile)
-	projectile.global_position = _projectile_origin(payload)
+	var projectile := _create_projectile(payload, animation)
 	_update_projectile_facing(projectile, _skill_travel_point(victim, payload) - projectile.global_position)
 	projectile.frame = 0
 	projectile.play()
@@ -950,6 +1028,108 @@ func _launch_projectile(victim: CharacterBody3D, animation: StringName, speed: f
 		&"q":
 			_damage(victim, _ranked_damage(&"ryze_q_damage", 60.0), &"magic", &"ryze_q_hit")
 		&"e": _resolve_e_chain(victim)
+
+
+func _create_projectile(payload: StringName, animation: StringName) -> AnimatedSprite3D:
+	var template := _projectile_template(payload)
+	var projectile := template.duplicate() as AnimatedSprite3D if template != null else AnimatedSprite3D.new()
+	if template == null:
+		projectile.sprite_frames = VFX_FRAMES
+		projectile.animation = animation
+		projectile.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		projectile.pixel_size = _character_pixel_size()
+		projectile.no_depth_test = true
+		projectile.render_priority = 3
+	projectile.visible = true
+	projectile.set_meta(&"authored_offset", projectile.offset)
+	get_tree().current_scene.add_child(projectile)
+	projectile.global_position = _projectile_origin(payload)
+	return projectile
+
+
+func _launch_directional_projectile(
+	animation: StringName,
+	speed: float,
+	payload: StringName,
+	direction: Vector3,
+	max_range: float
+) -> void:
+	var planar_direction := Vector3(direction.x, 0.0, direction.z)
+	if planar_direction.length_squared() <= 0.0001 or speed <= 0.0 or max_range <= 0.0:
+		return
+	planar_direction = planar_direction.normalized()
+	var projectile := _create_projectile(payload, animation)
+	projectile.add_to_group(&"ryze_directional_projectile")
+	_update_projectile_facing(projectile, planar_direction)
+	projectile.frame = 0
+	projectile.play()
+	var base_scale := projectile.scale
+	var elapsed := 0.0
+	var traveled := 0.0
+	var hit_target: CharacterBody3D
+	while is_instance_valid(projectile) and traveled < max_range:
+		var delta := get_physics_process_delta_time()
+		if delta <= 0.0:
+			delta = 1.0 / 60.0
+		var step_length := minf(speed * delta, max_range - traveled)
+		var previous_position := projectile.global_position
+		var next_position := previous_position + planar_direction * step_length
+		hit_target = _first_enemy_on_projectile_segment(previous_position, next_position)
+		var travel_direction := next_position - previous_position
+		if hit_target != null:
+			var hit_point := _target_visual_position(hit_target)
+			projectile.global_position = Vector3(hit_point.x, previous_position.y, hit_point.z)
+			travel_direction = projectile.global_position - previous_position
+		else:
+			projectile.global_position = next_position
+		_update_projectile_facing(projectile, travel_direction)
+		if payload == &"q":
+			_update_q_travel_deform(projectile, base_scale, planar_direction * speed, elapsed)
+			elapsed += delta
+		traveled += step_length
+		if not projectile.is_playing():
+			projectile.play()
+		if hit_target != null:
+			break
+		await get_tree().physics_frame
+	if is_instance_valid(projectile):
+		projectile.queue_free()
+	if not is_instance_valid(hit_target) or not _can_harm(hit_target):
+		return
+	match payload:
+		&"basic":
+			_damage(hit_target, definition.attack_damage if definition != null else 55.0, &"physical", &"ryze_basic_hit")
+		&"q":
+			_damage(hit_target, _ranked_damage(&"ryze_q_damage", 60.0), &"magic", &"ryze_q_hit")
+
+
+func _first_enemy_on_projectile_segment(from: Vector3, to: Vector3) -> CharacterBody3D:
+	var start := Vector2(from.x, from.z)
+	var segment := Vector2(to.x - from.x, to.z - from.z)
+	var length_squared := segment.length_squared()
+	var best_progress := INF
+	var best_target: CharacterBody3D
+	var hit_radius := _rulef(&"ryze.projectile.hit_radius", 0.62)
+	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
+		var candidate := candidate_node as CharacterBody3D
+		if candidate == null or not _can_harm(candidate):
+			continue
+		var contact := _target_visual_position(candidate)
+		var target_point := Vector2(contact.x, contact.z)
+		var progress := clampf((target_point - start).dot(segment) / length_squared, 0.0, 1.0) if length_squared > 0.0001 else 0.0
+		if start.lerp(Vector2(to.x, to.z), progress).distance_to(target_point) > hit_radius:
+			continue
+		if progress < best_progress:
+			best_progress = progress
+			best_target = candidate
+	return best_target
+
+
+func _basic_attack_range() -> float:
+	if database == null:
+		return 5.5
+	var range := database.get_unit_stat_value(&"ryze", &"attack_range", level)
+	return range if range > 0.0 else 5.5
 
 
 func _update_q_travel_deform(

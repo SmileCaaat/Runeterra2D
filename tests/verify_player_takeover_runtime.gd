@@ -34,6 +34,9 @@ func _run() -> void:
 	enemy = stage.get_node("Characters/RosterGarenRed")
 	for hero: Node in get_nodes_in_group(&"hero_actor"):
 		hero.set_physics_process(false)
+		var hero_skills := hero.get_node_or_null("SkillController")
+		if hero_skills != null:
+			hero_skills.set("automatic_demo", false)
 	coordinator.set_physics_process(false)
 	_check(not garen.is_player_controlled() and not ryze.is_player_controlled() and coordinator.manual_hero == null, "default AI")
 	hud.select_hero(0)
@@ -108,7 +111,8 @@ func _hero_tests() -> void:
 		var index := [&"q", &"w", &"e", &"r", &"t"].find(slot) + 1
 		(skills.get("cooldowns") as Array)[index] = 0.0
 		var previous_count := int(skills.get("cast_counts")[index])
-		_check(garen.request_player_skill(slot), "Garen skill " + slot)
+		var manual_skill_started := garen.request_player_skill(slot)
+		_check(manual_skill_started, "Garen skill " + slot)
 		_check(int(skills.get("cast_counts")[index]) == previous_count + 1 and not garen.request_player_skill(slot), "Garen one start/CD " + slot)
 		if slot == &"e":
 			(skills.get("cooldowns") as Array)[2] = 0.0
@@ -124,6 +128,7 @@ func _hero_tests() -> void:
 			coordinator.toggle_control()
 			_check(bool(skills.get("is_casting")) and int(skills.get("current_skill")) == 3, "takeover preserves E")
 		await _wait_garen_idle()
+	await _garen_empty_target_tests()
 	skills.set("silence_timer", 1.0)
 	(skills.get("cooldowns") as Array)[1] = 0.0
 	(skills.get("cooldowns") as Array)[2] = 0.0
@@ -136,6 +141,35 @@ func _hero_tests() -> void:
 	garen.set_physics_process(false)
 
 
+func _garen_empty_target_tests() -> void:
+	var hidden_foes := _hide_enemy_targets()
+	var skills := garen.get_node("SkillController")
+	garen.global_position = Vector3.ZERO
+	garen.velocity = Vector3.ZERO
+	garen.player_facing_direction = Vector2.RIGHT
+	var health_before := float(enemy.get("current_health"))
+	_check(garen.request_player_basic_attack(Vector2.RIGHT), "Garen manual basic starts with no enemy")
+	await _wait_garen_idle()
+	_check(bool(garen.get("attack_hit_sent")) and float(enemy.get("current_health")) == health_before, "Garen manual basic whiffs with no enemy")
+	for slot: StringName in [&"q", &"w", &"e"]:
+		var index := [&"q", &"w", &"e"].find(slot) + 1
+		(skills.get("cooldowns") as Array)[index] = 0.0
+		var cast_count := int(skills.get("cast_counts")[index])
+		_check(garen.request_player_skill(slot), "Garen %s starts without target" % slot)
+		_check(int(skills.get("cast_counts")[index]) == cast_count + 1, "Garen %s counted without target" % slot)
+		await _wait_garen_idle()
+	(skills.get("cooldowns") as Array)[4] = 0.0
+	_check(not garen.request_player_skill(&"r"), "Garen unit R still requires target")
+	(skills.get("cooldowns") as Array)[5] = 0.0
+	var facing_before := garen.player_facing_direction
+	_check(garen.request_player_skill(&"t", Vector2.DOWN), "Garen ground T starts without target")
+	_check(garen.player_facing_direction == Vector2.DOWN and facing_before == Vector2.RIGHT, "Garen ground T uses player aim")
+	await _wait_garen_idle()
+	var ghostship := skills.get("ghostship") as AnimatedSprite3D
+	_check(ghostship != null and ghostship.global_position.z > 0.1, "Garen ground T lands along aim")
+	_restore_targets(hidden_foes)
+
+
 func _frames(count: int) -> void:
 	for _index in count:
 		await physics_frame
@@ -144,6 +178,10 @@ func _frames(count: int) -> void:
 func _ryze_tests() -> void:
 	hud.select_hero(1)
 	coordinator._ensure_manual_control()
+	for hero: Node in get_nodes_in_group(&"hero_actor"):
+		var hero_skills := hero.get_node_or_null("SkillController")
+		if hero_skills != null:
+			hero_skills.set("automatic_demo", false)
 	var cooldowns: Dictionary = ryze.get("cooldowns")
 	ryze.set_physics_process(true)
 	await _wait_ryze_idle()
@@ -183,6 +221,7 @@ func _ryze_tests() -> void:
 			coordinator._ensure_manual_control()
 			_check(float(ryze.get("action_lock")) == lock, "takeover preserves Ryze action")
 		await _wait_ryze_idle()
+	await _ryze_empty_target_tests()
 	ryze.set("silence_timer", 2.0)
 	for slot: StringName in [&"q", &"w", &"e", &"r", &"t"]:
 		cooldowns[slot] = 0.0
@@ -196,7 +235,6 @@ func _ryze_tests() -> void:
 	await _wait_ryze_idle()
 	ryze.set("silence_timer", 0.0)
 	cooldowns[&"r"] = 0.0
-	_check(not ryze.request_player_skill(&"r") and float(cooldowns[&"r"]) == 0.0, "R requires direction")
 	ryze.global_position = Vector3.ZERO
 	garen.global_position = Vector3(1, 0, 1)
 	var model := ryze.get_node("RyzeModel")
@@ -230,6 +268,108 @@ func _ryze_tests() -> void:
 	await _frames(3)
 	_check(ryze.get("ai_decision") != null or float(ryze.get("action_lock")) > 0.0, "Ryze fresh AI")
 	ryze.set_physics_process(false)
+
+
+func _ryze_empty_target_tests() -> void:
+	var hidden_foes := _hide_enemy_targets()
+	var cooldowns: Dictionary = ryze.get("cooldowns")
+	ryze.call("revive_for_training")
+	ryze.global_position = Vector3.ZERO
+	ryze.player_facing_direction = Vector2.RIGHT
+	ryze.set("target", null)
+	ryze.set("_faces_left", false)
+	ryze.set("_root_timer", 0.0)
+	var enemy_health := float(enemy.get("current_health"))
+	_check(ryze.request_player_basic_attack(Vector2.RIGHT), "Ryze manual basic starts with no target")
+	_check(await _wait_for_manual_projectile(), "Ryze manual basic emits directional projectile without target")
+	await _wait_ryze_idle()
+	await _frames(32)
+	_check(float(enemy.get("current_health")) == enemy_health, "Ryze manual basic flies and misses with no target")
+	cooldowns[&"q"] = 0.0
+	_check(ryze.request_player_skill(&"q", Vector2.RIGHT), "Ryze directional Q starts with no target")
+	_check(not bool(ryze.get("_faces_left")), "Ryze Q does not face empty auto target")
+	_check(await _wait_for_manual_projectile(), "Ryze Q emits directional projectile without target")
+	await _wait_ryze_idle()
+	await _frames(32)
+	_check(float(enemy.get("current_health")) == enemy_health, "Ryze directional Q flies and misses with no target")
+	for slot: StringName in [&"w", &"e"]:
+		cooldowns[slot] = 0.0
+		_check(not ryze.request_player_skill(slot), "Ryze %s still requires unit target" % slot)
+	cooldowns[&"t"] = 0.0
+	_check(ryze.request_player_skill(&"t"), "Ryze self T starts with no target")
+	await _wait_ryze_idle()
+	cooldowns[&"r"] = 0.0
+	_check(ryze.request_player_skill(&"r", Vector2.RIGHT), "Ryze ground R starts with no target")
+	await create_timer(1.05).timeout
+	_check(absf(ryze.position.x - 8.0) < 0.1, "Ryze ground R travels along aim without target")
+	await _wait_ryze_idle()
+	ryze.set("desperate_timer", 0.0)
+	ryze.set("supercharged_casts", 0)
+	ryze.set("supercharged_timer", 0.0)
+	_restore_targets(hidden_foes)
+
+	ryze.global_position = Vector3.ZERO
+	ryze.set("_faces_left", false)
+	enemy.call("revive_for_training")
+	var red_ryze := stage.get_node("Characters/RosterRyzeRed") as CharacterBody3D
+	red_ryze.call("revive_for_training")
+	enemy.global_position = Vector3(-2.0, 0.0, 0.0)
+	red_ryze.global_position = Vector3(10.0, 0.0, 0.0)
+	ryze.set("target", enemy)
+	cooldowns[&"w"] = 0.0
+	_check(ryze.request_player_skill(&"w"), "Ryze unit W may face its target")
+	_check(bool(ryze.get("_faces_left")), "Ryze unit W corrects facing at cast time")
+	await _wait_ryze_idle()
+	cooldowns[&"q"] = 0.0
+	enemy_health = float(enemy.get("current_health"))
+	_check(ryze.request_player_skill(&"q"), "Ryze Q fires along stored facing while auto target is behind")
+	_check(not bool(ryze.get("_faces_left")), "Ryze directional Q preserves player facing")
+	await _wait_ryze_idle()
+	await _frames(10)
+	_check(float(enemy.get("current_health")) == enemy_health, "Ryze Q does not curve back to auto target")
+
+	ryze.global_position = Vector3.ZERO
+	enemy.global_position = Vector3(2.0, 0.0, 0.0)
+	red_ryze.global_position = Vector3(4.0, 0.0, 0.0)
+	cooldowns[&"q"] = 0.0
+	var second_health := float(red_ryze.get("current_health"))
+	_check(ryze.request_player_skill(&"q", Vector2.RIGHT), "Ryze manual Q starts first-hit sweep")
+	await _wait_ryze_idle()
+	await _frames(10)
+	_check(float(enemy.get("current_health")) < enemy_health and float(red_ryze.get("current_health")) == second_health, "Ryze manual Q hits first enemy on line")
+
+	ryze.global_position = Vector3.ZERO
+	enemy.global_position = Vector3(2.0, 0.0, 0.0)
+	red_ryze.global_position = Vector3(4.0, 0.0, 0.0)
+	var basic_health := float(enemy.get("current_health"))
+	var second_basic_health := float(red_ryze.get("current_health"))
+	_check(ryze.request_player_basic_attack(Vector2.RIGHT), "Ryze manual basic starts directional sweep")
+	await _wait_ryze_idle()
+	await _frames(10)
+	_check(float(enemy.get("current_health")) < basic_health and float(red_ryze.get("current_health")) == second_basic_health, "Ryze manual basic hits first enemy on line")
+
+
+func _hide_enemy_targets() -> Array[Node]:
+	var hidden: Array[Node] = []
+	for candidate: Node in get_nodes_in_group(&"combat_target"):
+		if candidate.has_method("get_team") and String(candidate.call("get_team")) != String(garen.call("get_team")):
+			candidate.remove_from_group(&"combat_target")
+			hidden.append(candidate)
+	return hidden
+
+
+func _restore_targets(hidden: Array[Node]) -> void:
+	for candidate: Node in hidden:
+		if is_instance_valid(candidate) and not candidate.is_in_group(&"combat_target"):
+			candidate.add_to_group(&"combat_target")
+
+
+func _wait_for_manual_projectile() -> bool:
+	for _frame in 90:
+		if not get_nodes_in_group(&"ryze_directional_projectile").is_empty():
+			return true
+		await physics_frame
+	return false
 
 
 func _integration_tests() -> void:

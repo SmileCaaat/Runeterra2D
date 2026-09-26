@@ -6,6 +6,7 @@ signal control_authority_changed(authority: ControlAuthority)
 enum ControlAuthority { AI, PLAYER }
 var control_authority := ControlAuthority.AI
 var player_move_input := Vector2.ZERO
+var player_facing_direction := Vector2.RIGHT
 
 
 func supports_player_control() -> bool:
@@ -31,13 +32,19 @@ func is_player_controlled() -> bool:
 
 func set_player_move_input(input_vector: Vector2) -> void:
 	player_move_input = input_vector.limit_length(1.0) if input_vector.is_finite() else Vector2.ZERO
+	if player_move_input.length_squared() > 0.0001:
+		player_facing_direction = player_move_input.normalized()
 
 
 func get_player_move_input() -> Vector2:
 	return player_move_input
 
 
-func request_player_basic_attack() -> bool:
+func get_player_facing_direction() -> Vector2:
+	return player_facing_direction
+
+
+func request_player_basic_attack(_direction_input := Vector2.ZERO) -> bool:
 	return false
 
 

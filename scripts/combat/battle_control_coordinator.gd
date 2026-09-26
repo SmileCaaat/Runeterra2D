@@ -57,7 +57,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_control()
 	elif event.is_action_pressed(&"battle_basic_attack"):
 		if _ensure_manual_control():
-			manual_hero.request_player_basic_attack()
+			manual_hero.request_player_basic_attack(_movement_input())
 	else:
 		for slot: StringName in [&"q", &"w", &"e", &"r", &"t"]:
 			if event.is_action_pressed(StringName("battle_skill_" + slot)):

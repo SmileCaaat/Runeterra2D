@@ -16,6 +16,7 @@ const SKILL_T := 5
 @export_range(0.1, 10.0, 0.1) var move_speed := 3.4
 @export_range(0.5, 4.0, 0.05) var attack_range := 1.5
 @export_range(0.0, 20.0, 0.1) var acceleration := 14.0
+@export_range(1.0, 5.0, 0.1) var manual_turn_acceleration_multiplier := 3.0
 @export_enum("friendly", "enemy") var team := "friendly"
 @export var level := 1
 
@@ -32,6 +33,8 @@ var attack_audio_events_sent: Dictionary[StringName, bool] = {}
 var attack_sound_count := 0
 var current_attack_name: StringName = &"attack1"
 var current_attack_is_breaker := false
+var current_attack_is_manual := false
+var current_attack_facing_direction := Vector2.RIGHT
 var attack_combo: Array[StringName] = ATTACK_COMBO.duplicate()
 var combat_database: CombatDatabase
 var garen_definition: UnitDefinition
@@ -51,6 +54,7 @@ var arena_max := Vector2(14.5, 4.3)
 var external_move_speed_modifiers: Dictionary = {}
 var attack_pitches: Array[float] = [1.08, 1.0, 0.88]
 var breaker_lunge_pending := false
+var automatic_demo_before_manual_control := true
 var is_dead := false
 var hit_feedback: HeroHitFeedback3D
 
@@ -182,37 +186,104 @@ func _apply_player_movement(delta: float, rooted: bool) -> void:
 		_set_state(CombatState.IDLE)
 	else:
 		var speed := move_speed * float(skill_controller.call("get_move_speed_multiplier")) * _external_move_speed_multiplier()
-		velocity.x = move_toward(velocity.x, direction.x * speed, acceleration * delta)
-		velocity.z = move_toward(velocity.z, direction.z * speed, acceleration * delta)
+		var turn_acceleration := acceleration
+		var planar_velocity := Vector2(velocity.x, velocity.z)
+		var planar_direction := Vector2(direction.x, direction.z)
+		if not planar_velocity.is_zero_approx() and planar_velocity.dot(planar_direction) < 0.0:
+			turn_acceleration *= manual_turn_acceleration_multiplier
+		velocity.x = move_toward(velocity.x, direction.x * speed, turn_acceleration * delta)
+		velocity.z = move_toward(velocity.z, direction.z * speed, turn_acceleration * delta)
 		_face_direction(direction)
 		_set_state(CombatState.CHASE)
 
 
-func request_player_basic_attack() -> bool:
-	return _request_player_action(&"basic_attack")
+func request_player_basic_attack(direction_input := Vector2.ZERO) -> bool:
+	return _request_player_action(&"basic_attack", direction_input)
 
 
-func request_player_skill(slot: StringName, _direction_input := Vector2.ZERO) -> bool:
+func request_player_skill(slot: StringName, direction_input := Vector2.ZERO) -> bool:
 	if slot not in [&"q", &"w", &"e", &"r", &"t"]:
 		return false
-	return _request_player_action(StringName("skill_" + slot))
+	return _request_player_action(StringName("skill_" + slot), direction_input)
 
 
-func _request_player_action(action: StringName) -> bool:
+func _request_player_action(action: StringName, direction_input := Vector2.ZERO) -> bool:
 	if not is_player_controlled() or is_dead or process_mode == Node.PROCESS_MODE_DISABLED:
 		return false
-	_refresh_target()
-	var decision := HeroAIDecision.make(action, 0.0, "player request")
-	decision.target = target
-	if not _can_execute_ai_decision(decision):
+	if direction_input.is_finite() and direction_input.length_squared() > 0.0001:
+		player_facing_direction = direction_input.normalized()
+		_face_direction(Vector3(player_facing_direction.x, 0.0, player_facing_direction.y))
+	if state == CombatState.ATTACK:
 		return false
-	_face_direction(target.global_position - global_position)
-	return _start_combat_action(decision)
+	if action == &"basic_attack":
+		if bool(skill_controller.get("is_casting")):
+			return false
+		var attack_aim := _player_aim_direction(Vector2.ZERO)
+		_face_direction(Vector3(attack_aim.x, 0.0, attack_aim.y))
+		_start_next_attack(true)
+		return true
+	var skill_index := _player_skill_index(action)
+	if skill_index == 0 or combat_database == null:
+		return false
+	var skill := combat_database.get_skill_by_slot(&"garen", skill_index)
+	if skill == null:
+		return false
+	var casting := bool(skill_controller.get("is_casting"))
+	if casting and not (skill_index == SKILL_W and int(skill_controller.get("current_skill")) == SKILL_E):
+		return false
+	var skill_target: CharacterBody3D
+	var face_target_on_cast := false
+	var ground_point := Vector3.INF
+	match skill.target_type:
+		"unit":
+			_refresh_target()
+			if not _is_target_available(target):
+				return false
+			var target_offset := target.global_position - global_position
+			target_offset.y = 0.0
+			if target_offset.length() > skill.cast_range:
+				return false
+			skill_target = target
+			face_target_on_cast = skill.facing_policy != "none"
+		"ground_area":
+			var aim := _player_aim_direction(direction_input)
+			player_facing_direction = aim
+			_face_direction(Vector3(aim.x, 0.0, aim.y))
+			ground_point = global_position + Vector3(aim.x, 0.0, aim.y) * skill.cast_range
+			ground_point.x = clampf(ground_point.x, arena_min.x, arena_max.x)
+			ground_point.z = clampf(ground_point.z, arena_min.y, arena_max.y)
+			if not ground_point.is_finite() or global_position.distance_to(ground_point) < 0.05:
+				return false
+		_: # self and self_area actions deliberately do not acquire or face a target.
+			pass
+	var started := bool(skill_controller.call("begin_skill", skill_index, skill_target, ground_point))
+	if started and face_target_on_cast and is_instance_valid(skill_target):
+		_face_direction(skill_target.global_position - global_position)
+	return started
 
 
-func _start_next_attack() -> void:
+func _player_skill_index(action: StringName) -> int:
+	match action:
+		&"skill_q": return SKILL_Q
+		&"skill_w": return SKILL_W
+		&"skill_e": return SKILL_E
+		&"skill_r": return SKILL_R
+		&"skill_t": return SKILL_T
+	return 0
+
+
+func _player_aim_direction(direction_input: Vector2) -> Vector2:
+	if direction_input.is_finite() and direction_input.length_squared() > 0.0001:
+		return direction_input.normalized()
+	return player_facing_direction.normalized() if player_facing_direction.length_squared() > 0.0001 else Vector2.RIGHT
+
+
+func _start_next_attack(manual_attack := false) -> void:
 	attack_hit_sent = false
 	attack_audio_events_sent.clear()
+	current_attack_is_manual = manual_attack
+	if manual_attack:
+		current_attack_facing_direction = player_facing_direction.normalized()
 	state = CombatState.ATTACK
 	current_attack_is_breaker = bool(skill_controller.call("should_use_breaker_attack"))
 	if current_attack_is_breaker:
@@ -223,7 +294,7 @@ func _start_next_attack() -> void:
 		combo_index = (combo_index + 1) % attack_combo.size()
 		current_attack_name = attack_combo[combo_index]
 		state_label.text = "AI · COMBO %d" % (combo_index + 1)
-	if current_attack_is_breaker and _should_lunge_to_target():
+	if current_attack_is_breaker and not manual_attack and _should_lunge_to_target():
 		breaker_lunge_pending = true
 		await _perform_breaker_lunge()
 		breaker_lunge_pending = false
@@ -238,24 +309,47 @@ func _check_attack_hit(distance: float) -> void:
 	if character_model.get_normalized_progress() < impact_normalized:
 		return
 	attack_hit_sent = true
-	if not _is_target_available(target):
+	var hit_target := _find_manual_attack_target() if current_attack_is_manual else target
+	if not _is_target_available(hit_target):
 		return
-	if distance <= get_current_attack_hit_range():
-		if target.has_method("register_damage_source"):
-			target.call("register_damage_source", global_position, get_team())
+	var hit_offset := hit_target.global_position - global_position
+	hit_offset.y = 0.0
+	var hit_distance := hit_offset.length() if current_attack_is_manual else distance
+	if hit_distance <= get_current_attack_hit_range():
+		if hit_target.has_method("register_damage_source"):
+			hit_target.call("register_damage_source", global_position, get_team())
 		if current_attack_is_breaker:
-			skill_controller.call("resolve_breaker_attack", target)
+			skill_controller.call("resolve_breaker_attack", hit_target)
 			current_attack_is_breaker = false
 		else:
 			var damage := garen_definition.attack_damage if garen_definition != null else 69.0
 			var hit_profile_id: StringName = hit_event.payload_id if hit_event != null else &"basic_melee"
-			if target.has_method("receive_hit"):
-				target.call("receive_hit", global_position, character_model.current_animation, damage, self)
-			elif target.has_method("receive_skill_damage"):
-				target.call("receive_skill_damage", damage, String(character_model.current_animation), true, global_position, &"physical", hit_profile_id, self)
+			if hit_target.has_method("receive_hit"):
+				hit_target.call("receive_hit", global_position, character_model.current_animation, damage, self)
+			elif hit_target.has_method("receive_skill_damage"):
+				hit_target.call("receive_skill_damage", damage, String(character_model.current_animation), true, global_position, &"physical", hit_profile_id, self)
 			if skill_controller != null:
-				skill_controller.call("register_courage_kill", target)
+				skill_controller.call("register_courage_kill", hit_target)
 		attack_landed.emit(character_model.current_animation)
+
+
+func _find_manual_attack_target() -> CharacterBody3D:
+	var facing := Vector3(current_attack_facing_direction.x, 0.0, current_attack_facing_direction.y).normalized()
+	var best: CharacterBody3D
+	var best_distance := INF
+	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
+		var candidate := candidate_node as CharacterBody3D
+		if candidate == null or candidate == self or not _is_target_available(candidate) or not _is_hostile_candidate(candidate):
+			continue
+		var offset := candidate.global_position - global_position
+		offset.y = 0.0
+		var distance := offset.length()
+		if distance > get_current_attack_hit_range() or (distance > 0.001 and facing.dot(offset.normalized()) < 0.15):
+			continue
+		if distance < best_distance:
+			best = candidate
+			best_distance = distance
+	return best
 
 
 func _check_attack_audio() -> void:
@@ -304,6 +398,7 @@ func _animation_elapsed_seconds() -> float:
 func _on_animation_finished(_animation_name: StringName) -> void:
 	if state != CombatState.ATTACK:
 		return
+	current_attack_is_manual = false
 	state = CombatState.CHASE
 	_invalidate_ai_decision("attack finished")
 	_set_state(CombatState.CHASE)
@@ -331,6 +426,12 @@ func supports_player_control() -> bool:
 
 func _on_control_authority_changed(_authority: ControlAuthority) -> void:
 	player_move_input = Vector2.ZERO
+	if skill_controller != null:
+		if _authority == ControlAuthority.PLAYER:
+			automatic_demo_before_manual_control = bool(skill_controller.get("automatic_demo"))
+			skill_controller.set("automatic_demo", false)
+		else:
+			skill_controller.set("automatic_demo", automatic_demo_before_manual_control)
 	_invalidate_ai_decision("control authority changed")
 
 
