@@ -227,6 +227,11 @@ func _validate_source() -> void:
 		_require_ref(row, "audio_profile_id", asset_ids, true)
 		_require_ref(row, "icon_profile_id", asset_ids, true)
 		_validate_enum(row, "target_type", ["self", "unit", "direction", "ground_area", "self_area"])
+		_validate_enum(row, "target_relation", ["none", "hostile", "friendly", "self_or_friendly", "any"])
+		if _s(row, "target_type") == "unit" and _s(row, "target_relation") == "none":
+			_error(row, "unit skill requires an explicit target_relation")
+		if _s(row, "target_type") != "unit" and _s(row, "target_relation") != "none":
+			_error(row, "non-unit skill must use target_relation none")
 		_validate_enum(row, "cast_type", ["instant", "cast", "channel", "empower", "travel"])
 		_validate_enum(row, "ability_kind", ["basic_attack", "passive", "active", "original"])
 		_validate_enum(row, "source_slot", ["basic", "p", "q", "w", "e", "r", "t"])
@@ -492,7 +497,7 @@ func _populate_skills(database: CombatDatabase) -> void:
 		definition.identity_status = _s(row, "identity_status")
 		definition.max_rank = _i(row, "max_rank")
 		definition.display_name = _s(row, "display_name")
-		for field: String in ["target_type", "cast_type", "movement_policy", "facing_policy"]:
+		for field: String in ["target_type", "target_relation", "cast_type", "movement_policy", "facing_policy"]:
 			definition.set(field, _s(row, field))
 		for field: String in ["cooldown", "cast_time", "recovery_time", "cast_range", "radius", "duration", "tick_interval", "resource_cost", "travel_start_offset", "travel_duration"]:
 			definition.set(field, _f(row, field))

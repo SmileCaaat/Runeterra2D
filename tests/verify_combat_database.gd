@@ -186,6 +186,9 @@ func _initialize() -> void:
 	var seven := seven_seas
 	var semantic_ok := garen != null and garen.skill_ids.size() == 6
 	semantic_ok = semantic_ok and ocean != null and ocean.target_type == "self_area"
+	semantic_ok = semantic_ok and ocean.target_relation == "none"
+	semantic_ok = semantic_ok and database.get_skill(&"garen_tyrant_judgment").target_relation == "hostile"
+	semantic_ok = semantic_ok and database.get_skill(&"ryze_rune_prison").target_relation == "hostile"
 	semantic_ok = semantic_ok and ocean.movement_policy == "allowed" and ocean.icon_profile_id == &"garen_judgment_icon"
 	semantic_ok = semantic_ok and is_equal_approx(ocean.radius, 3.8)
 	semantic_ok = semantic_ok and is_equal_approx(database.get_skill_rank(&"garen_ocean_storm", 1).radius, 3.8)

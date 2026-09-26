@@ -543,7 +543,7 @@ func can_execute_action(request: HeroActionRequest) -> bool:
 			return false
 		match skill.target_type:
 			"unit":
-				if not is_instance_valid(request.target) or not _can_harm(request.target):
+				if not CombatTargetQuery.matches_relation(self, request.target, skill.target_relation):
 					return false
 				var target_offset := request.target.global_position - global_position
 				target_offset.y = 0.0
@@ -1151,25 +1151,8 @@ func _launch_directional_projectile(
 
 
 func _first_enemy_on_projectile_segment(from: Vector3, to: Vector3) -> CharacterBody3D:
-	var start := Vector2(from.x, from.z)
-	var segment := Vector2(to.x - from.x, to.z - from.z)
-	var length_squared := segment.length_squared()
-	var best_progress := INF
-	var best_target: CharacterBody3D
 	var hit_radius := _rulef(&"ryze.projectile.hit_radius", 0.62)
-	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		var candidate := candidate_node as CharacterBody3D
-		if candidate == null or not _can_harm(candidate):
-			continue
-		var contact := _target_visual_position(candidate)
-		var target_point := Vector2(contact.x, contact.z)
-		var progress := clampf((target_point - start).dot(segment) / length_squared, 0.0, 1.0) if length_squared > 0.0001 else 0.0
-		if start.lerp(Vector2(to.x, to.z), progress).distance_to(target_point) > hit_radius:
-			continue
-		if progress < best_progress:
-			best_progress = progress
-			best_target = candidate
-	return best_target
+	return CombatTargetQuery.first_hostile_on_segment(get_tree(), self, from, to, hit_radius, Callable(self, &"_target_visual_position"))
 
 
 func _basic_attack_range() -> float:
@@ -1666,24 +1649,7 @@ func _set_target_outline(candidate: Node, active: bool) -> void:
 
 
 func _find_preferred_hostile() -> CharacterBody3D:
-	var closest_hero: CharacterBody3D
-	var closest_hero_distance := INF
-	var closest_any: CharacterBody3D
-	var closest_any_distance := INF
-	for node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		if not is_instance_valid(node):
-			continue
-		var candidate := node as CharacterBody3D
-		if candidate == null or candidate == self or not _can_harm(candidate):
-			continue
-		var distance := global_position.distance_squared_to(candidate.global_position)
-		if distance < closest_any_distance:
-			closest_any = candidate
-			closest_any_distance = distance
-		if candidate.is_in_group(&"hero_actor") and distance < closest_hero_distance:
-			closest_hero = candidate
-			closest_hero_distance = distance
-	return closest_hero if closest_hero != null else closest_any
+	return CombatTargetQuery.nearest_hostile(get_tree(), self, global_position, INF, true)
 
 
 func _valid_target(candidate: Variant) -> bool:
@@ -1835,13 +1801,7 @@ func _is_enemy_candidate(candidate: CharacterBody3D) -> bool:
 
 
 func _can_harm(candidate: CharacterBody3D) -> bool:
-	if candidate == null or candidate == self or not _valid_target(candidate):
-		return false
-	if candidate.has_method("get_team") and String(candidate.call("get_team")) == String(get_team()):
-		return false
-	if candidate.has_method("is_enemy_of"):
-		return bool(candidate.call("is_enemy_of", get_team()))
-	return true
+	return CombatTargetQuery.matches_relation(self, candidate, "hostile")
 
 
 func _escape_destination(away_from_target: Vector3) -> Vector3:

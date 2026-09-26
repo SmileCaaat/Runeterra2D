@@ -311,21 +311,7 @@ func _check_attack_hit(distance: float) -> void:
 
 func _find_manual_attack_target() -> CharacterBody3D:
 	var facing := Vector3(current_attack_facing_direction.x, 0.0, current_attack_facing_direction.y).normalized()
-	var best: CharacterBody3D
-	var best_distance := INF
-	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		var candidate := candidate_node as CharacterBody3D
-		if candidate == null or candidate == self or not _is_target_available(candidate) or not _is_hostile_candidate(candidate):
-			continue
-		var offset := candidate.global_position - global_position
-		offset.y = 0.0
-		var distance := offset.length()
-		if distance > get_current_attack_hit_range() or (distance > 0.001 and facing.dot(offset.normalized()) < 0.15):
-			continue
-		if distance < best_distance:
-			best = candidate
-			best_distance = distance
-	return best
+	return CombatTargetQuery.first_hostile_in_facing_arc(get_tree(), self, global_position, facing, get_current_attack_hit_range(), 0.15)
 
 
 func _check_attack_audio() -> void:
@@ -542,7 +528,7 @@ func can_execute_action(request: HeroActionRequest) -> bool:
 			return false
 		match skill.target_type:
 			"unit":
-				if not is_instance_valid(request.target) or not _is_target_available(request.target):
+				if not CombatTargetQuery.matches_relation(self, request.target, skill.target_relation):
 					return false
 				var target_offset := request.target.global_position - global_position
 				target_offset.y = 0.0
@@ -681,18 +667,7 @@ func _target_health_ratio(candidate: CharacterBody3D) -> float:
 
 
 func _count_nearby_enemies(radius: float) -> int:
-	var count := 0
-	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		var candidate := candidate_node as CharacterBody3D
-		if candidate == self or not _is_target_available(candidate):
-			continue
-		if not _is_hostile_candidate(candidate):
-			continue
-		var planar := candidate.global_position - global_position
-		planar.y = 0.0
-		if planar.length() <= radius:
-			count += 1
-	return count
+	return CombatTargetQuery.hostiles_in_radius(get_tree(), self, global_position, radius).size()
 
 
 func _set_state(next_state: CombatState) -> void:
@@ -837,36 +812,11 @@ func _is_target_available(candidate: Node) -> bool:
 
 
 func _find_closest_target() -> CharacterBody3D:
-	var closest_hero: CharacterBody3D
-	var closest_hero_distance := INF
-	var closest_any: CharacterBody3D
-	var closest_any_distance := INF
-	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		if not is_instance_valid(candidate_node):
-			continue
-		var candidate := candidate_node as CharacterBody3D
-		if candidate == null or candidate == self or not _is_target_available(candidate):
-			continue
-		if not _is_hostile_candidate(candidate):
-			continue
-		var candidate_distance := global_position.distance_squared_to(candidate.global_position)
-		if candidate_distance < closest_any_distance:
-			closest_any = candidate
-			closest_any_distance = candidate_distance
-		if _is_hero_actor(candidate) and candidate_distance < closest_hero_distance:
-			closest_hero = candidate
-			closest_hero_distance = candidate_distance
-	return closest_hero if closest_hero != null else closest_any
+	return CombatTargetQuery.nearest_hostile(get_tree(), self, global_position, INF, true)
 
 
 func _is_hostile_candidate(candidate: CharacterBody3D) -> bool:
-	if not is_instance_valid(candidate):
-		return false
-	if candidate.has_method("is_enemy_of"):
-		return bool(candidate.call("is_enemy_of", get_team()))
-	if candidate.has_method("get_team"):
-		return StringName(candidate.call("get_team")) != get_team()
-	return false
+	return CombatTargetQuery.matches_relation(self, candidate, "hostile")
 
 
 func _is_hero_actor(candidate: Node) -> bool:

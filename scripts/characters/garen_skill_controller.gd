@@ -288,11 +288,11 @@ func begin_skill(
 	if cooldowns[skill_index] > 0.0:
 		return false
 	var cast_point := ground_target_position
-	if definition.target_type == "ground_area" and not cast_point.is_finite() and _is_valid_skill_target(skill_target):
+	if definition.target_type == "ground_area" and not cast_point.is_finite() and _is_valid_skill_target(skill_target, "any"):
 		cast_point = skill_target.global_position
 	match definition.target_type:
 		"unit":
-			if not _is_valid_skill_target(skill_target):
+			if not _is_valid_skill_target(skill_target, definition.target_relation):
 				return false
 		"ground_area":
 			if not cast_point.is_finite():
@@ -322,8 +322,8 @@ func begin_skill(
 	return true
 
 
-func _is_valid_skill_target(skill_target: Variant) -> bool:
-	return is_instance_valid(skill_target) and skill_target is CharacterBody3D and skill_target != fighter and skill_target.is_in_group(&"combat_target") and (not skill_target.has_method("is_targetable") or bool(skill_target.call("is_targetable")))
+func _is_valid_skill_target(skill_target: Variant, relation := "hostile") -> bool:
+	return CombatTargetQuery.matches_relation(fighter, skill_target, relation)
 
 
 func try_begin_demo_skill() -> bool:
@@ -1516,27 +1516,7 @@ func _is_within_ship_path(point: Vector3, path_start: Vector3, path_end: Vector3
 
 
 func _get_enemy_targets_in_radius(area_center: Vector3, radius: float) -> Array[CharacterBody3D]:
-	var enemies: Array[CharacterBody3D] = []
-	var fighter_team := StringName(fighter.call("get_team")) if fighter != null and fighter.has_method("get_team") else &"friendly"
-	for candidate_node: Node in get_tree().get_nodes_in_group(&"combat_target"):
-		var candidate := candidate_node as CharacterBody3D
-		if not is_instance_valid(candidate) or candidate == fighter:
-			continue
-		if candidate.has_method("is_targetable") and not bool(candidate.call("is_targetable")):
-			continue
-		if candidate.has_method("is_enemy_of"):
-			if not bool(candidate.call("is_enemy_of", fighter_team)):
-				continue
-		elif candidate.has_method("get_team"):
-			if StringName(candidate.call("get_team")) == fighter_team:
-				continue
-		else:
-			continue
-		var horizontal_offset := candidate.global_position - area_center
-		horizontal_offset.y = 0.0
-		if horizontal_offset.length() <= radius:
-			enemies.append(candidate)
-	return enemies
+	return CombatTargetQuery.hostiles_in_radius(get_tree(), fighter, area_center, radius)
 
 
 func _register_damage_source(target_actor: CharacterBody3D) -> void:
